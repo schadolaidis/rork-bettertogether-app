@@ -86,7 +86,12 @@ export function TaskFormModal({
   const [selectedCategory, setSelectedCategory] = useState<TaskCategory>(existingTask?.category || 'Household');
   const [startDate, setStartDate] = useState<Date>(() => {
     if (existingTask) {
-      return new Date(existingTask.startAt);
+      const d = new Date(existingTask.startAt);
+      return isNaN(d.getTime()) ? (() => {
+        const fallback = new Date();
+        fallback.setHours(fallback.getHours() + 1, 0, 0, 0);
+        return fallback;
+      })() : d;
     }
     const date = new Date();
     date.setHours(date.getHours() + 1, 0, 0, 0);
@@ -94,7 +99,12 @@ export function TaskFormModal({
   });
   const [endDate, setEndDate] = useState<Date>(() => {
     if (existingTask) {
-      return new Date(existingTask.endAt);
+      const d = new Date(existingTask.endAt);
+      return isNaN(d.getTime()) ? (() => {
+        const fallback = new Date();
+        fallback.setHours(fallback.getHours() + 2, 0, 0, 0);
+        return fallback;
+      })() : d;
     }
     const date = new Date();
     date.setHours(date.getHours() + 2, 0, 0, 0);
@@ -124,8 +134,23 @@ export function TaskFormModal({
       setTitle(existingTask.title);
       setDescription(existingTask.description || '');
       setSelectedCategory(existingTask.category);
-      setStartDate(new Date(existingTask.startAt));
-      setEndDate(new Date(existingTask.endAt));
+      
+      const validStartDate = new Date(existingTask.startAt);
+      const validEndDate = new Date(existingTask.endAt);
+      
+      if (!isNaN(validStartDate.getTime())) {
+        setStartDate(validStartDate);
+        setTempStartDate(validStartDate);
+      } else {
+        console.warn('[TaskForm] Invalid startAt date:', existingTask.startAt);
+      }
+      
+      if (!isNaN(validEndDate.getTime())) {
+        setEndDate(validEndDate);
+      } else {
+        console.warn('[TaskForm] Invalid endAt date:', existingTask.endAt);
+      }
+      
       setAllDay(existingTask.allDay || false);
       setStake(String(existingTask.stake));
       setSelectedMembers(
@@ -318,16 +343,30 @@ export function TaskFormModal({
       setShowStartDatePicker(false);
     }
     
-    if (selectedDate) {
+    if (selectedDate && !isNaN(selectedDate.getTime())) {
       console.log('[DatePicker] Selected date:', selectedDate);
       const newStart = new Date(selectedDate);
-      newStart.setHours(startDate.getHours(), startDate.getMinutes(), 0, 0);
+      
+      if (!isNaN(startDate.getTime())) {
+        newStart.setHours(startDate.getHours(), startDate.getMinutes(), 0, 0);
+      } else {
+        newStart.setHours(12, 0, 0, 0);
+      }
+      
       setStartDate(newStart);
       setTempStartDate(newStart);
       
-      const duration = endDate.getTime() - startDate.getTime();
-      if (duration > 0) {
-        const newEnd = new Date(newStart.getTime() + duration);
+      if (!isNaN(endDate.getTime()) && !isNaN(startDate.getTime())) {
+        const duration = endDate.getTime() - startDate.getTime();
+        if (duration > 0) {
+          const newEnd = new Date(newStart.getTime() + duration);
+          setEndDate(newEnd);
+        } else {
+          const newEnd = new Date(newStart.getTime() + 3600000);
+          setEndDate(newEnd);
+        }
+      } else {
+        const newEnd = new Date(newStart.getTime() + 3600000);
         setEndDate(newEnd);
       }
       
@@ -342,9 +381,9 @@ export function TaskFormModal({
       setShowStartTimePicker(false);
     }
     
-    if (selectedDate) {
+    if (selectedDate && !isNaN(selectedDate.getTime())) {
       console.log('[TimePicker] Selected time:', selectedDate);
-      const newStart = new Date(startDate);
+      const newStart = !isNaN(startDate.getTime()) ? new Date(startDate) : new Date();
       newStart.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
       setStartDate(newStart);
       setTempStartDate(newStart);
@@ -360,10 +399,18 @@ export function TaskFormModal({
   };
 
   const formatDate = (date: Date) => {
+    if (!date || isNaN(date.getTime())) {
+      console.warn('[TaskForm] Invalid date in formatDate:', date);
+      return 'Invalid Date';
+    }
     return EUDateFormatter.formatDate(date, 'long');
   };
 
   const formatTime = (date: Date) => {
+    if (!date || isNaN(date.getTime())) {
+      console.warn('[TaskForm] Invalid date in formatTime:', date);
+      return 'Invalid Time';
+    }
     return EUDateFormatter.formatTime(date);
   };
 

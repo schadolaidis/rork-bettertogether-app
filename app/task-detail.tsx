@@ -196,9 +196,10 @@ export default function TaskDetailScreen() {
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [editingDateTime, setEditingDateTime] = useState<{ startDate: Date; endDate: Date; allDay: boolean }>(() => {
+    const now = new Date();
+    const later = new Date(now.getTime() + 3600000);
+    
     if (!task) {
-      const now = new Date();
-      const later = new Date(now.getTime() + 3600000);
       return {
         startDate: now,
         endDate: later,
@@ -209,9 +210,12 @@ export default function TaskDetailScreen() {
     const startDate = new Date(task.startAt);
     const endDate = new Date(task.endAt);
     
+    const validStart = !isNaN(startDate.getTime()) ? startDate : now;
+    const validEnd = !isNaN(endDate.getTime()) ? endDate : later;
+    
     return {
-      startDate: isNaN(startDate.getTime()) ? new Date() : startDate,
-      endDate: isNaN(endDate.getTime()) ? new Date(Date.now() + 3600000) : endDate,
+      startDate: validStart,
+      endDate: validEnd,
       allDay: task.allDay || false,
     };
   });
@@ -892,14 +896,28 @@ function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onS
   const handleStartDateChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
     if (Platform.OS === 'android') {
       setShowPickerType(null);
-      if (selectedDate) {
+      if (selectedDate && !isNaN(selectedDate.getTime())) {
         const newStart = new Date(selectedDate);
-        newStart.setHours(start.getHours(), start.getMinutes(), 0, 0);
+        
+        if (!isNaN(start.getTime())) {
+          newStart.setHours(start.getHours(), start.getMinutes(), 0, 0);
+        } else {
+          newStart.setHours(12, 0, 0, 0);
+        }
+        
         setStart(newStart);
         
-        const duration = end.getTime() - start.getTime();
-        if (duration > 0) {
-          const newEnd = new Date(newStart.getTime() + duration);
+        if (!isNaN(end.getTime()) && !isNaN(start.getTime())) {
+          const duration = end.getTime() - start.getTime();
+          if (duration > 0) {
+            const newEnd = new Date(newStart.getTime() + duration);
+            setEnd(newEnd);
+          } else {
+            const newEnd = new Date(newStart.getTime() + 3600000);
+            setEnd(newEnd);
+          }
+        } else {
+          const newEnd = new Date(newStart.getTime() + 3600000);
           setEnd(newEnd);
         }
         
@@ -911,8 +929,8 @@ function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onS
   const handleStartTimeChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
     if (Platform.OS === 'android') {
       setShowPickerType(null);
-      if (selectedDate) {
-        const newStart = new Date(start);
+      if (selectedDate && !isNaN(selectedDate.getTime())) {
+        const newStart = !isNaN(start.getTime()) ? new Date(start) : new Date();
         newStart.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
         setStart(newStart);
         
