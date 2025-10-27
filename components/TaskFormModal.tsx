@@ -81,8 +81,8 @@ export function TaskFormModal({
   existingTask,
   mode = 'create',
 }: TaskFormModalProps) {
-  const [title, setTitle] = useState(existingTask?.title || '');
-  const [description, setDescription] = useState(existingTask?.description || '');
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<TaskCategory>(existingTask?.category || 'Household');
   const [startDate, setStartDate] = useState<Date>(() => {
     if (existingTask) {
@@ -131,7 +131,7 @@ export function TaskFormModal({
   useEffect(() => {
     if (existingTask && mode === 'edit') {
       console.log('[TaskForm] Loading existing task:', existingTask);
-      setTitle(existingTask.title);
+      setTitle(existingTask.title || '');
       setDescription(existingTask.description || '');
       setSelectedCategory(existingTask.category);
       
@@ -185,26 +185,11 @@ export function TaskFormModal({
   const loadDraft = useCallback(async () => {
     if (mode === 'edit') return;
     try {
-      const draft = await AsyncStorage.getItem(DRAFT_KEY);
-      if (draft) {
-        const parsed = JSON.parse(draft);
-        setTitle(parsed.title || '');
-        setDescription(parsed.description || '');
-        setSelectedCategory(parsed.category || 'Household');
-        if (parsed.startDate) setStartDate(new Date(parsed.startDate));
-        if (parsed.endDate) setEndDate(new Date(parsed.endDate));
-        setAllDay(parsed.allDay || false);
-        setStake(parsed.stake || String(defaultStakeCents / 100));
-        setSelectedMembers(parsed.assignedTo || [members[0]?.id || '']);
-        setPriority(parsed.priority || 'medium');
-        setReminder(parsed.reminder || 'none');
-        setRecurrence(parsed.recurrence || 'none');
-        console.log('[Draft] Loaded task draft');
-      }
+      await AsyncStorage.removeItem(DRAFT_KEY);
     } catch (error) {
-      console.error('[Draft] Failed to load:', error);
+      console.error('[Draft] Failed to clear:', error);
     }
-  }, [defaultStakeCents, members, mode]);
+  }, [mode]);
 
   useEffect(() => {
     if (visible && mode === 'create') {
