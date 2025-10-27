@@ -8,11 +8,12 @@ import {
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { TrendingUp, TrendingDown, Users, Calendar, BarChart3, ArrowUpDown } from 'lucide-react-native';
+import { TrendingUp, TrendingDown, Users, Calendar, BarChart3, ArrowUpDown, DollarSign, Activity } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useApp } from '@/contexts/AppContext';
-import { LedgerEntry, User } from '@/types';
+import { LedgerEntry, User, TaskCategory } from '@/types';
 import { ClockService } from '@/services/ClockService';
+import { router } from 'expo-router';
 
 type TabType = 'overview' | 'history' | 'stats';
 
@@ -28,6 +29,15 @@ interface MemberBalance {
 interface DateGroup {
   date: string;
   entries: LedgerEntry[];
+}
+
+interface CategoryBreakdown {
+  category: TaskCategory;
+  emoji: string;
+  color: string;
+  total: number;
+  count: number;
+  percentage: number;
 }
 
 interface TransactionItemProps {
@@ -59,6 +69,36 @@ function TransactionItem({ entry, categoryEmoji, payerName, currencySymbol, onPr
         <Text style={styles.transactionAmount}>
           {currencySymbol}{entry.amount.toFixed(2)}
         </Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+interface CategoryCardProps {
+  category: CategoryBreakdown;
+  currencySymbol: string;
+  onPress: () => void;
+}
+
+function CategoryCard({ category, currencySymbol, onPress }: CategoryCardProps) {
+  return (
+    <TouchableOpacity style={[styles.categoryCard, { borderLeftColor: category.color }]} onPress={onPress}>
+      <View style={styles.categoryHeader}>
+        <View style={styles.categoryIconContainer}>
+          <Text style={styles.categoryEmoji}>{category.emoji}</Text>
+        </View>
+        <View style={styles.categoryInfo}>
+          <Text style={styles.categoryName}>{category.category}</Text>
+          <Text style={styles.categoryCount}>{category.count} transactions</Text>
+        </View>
+      </View>
+      <View style={styles.categoryBottom}>
+        <Text style={[styles.categoryAmount, { color: category.color }]}>
+          {currencySymbol}{category.total.toFixed(2)}
+        </Text>
+        <View style={styles.percentageBar}>
+          <View style={[styles.percentageFill, { width: `${category.percentage}%`, backgroundColor: category.color }]} />
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -251,11 +291,66 @@ export default function BalancesScreen() {
     return { name: user?.name || 'Unknown', count: sorted[0][1] };
   }, [tasks, users]);
 
+  const categoryBreakdown = useMemo((): CategoryBreakdown[] => {
+    const categoriesMap: Record<TaskCategory, { total: number; count: number }> = {
+      Household: { total: 0, count: 0 },
+      Finance: { total: 0, count: 0 },
+      Work: { total: 0, count: 0 },
+      Leisure: { total: 0, count: 0 },
+    };
+
+    currentMonthEntries.forEach((entry) => {
+      const task = tasks.find((t) => t.id === entry.taskId);
+      if (task) {
+        categoriesMap[task.category].total += entry.amount;
+        categoriesMap[task.category].count += 1;
+      }
+    });
+
+    const breakdown: CategoryBreakdown[] = Object.entries(categoriesMap)
+      .filter(([_, data]) => data.total > 0)
+      .map(([category, data]) => {
+        const categoryMeta = currentList?.categories[category as TaskCategory];
+        return {
+          category: category as TaskCategory,
+          emoji: categoryMeta?.emoji || '📋',
+          color: categoryMeta?.color || '#6B7280',
+          total: data.total,
+          count: data.count,
+          percentage: totalExpenses > 0 ? (data.total / totalExpenses) * 100 : 0,
+        };
+      })
+      .sort((a, b) => b.total - a.total);
+
+    return breakdown;
+  }, [currentMonthEntries, tasks, currentList, totalExpenses]);
+
   const handleTabPress = (tab: TabType) => {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     setActiveTab(tab);
+  };
+
+  const handleMemberPress = (memberId: string) => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    console.log('[Balance] View member details:', memberId);
+  };
+
+  const handleTransactionPress = (taskId: string) => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    router.push(`/task-detail?id=${taskId}`);
+  };
+
+  const handleCategoryPress = (category: string) => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    console.log('[Balance] View category:', category);
   };
 
   const monthName = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
@@ -341,11 +436,7 @@ export default function BalancesScreen() {
                     key={mb.user.id}
                     memberBalance={mb}
                     currencySymbol={currencySymbol}
-                    onPress={() => {
-                      if (Platform.OS !== 'web') {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      }
-                    }}
+                    onPress={() => handleMemberPress(mb.user.id)}
                   />
                 ))
               ) : (
@@ -380,11 +471,7 @@ export default function BalancesScreen() {
                         categoryEmoji={categoryEmoji}
                         payerName={payerName}
                         currencySymbol={currencySymbol}
-                        onPress={() => {
-                          if (Platform.OS !== 'web') {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                          }
-                        }}
+                        onPress={() => handleTransactionPress(entry.taskId)}
                       />
                     );
                   })}
@@ -405,15 +492,51 @@ export default function BalancesScreen() {
         {activeTab === 'stats' && (
           <>
             <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Category Breakdown</Text>
+              {categoryBreakdown.length > 0 ? (
+                categoryBreakdown.map((cat) => (
+                  <CategoryCard
+                    key={cat.category}
+                    category={cat}
+                    currencySymbol={currencySymbol}
+                    onPress={() => handleCategoryPress(cat.category)}
+                  />
+                ))
+              ) : (
+                <View style={styles.emptyState}>
+                  <BarChart3 size={48} color="#D1D5DB" />
+                  <Text style={styles.emptyText}>No category data yet</Text>
+                  <Text style={styles.emptySubtext}>
+                    Complete tasks to see category breakdown
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.section}>
               <Text style={styles.sectionTitle}>Monthly Overview</Text>
-              <View style={styles.chartPlaceholder}>
-                <BarChart3 size={48} color="#3B82F6" />
-                <Text style={styles.chartPlaceholderText}>
-                  Total expenses this month
-                </Text>
-                <Text style={styles.chartPlaceholderValue}>
-                  {currencySymbol}{totalExpenses.toFixed(2)}
-                </Text>
+              <View style={styles.overviewGrid}>
+                <View style={styles.overviewCard}>
+                  <View style={styles.overviewIconContainer}>
+                    <DollarSign size={20} color="#3B82F6" />
+                  </View>
+                  <Text style={styles.overviewLabel}>Total</Text>
+                  <Text style={styles.overviewValue}>
+                    {currencySymbol}{totalExpenses.toFixed(2)}
+                  </Text>
+                </View>
+                <View style={styles.overviewCard}>
+                  <View style={styles.overviewIconContainer}>
+                    <Activity size={20} color="#10B981" />
+                  </View>
+                  <Text style={styles.overviewLabel}>Avg/Transaction</Text>
+                  <Text style={styles.overviewValue}>
+                    {currencySymbol}
+                    {currentMonthEntries.length > 0
+                      ? (totalExpenses / currentMonthEntries.length).toFixed(2)
+                      : '0.00'}
+                  </Text>
+                </View>
               </View>
             </View>
 
@@ -453,12 +576,9 @@ export default function BalancesScreen() {
                   <Calendar size={20} color="#3B82F6" />
                 </View>
                 <View style={styles.insightContent}>
-                  <Text style={styles.insightLabel}>Average per Transaction</Text>
+                  <Text style={styles.insightLabel}>Total Transactions</Text>
                   <Text style={styles.insightValue}>
-                    {currencySymbol}
-                    {currentMonthEntries.length > 0
-                      ? (totalExpenses / currentMonthEntries.length).toFixed(2)
-                      : '0.00'}
+                    {currentMonthEntries.length} this month
                   </Text>
                 </View>
               </View>
@@ -814,5 +934,101 @@ const styles = StyleSheet.create({
     color: '#D1D5DB',
     marginTop: 8,
     textAlign: 'center',
+  },
+  categoryCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  categoryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  categoryIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#F9FAFB',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  categoryEmoji: {
+    fontSize: 22,
+  },
+  categoryInfo: {
+    flex: 1,
+  },
+  categoryName: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: '#111827',
+    marginBottom: 2,
+  },
+  categoryCount: {
+    fontSize: 13,
+    color: '#6B7280',
+  },
+  categoryBottom: {
+    gap: 8,
+  },
+  categoryAmount: {
+    fontSize: 24,
+    fontWeight: '700' as const,
+  },
+  percentageBar: {
+    height: 6,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  percentageFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  overviewGrid: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  overviewCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  overviewIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F9FAFB',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  overviewLabel: {
+    fontSize: 12,
+    fontWeight: '500' as const,
+    color: '#6B7280',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  overviewValue: {
+    fontSize: 18,
+    fontWeight: '700' as const,
+    color: '#111827',
   },
 });
