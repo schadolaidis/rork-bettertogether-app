@@ -458,9 +458,6 @@ export default function DashboardScreen() {
             categoryColors={categoryColors}
             onViewChange={setCalendarViewType}
             onDateSelect={setCalendarSelectedDate}
-            onTaskPress={() => {
-              handleCloseCalendar();
-            }}
           />
         </View>
       </Modal>

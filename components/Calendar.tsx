@@ -9,6 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { ChevronLeft, ChevronRight, X, CheckCircle2, Clock } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { CalendarService, DayMarkers } from '@/services/CalendarService';
 import { Task, TaskCategory } from '@/types';
@@ -21,7 +22,6 @@ interface CalendarProps {
   categoryColors: Record<TaskCategory, string>;
   onViewChange: (view: CalendarViewType) => void;
   onDateSelect: (date: Date) => void;
-  onTaskPress?: (task: Task) => void;
 }
 
 interface DayAgendaProps {
@@ -30,7 +30,6 @@ interface DayAgendaProps {
   categoryColors: Record<TaskCategory, string>;
   categoryEmojis: Record<TaskCategory, string>;
   onClose: () => void;
-  onTaskPress?: (task: Task) => void;
 }
 
 function DayAgenda({
@@ -39,11 +38,11 @@ function DayAgenda({
   categoryColors,
   categoryEmojis,
   onClose,
-  onTaskPress,
 }: DayAgendaProps) {
+  const router = useRouter();
   const sortedTasks = useMemo(() => {
     return [...tasks].sort((a, b) => {
-      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+      return new Date(a.endAt).getTime() - new Date(b.endAt).getTime();
     });
   }, [tasks]);
 
@@ -87,7 +86,7 @@ function DayAgenda({
               const categoryColor = categoryColors[task.category] || '#6B7280';
               const categoryEmoji = categoryEmojis[task.category] || '📋';
               const statusColor = getStatusColor(task.status);
-              const time = new Date(task.dueDate).toLocaleTimeString('en-US', {
+              const time = new Date(task.endAt).toLocaleTimeString('en-US', {
                 hour: 'numeric',
                 minute: '2-digit',
               });
@@ -100,7 +99,8 @@ function DayAgenda({
                     if (Platform.OS !== 'web') {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     }
-                    onTaskPress?.(task);
+                    onClose();
+                    router.push(`/task-detail?id=${task.id}`);
                   }}
                   activeOpacity={0.7}
                 >
@@ -145,8 +145,8 @@ export function Calendar({
   categoryColors,
   onViewChange,
   onDateSelect,
-  onTaskPress,
 }: CalendarProps) {
+  const router = useRouter();
   const [currentMonth, setCurrentMonth] = useState(() => ({
     year: selectedDate.getFullYear(),
     month: selectedDate.getMonth(),
@@ -410,7 +410,7 @@ export function Calendar({
             const categoryColor = categoryColors[task.category] || '#6B7280';
             const categoryEmoji = categoryEmojis[task.category] || '📋';
             const statusColor = getStatusColor(task.status);
-            const time = new Date(task.dueDate).toLocaleTimeString('en-US', {
+            const time = new Date(task.endAt).toLocaleTimeString('en-US', {
               hour: 'numeric',
               minute: '2-digit',
             });
@@ -423,7 +423,7 @@ export function Calendar({
                   if (Platform.OS !== 'web') {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   }
-                  onTaskPress?.(task);
+                  router.push(`/task-detail?id=${task.id}`);
                 }}
                 activeOpacity={0.7}
               >
@@ -531,7 +531,6 @@ export function Calendar({
           categoryColors={categoryColors}
           categoryEmojis={categoryEmojis}
           onClose={() => setShowAgenda(false)}
-          onTaskPress={onTaskPress}
         />
       )}
     </ScrollView>
