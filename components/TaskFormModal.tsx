@@ -319,9 +319,11 @@ export function TaskFormModal({
     }
     
     if (selectedDate) {
+      console.log('[DatePicker] Selected date:', selectedDate);
       const newStart = new Date(selectedDate);
       newStart.setHours(startDate.getHours(), startDate.getMinutes(), 0, 0);
       setStartDate(newStart);
+      setTempStartDate(newStart);
       
       const duration = endDate.getTime() - startDate.getTime();
       if (duration > 0) {
@@ -341,9 +343,11 @@ export function TaskFormModal({
     }
     
     if (selectedDate) {
+      console.log('[TimePicker] Selected time:', selectedDate);
       const newStart = new Date(startDate);
       newStart.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
       setStartDate(newStart);
+      setTempStartDate(newStart);
       
       const newEnd = new Date(newStart);
       newEnd.setHours(newStart.getHours() + 1, newStart.getMinutes(), 0, 0);
@@ -810,11 +814,33 @@ export function TaskFormModal({
           <TouchableOpacity 
             style={styles.iosPickerBackdrop}
             activeOpacity={1}
-            onPress={() => setShowStartDatePicker(false)}
+            onPress={() => {
+              const newStart = new Date(tempStartDate);
+              newStart.setHours(startDate.getHours(), startDate.getMinutes(), 0, 0);
+              setStartDate(newStart);
+              
+              const duration = endDate.getTime() - startDate.getTime();
+              if (duration > 0) {
+                const newEnd = new Date(newStart.getTime() + duration);
+                setEndDate(newEnd);
+              }
+              setShowStartDatePicker(false);
+            }}
           />
           <View style={styles.iosPickerContainer}>
             <View style={styles.iosPickerHeader}>
-              <TouchableOpacity onPress={() => setShowStartDatePicker(false)}>
+              <TouchableOpacity onPress={() => {
+                const newStart = new Date(tempStartDate);
+                newStart.setHours(startDate.getHours(), startDate.getMinutes(), 0, 0);
+                setStartDate(newStart);
+                
+                const duration = endDate.getTime() - startDate.getTime();
+                if (duration > 0) {
+                  const newEnd = new Date(newStart.getTime() + duration);
+                  setEndDate(newEnd);
+                }
+                setShowStartDatePicker(false);
+              }}>
                 <Text style={styles.iosPickerDoneButton}>Fertig</Text>
               </TouchableOpacity>
             </View>
@@ -822,7 +848,12 @@ export function TaskFormModal({
               value={tempStartDate}
               mode="date"
               display="spinner"
-              onChange={handleStartDateChange}
+              onChange={(_event: DateTimePickerEvent, date?: Date) => {
+                if (date) {
+                  console.log('[iOS DatePicker] Selected:', date);
+                  setTempStartDate(date);
+                }
+              }}
               minimumDate={mode === 'create' ? new Date() : undefined}
               style={styles.iosPicker}
             />
@@ -845,11 +876,29 @@ export function TaskFormModal({
           <TouchableOpacity 
             style={styles.iosPickerBackdrop}
             activeOpacity={1}
-            onPress={() => setShowStartTimePicker(false)}
+            onPress={() => {
+              const newStart = new Date(startDate);
+              newStart.setHours(tempStartDate.getHours(), tempStartDate.getMinutes(), 0, 0);
+              setStartDate(newStart);
+              
+              const newEnd = new Date(newStart);
+              newEnd.setHours(newStart.getHours() + 1, newStart.getMinutes(), 0, 0);
+              setEndDate(newEnd);
+              setShowStartTimePicker(false);
+            }}
           />
           <View style={styles.iosPickerContainer}>
             <View style={styles.iosPickerHeader}>
-              <TouchableOpacity onPress={() => setShowStartTimePicker(false)}>
+              <TouchableOpacity onPress={() => {
+                const newStart = new Date(startDate);
+                newStart.setHours(tempStartDate.getHours(), tempStartDate.getMinutes(), 0, 0);
+                setStartDate(newStart);
+                
+                const newEnd = new Date(newStart);
+                newEnd.setHours(newStart.getHours() + 1, newStart.getMinutes(), 0, 0);
+                setEndDate(newEnd);
+                setShowStartTimePicker(false);
+              }}>
                 <Text style={styles.iosPickerDoneButton}>Fertig</Text>
               </TouchableOpacity>
             </View>
@@ -857,7 +906,12 @@ export function TaskFormModal({
               value={tempStartDate}
               mode="time"
               display="spinner"
-              onChange={handleStartTimeChange}
+              onChange={(_event: DateTimePickerEvent, date?: Date) => {
+                if (date) {
+                  console.log('[iOS TimePicker] Selected:', date);
+                  setTempStartDate(date);
+                }
+              }}
               is24Hour={true}
               style={styles.iosPicker}
             />

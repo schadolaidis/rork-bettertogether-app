@@ -195,10 +195,14 @@ export default function TaskDetailScreen() {
   const [showDateTimePicker, setShowDateTimePicker] = useState(false);
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
-  const [editingDateTime, setEditingDateTime] = useState<{ startDate: Date; endDate: Date; allDay: boolean }>({
-    startDate: new Date(),
-    endDate: new Date(),
-    allDay: false,
+  const [editingDateTime, setEditingDateTime] = useState<{ startDate: Date; endDate: Date; allDay: boolean }>(() => {
+    const now = new Date();
+    const later = new Date(now.getTime() + 3600000);
+    return {
+      startDate: now,
+      endDate: later,
+      allDay: false,
+    };
   });
 
   const formatDate = useCallback((date: Date) => {
@@ -811,32 +815,38 @@ function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onS
   };
 
   const handleStartDateChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
-    if (Platform.OS === 'android' && selectedDate) {
-      const newStart = new Date(selectedDate);
-      newStart.setHours(start.getHours(), start.getMinutes(), 0, 0);
-      setStart(newStart);
-      
-      const duration = end.getTime() - start.getTime();
-      if (duration > 0) {
-        const newEnd = new Date(newStart.getTime() + duration);
-        setEnd(newEnd);
+    if (Platform.OS === 'android') {
+      setShowPickerType(null);
+      if (selectedDate) {
+        const newStart = new Date(selectedDate);
+        newStart.setHours(start.getHours(), start.getMinutes(), 0, 0);
+        setStart(newStart);
+        
+        const duration = end.getTime() - start.getTime();
+        if (duration > 0) {
+          const newEnd = new Date(newStart.getTime() + duration);
+          setEnd(newEnd);
+        }
+        
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
-      
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
   };
 
   const handleStartTimeChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
-    if (Platform.OS === 'android' && selectedDate) {
-      const newStart = new Date(start);
-      newStart.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
-      setStart(newStart);
-      
-      const newEnd = new Date(newStart);
-      newEnd.setHours(newStart.getHours() + 1, newStart.getMinutes(), 0, 0);
-      setEnd(newEnd);
-      
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS === 'android') {
+      setShowPickerType(null);
+      if (selectedDate) {
+        const newStart = new Date(start);
+        newStart.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
+        setStart(newStart);
+        
+        const newEnd = new Date(newStart);
+        newEnd.setHours(newStart.getHours() + 1, newStart.getMinutes(), 0, 0);
+        setEnd(newEnd);
+        
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
     }
   };
 
@@ -1016,7 +1026,6 @@ function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onS
           mode="date"
           display="default"
           onChange={handleStartDateChange}
-          minimumDate={new Date()}
         />
       )}
 
