@@ -196,20 +196,39 @@ export default function TaskDetailScreen() {
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [editingDateTime, setEditingDateTime] = useState<{ startDate: Date; endDate: Date; allDay: boolean }>(() => {
-    const now = new Date();
-    const later = new Date(now.getTime() + 3600000);
+    if (!task) {
+      const now = new Date();
+      const later = new Date(now.getTime() + 3600000);
+      return {
+        startDate: now,
+        endDate: later,
+        allDay: false,
+      };
+    }
+    
+    const startDate = new Date(task.startAt);
+    const endDate = new Date(task.endAt);
+    
     return {
-      startDate: now,
-      endDate: later,
-      allDay: false,
+      startDate: isNaN(startDate.getTime()) ? new Date() : startDate,
+      endDate: isNaN(endDate.getTime()) ? new Date(Date.now() + 3600000) : endDate,
+      allDay: task.allDay || false,
     };
   });
 
   const formatDate = useCallback((date: Date) => {
+    if (!date || isNaN(date.getTime())) {
+      console.warn('[TaskDetail] Invalid date in formatDate:', date);
+      return 'Invalid Date';
+    }
     return EUDateFormatter.formatDate(date, 'long');
   }, []);
 
   const formatTime = useCallback((date: Date) => {
+    if (!date || isNaN(date.getTime())) {
+      console.warn('[TaskDetail] Invalid date in formatTime:', date);
+      return 'Invalid Time';
+    }
     return EUDateFormatter.formatTime(date);
   }, []);
 
@@ -294,6 +313,13 @@ export default function TaskDetailScreen() {
 
   const startDate = new Date(task.startAt);
   const endDate = new Date(task.endAt);
+  
+  if (isNaN(startDate.getTime())) {
+    console.error('[TaskDetail] Invalid startAt:', task.startAt);
+  }
+  if (isNaN(endDate.getTime())) {
+    console.error('[TaskDetail] Invalid endAt:', task.endAt);
+  }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
