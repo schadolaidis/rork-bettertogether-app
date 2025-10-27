@@ -649,20 +649,20 @@ const styles = StyleSheet.create({
   },
   filterScrollContent: {
     paddingHorizontal: 20,
-    gap: 8,
-    paddingVertical: 8,
+    gap: 6,
+    paddingVertical: 4,
   },
   filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 16,
     backgroundColor: '#F9FAFB',
   },
   filterChipActive: {
     backgroundColor: '#3B82F6',
   },
   filterChipText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600' as const,
     color: '#6B7280',
   },
