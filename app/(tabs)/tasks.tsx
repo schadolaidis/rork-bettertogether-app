@@ -396,23 +396,22 @@ export default function TasksScreen() {
       )}
 
       {filter !== 'all' && (
-        <View style={styles.filterPillBar}>
-          <View style={styles.filterPill}>
-            <Text style={styles.filterPillText}>
+        <View style={styles.activeFiltersBar}>
+          <View style={styles.activeFilterPill}>
+            <Text style={styles.activeFilterText}>
               {filters.find(f => f.value === filter)?.label}
             </Text>
             <TouchableOpacity
               onPress={clearFilters}
-              style={styles.filterPillClose}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <X size={14} color="#3B82F6" />
+              <X size={16} color="#3B82F6" strokeWidth={2} />
             </TouchableOpacity>
           </View>
           <TouchableOpacity
-            style={styles.clearAllButton}
             onPress={clearFilters}
           >
-            <Text style={styles.clearAllText}>Clear Filters</Text>
+            <Text style={styles.clearFiltersText}>Clear Filters</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -707,46 +706,32 @@ const styles = StyleSheet.create({
     fontWeight: '600' as const,
     color: '#3B82F6',
   },
-  filterPillBar: {
+  activeFiltersBar: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 12,
-    backgroundColor: '#EFF6FF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#DBEAFE',
-    gap: 12,
+    paddingVertical: 10,
+    backgroundColor: '#F9FAFB',
+    gap: 16,
   },
-  filterPill: {
+  activeFilterPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
+    borderRadius: 24,
+    borderWidth: 1.5,
     borderColor: '#3B82F6',
-    gap: 6,
+    gap: 10,
   },
-  filterPillText: {
-    fontSize: 13,
+  activeFilterText: {
+    fontSize: 15,
     fontWeight: '600' as const,
     color: '#3B82F6',
   },
-  filterPillClose: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: '#EFF6FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  clearAllButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  clearAllText: {
-    fontSize: 13,
+  clearFiltersText: {
+    fontSize: 15,
     fontWeight: '600' as const,
     color: '#3B82F6',
   },
