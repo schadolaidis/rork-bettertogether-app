@@ -22,6 +22,7 @@ import {
   Palette,
   Settings as SettingsIcon,
   LogOut,
+  Languages,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useApp } from '@/contexts/AppContext';
@@ -75,6 +76,9 @@ export default function SettingsScreen() {
     switchList,
     generateInviteLink,
     currentUserRole,
+    language,
+    t,
+    changeLanguage,
   } = useApp();
   const [copiedListId, setCopiedListId] = useState<string | null>(null);
 
@@ -83,7 +87,7 @@ export default function SettingsScreen() {
 
     const inviteLink = generateInviteLink(currentList.id);
     if (!inviteLink) {
-      Alert.alert('Error', 'Failed to generate invite link');
+      Alert.alert(t.alerts.error, t.alerts.failedToGenerate);
       return;
     }
 
@@ -91,12 +95,12 @@ export default function SettingsScreen() {
       await navigator.clipboard.writeText(inviteLink);
       setCopiedListId(currentList.id);
       setTimeout(() => setCopiedListId(null), 2000);
-      Alert.alert('Success', 'Invite link copied to clipboard!');
+      Alert.alert(t.alerts.success, t.alerts.inviteLinkCopied);
     } else {
       try {
         await Share.share({
-          message: `Join our list "${currentList.name}" on BetterTogether!\n\n${inviteLink}`,
-          title: 'Join BetterTogether',
+          message: `${t.teams.manageMembersDescription}\n\n${inviteLink}`,
+          title: currentList.name,
         });
       } catch (error) {
         console.error('Share error:', error);
@@ -111,13 +115,13 @@ export default function SettingsScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
     switchList(listId);
-    Alert.alert('Success', 'Switched list successfully!');
+    Alert.alert(t.alerts.success, t.alerts.listSwitched);
   };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <Text style={styles.title}>Settings</Text>
+        <Text style={styles.title}>{t.settings.title}</Text>
       </View>
 
       <ScrollView
@@ -141,21 +145,21 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Current List</Text>
+          <Text style={styles.sectionTitle}>{t.settings.currentList}</Text>
           <View style={styles.settingsList}>
             <SettingItem
               icon={<ListIcon size={20} color="#3B82F6" />}
-              title={currentList?.name || 'No list selected'}
-              subtitle={`${currentListMembers.length} members • ${currentList?.currencySymbol || '$'} ${currentList?.currency || 'USD'}`}
-              onPress={() => Alert.alert('List Settings', 'Tap again to edit', [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Edit', onPress: () => router.push('./list-settings' as any) },
+              title={currentList?.name || t.teams.noListSelected}
+              subtitle={`${currentListMembers.length} ${currentListMembers.length === 1 ? t.common.member : t.common.members} • ${currentList?.currencySymbol || '$'} ${currentList?.currency || 'USD'}`}
+              onPress={() => Alert.alert(t.listSettings.title, 'Tap again to edit', [
+                { text: t.common.cancel, style: 'cancel' },
+                { text: t.common.edit, onPress: () => router.push('./list-settings' as any) },
               ])}
             />
             <SettingItem
               icon={<Share2 size={20} color="#10B981" />}
-              title="Generate Invite Link"
-              subtitle="Share with others to join"
+              title={t.settings.generateInviteLink}
+              subtitle={t.settings.shareWithOthers}
               onPress={handleGenerateInvite}
               showChevron={false}
               rightContent={
@@ -168,7 +172,7 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>All Lists</Text>
+          <Text style={styles.sectionTitle}>{t.settings.allLists}</Text>
           <View style={styles.settingsList}>
             {lists.filter(l => !l.archived).map((list) => {
               const isActive = list.id === currentList?.id;
@@ -178,18 +182,18 @@ export default function SettingsScreen() {
                   key={list.id}
                   icon={<ListIcon size={20} color={isActive ? '#3B82F6' : '#6B7280'} />}
                   title={list.name}
-                  subtitle={`${members} member${members !== 1 ? 's' : ''}`}
+                  subtitle={`${members} ${members === 1 ? t.common.member : t.common.members}`}
                   onPress={() => {
                     if (isActive) {
                       router.push('./list-settings' as any);
                     } else {
                       Alert.alert(
                         list.name,
-                        'What would you like to do?',
+                        t.settings.whatToDo,
                         [
-                          { text: 'Cancel', style: 'cancel' },
-                          { text: 'Switch to this list', onPress: () => handleSwitchList(list.id) },
-                          { text: 'View settings', onPress: () => {
+                          { text: t.common.cancel, style: 'cancel' },
+                          { text: t.settings.switchToList, onPress: () => handleSwitchList(list.id) },
+                          { text: t.settings.viewSettings, onPress: () => {
                             switchList(list.id);
                             router.push('./list-settings' as any);
                           }},
@@ -200,7 +204,7 @@ export default function SettingsScreen() {
                   rightContent={
                     isActive ? (
                       <View style={styles.activeBadge}>
-                        <Text style={styles.activeBadgeText}>Active</Text>
+                        <Text style={styles.activeBadgeText}>{t.settings.active}</Text>
                       </View>
                     ) : (
                       <ChevronRight size={20} color="#9CA3AF" />
@@ -213,18 +217,18 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Manage</Text>
+          <Text style={styles.sectionTitle}>{t.settings.manage}</Text>
           <View style={styles.settingsList}>
             <SettingItem
               icon={<Palette size={20} color="#8B5CF6" />}
-              title="Categories"
-              subtitle="Manage task categories"
+              title={t.settings.categories}
+              subtitle={t.settings.manageCategories}
               onPress={() => {
                 if (currentUserRole !== 'Owner' && !currentList?.allowMemberCategoryManage) {
                   Alert.alert(
-                    'Permission Required',
-                    'Only the list owner can manage categories. Ask the owner to enable member category management in List Settings.',
-                    [{ text: 'OK' }]
+                    t.settings.permissionRequired,
+                    t.settings.ownerOnly,
+                    [{ text: t.common.ok }]
                   );
                 } else {
                   router.push('/(tabs)/settings/categories');
@@ -233,52 +237,74 @@ export default function SettingsScreen() {
             />
             <SettingItem
               icon={<Users size={20} color="#F59E0B" />}
-              title="Team Members"
-              subtitle={`${currentListMembers.length} members`}
+              title={t.settings.teamMembers}
+              subtitle={`${currentListMembers.length} ${currentListMembers.length === 1 ? t.common.member : t.common.members}`}
               onPress={() => router.push('/(tabs)/settings/teams')}
             />
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account</Text>
+          <Text style={styles.sectionTitle}>{t.settings.account}</Text>
           <View style={styles.settingsList}>
             <SettingItem
               icon={<User size={20} color="#3B82F6" />}
-              title="Profile"
-              subtitle="Update your name and settings"
+              title={t.settings.profile}
+              subtitle={t.settings.updateProfile}
               onPress={() => router.push('./profile' as any)}
             />
             <SettingItem
               icon={<Bell size={20} color="#F59E0B" />}
-              title="Notifications"
-              subtitle="Manage push notifications"
+              title={t.settings.notifications}
+              subtitle={t.settings.manageNotifications}
               onPress={() => {
-                Alert.alert('Coming Soon', 'Notification settings will be available soon!');
+                Alert.alert(t.alerts.comingSoon, t.alerts.featureComingSoon);
               }}
             />
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About</Text>
+          <Text style={styles.sectionTitle}>{t.settings.about}</Text>
           <View style={styles.settingsList}>
             <SettingItem
-              icon={<SettingsIcon size={20} color="#6B7280" />}
-              title="App Settings"
-              subtitle="Theme and preferences"
+              icon={<Languages size={20} color="#10B981" />}
+              title={t.settings.language}
+              subtitle={language === 'en' ? t.settings.english : t.settings.german}
               onPress={() => {
-                Alert.alert('Coming Soon', 'App settings will be available soon!');
+                Alert.alert(
+                  t.settings.language,
+                  t.settings.changeLanguage,
+                  [
+                    { text: t.common.cancel, style: 'cancel' },
+                    {
+                      text: t.settings.english,
+                      onPress: () => changeLanguage('en'),
+                    },
+                    {
+                      text: t.settings.german,
+                      onPress: () => changeLanguage('de'),
+                    },
+                  ]
+                );
+              }}
+            />
+            <SettingItem
+              icon={<SettingsIcon size={20} color="#6B7280" />}
+              title={t.settings.appSettings}
+              subtitle={t.settings.themeAndPreferences}
+              onPress={() => {
+                Alert.alert(t.alerts.comingSoon, t.alerts.featureComingSoon);
               }}
             />
             <SettingItem
               icon={<LogOut size={20} color="#EF4444" />}
-              title="Sign Out"
-              subtitle="Log out of your account"
+              title={t.settings.signOut}
+              subtitle={t.settings.logOut}
               onPress={() => {
-                Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-                  { text: 'Cancel', style: 'cancel' },
-                  { text: 'Sign Out', style: 'destructive' },
+                Alert.alert(t.settings.signOut, t.alerts.areYouSure, [
+                  { text: t.common.cancel, style: 'cancel' },
+                  { text: t.settings.signOut, style: 'destructive' },
                 ]);
               }}
               showChevron={false}
@@ -287,8 +313,8 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>BetterTogether v1.0.0</Text>
-          <Text style={styles.footerSubtext}>Made with ❤️ for better collaboration</Text>
+          <Text style={styles.footerText}>{t.settings.version}</Text>
+          <Text style={styles.footerSubtext}>{t.settings.madeWithLove}</Text>
         </View>
       </ScrollView>
     </View>

@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Task, LedgerEntry, User, DashboardStats, List, UndoAction, TaskCategory, CategoryMeta, ListMember, MemberRole } from '@/types';
+import { Language, getTranslations, Translations } from '@/constants/translations';
 import { MOCK_TASKS, MOCK_USERS, MOCK_LISTS, MOCK_LEDGER_ENTRIES } from '@/mocks/data';
 import { ClockService } from '@/services/ClockService';
 import { LedgerService } from '@/services/LedgerService';
@@ -24,6 +25,7 @@ const STORAGE_KEYS = {
   CALENDAR_VIEW: '@bettertogether/calendar_view',
   CALENDAR_SELECTED_DATE: '@bettertogether/calendar_selected_date',
   MEMBERSHIPS: '@bettertogether/memberships',
+  LANGUAGE: '@bettertogether/language',
 };
 
 export const [AppProvider, useApp] = createContextHook(() => {
@@ -36,6 +38,8 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const [undoAction, setUndoAction] = useState<UndoAction | null>(null);
   const [calendarView, setCalendarView] = useState<CalendarViewType>('month');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [language, setLanguage] = useState<Language>('en');
+  const [t, setT] = useState<Translations>(getTranslations('en'));
 
   const tasksQuery = useQuery({
     queryKey: ['tasks'],
@@ -101,6 +105,14 @@ export const [AppProvider, useApp] = createContextHook(() => {
     },
   });
 
+  const languageQuery = useQuery({
+    queryKey: ['language'],
+    queryFn: async () => {
+      const stored = await AsyncStorage.getItem(STORAGE_KEYS.LANGUAGE);
+      return (stored as Language) || 'en';
+    },
+  });
+
   useEffect(() => {
     if (tasksQuery.data) {
       setTasks(tasksQuery.data);
@@ -149,6 +161,13 @@ export const [AppProvider, useApp] = createContextHook(() => {
     }
   }, [calendarDateQuery.data]);
 
+  useEffect(() => {
+    if (languageQuery.data) {
+      setLanguage(languageQuery.data);
+      setT(getTranslations(languageQuery.data));
+    }
+  }, [languageQuery.data]);
+
   const { mutate: mutateTasks } = useMutation({
     mutationFn: async (newTasks: Task[]) => {
       await AsyncStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(newTasks));
@@ -188,6 +207,13 @@ export const [AppProvider, useApp] = createContextHook(() => {
     mutationFn: async (date: Date) => {
       await AsyncStorage.setItem(STORAGE_KEYS.CALENDAR_SELECTED_DATE, date.toISOString());
       return date;
+    },
+  });
+
+  const { mutate: mutateLanguage } = useMutation({
+    mutationFn: async (lang: Language) => {
+      await AsyncStorage.setItem(STORAGE_KEYS.LANGUAGE, lang);
+      return lang;
     },
   });
 
@@ -539,6 +565,16 @@ export const [AppProvider, useApp] = createContextHook(() => {
     [mutateCalendarDate]
   );
 
+  const changeLanguage = useCallback(
+    (lang: Language) => {
+      setLanguage(lang);
+      setT(getTranslations(lang));
+      mutateLanguage(lang);
+      console.log(`[Language] Changed to: ${lang}`);
+    },
+    [mutateLanguage]
+  );
+
   const updateListSettings = useCallback(
     (listId: string, payload: ListSettingsPayload) => {
       const list = lists.find((l) => l.id === listId);
@@ -752,6 +788,9 @@ export const [AppProvider, useApp] = createContextHook(() => {
       updateUserProfile,
       currentUserRole,
       canManageCategories,
+      language,
+      t,
+      changeLanguage,
       isLoading: tasksQuery.isLoading || ledgerQuery.isLoading,
     }),
     [
@@ -792,6 +831,9 @@ export const [AppProvider, useApp] = createContextHook(() => {
       updateUserProfile,
       currentUserRole,
       canManageCategories,
+      language,
+      t,
+      changeLanguage,
       tasksQuery.isLoading,
       ledgerQuery.isLoading,
     ]
