@@ -1,11 +1,9 @@
-import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
   View,
   ScrollView,
-  Animated,
-  PanResponder,
   TouchableOpacity,
   Platform,
   Pressable,
@@ -20,7 +18,7 @@ import { TaskFormModal, TaskFormData, FundTargetOption } from '@/components/Task
 import { QuickAddModal, QuickTaskData } from '@/components/QuickAddModal';
 import { MOCK_FUND_TARGETS } from '@/mocks/data';
 
-interface SwipeableTaskProps {
+interface TaskCardProps {
   task: Task;
   userName: string | string[];
   categoryColor: string;
@@ -30,7 +28,7 @@ interface SwipeableTaskProps {
   onPress: () => void;
 }
 
-function SwipeableTask({
+function TaskCard({
   task,
   userName,
   categoryColor,
@@ -38,64 +36,9 @@ function SwipeableTask({
   onComplete,
   onFail,
   onPress,
-}: SwipeableTaskProps) {
-  const pan = useRef(new Animated.Value(0)).current;
-
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () =>
-        task.status === 'pending' || task.status === 'overdue',
-      onMoveShouldSetPanResponder: (_, gestureState) => {
-        return Math.abs(gestureState.dx) > 5;
-      },
-      onPanResponderGrant: () => {
-        if (Platform.OS !== 'web') {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        }
-      },
-      onPanResponderMove: (_, gestureState) => {
-        pan.setValue(gestureState.dx);
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        const threshold = 120;
-
-        if (gestureState.dx > threshold) {
-          Animated.timing(pan, {
-            toValue: 500,
-            duration: 200,
-            useNativeDriver: true,
-          }).start(() => {
-            if (Platform.OS !== 'web') {
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            }
-            onComplete();
-            pan.setValue(0);
-          });
-        } else if (gestureState.dx < -threshold) {
-          Animated.timing(pan, {
-            toValue: -500,
-            duration: 200,
-            useNativeDriver: true,
-          }).start(() => {
-            if (Platform.OS !== 'web') {
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-            }
-            onFail();
-            pan.setValue(0);
-          });
-        } else {
-          Animated.spring(pan, {
-            toValue: 0,
-            useNativeDriver: true,
-            tension: 100,
-            friction: 8,
-          }).start();
-        }
-      },
-    })
-  ).current;
-
+}: TaskCardProps) {
   const isDisabled = task.status === 'completed' || task.status === 'failed';
+  const isActionable = task.status === 'pending' || task.status === 'overdue';
   const statusColor = useMemo(() => {
     switch (task.status) {
       case 'completed':
@@ -128,7 +71,7 @@ function SwipeableTask({
     dateText = dueDate.toLocaleDateString();
   }
 
-  const getStaticBackgroundColor = () => {
+  const backgroundColor = useMemo(() => {
     switch (task.status) {
       case 'completed':
         return '#F0FDF4';
@@ -137,42 +80,11 @@ function SwipeableTask({
       default:
         return '#FFFFFF';
     }
-  };
-
-  const backgroundColor = isDisabled
-    ? getStaticBackgroundColor()
-    : pan.interpolate({
-        inputRange: [-200, -120, 0, 120, 200],
-        outputRange: ['#FEE2E2', '#FEE2E2', '#FFFFFF', '#D1FAE5', '#D1FAE5'],
-        extrapolate: 'clamp',
-      });
+  }, [task.status]);
 
   return (
-    <View style={styles.taskWrapper}>
-      {!isDisabled && (
-        <View style={styles.swipeActions}>
-          <View style={[styles.swipeActionLeft, { backgroundColor: '#D1FAE5' }]}>
-            <CheckCircle2 size={28} color="#10B981" />
-            <Text style={[styles.swipeActionText, { color: '#10B981' }]}>Complete</Text>
-          </View>
-          <View style={[styles.swipeActionRight, { backgroundColor: '#FEE2E2' }]}>
-            <XCircle size={28} color="#EF4444" />
-            <Text style={[styles.swipeActionText, { color: '#EF4444' }]}>Failed</Text>
-          </View>
-        </View>
-      )}
-      <Animated.View
-        style={[
-          styles.taskCard,
-          {
-            transform: [{ translateX: pan }],
-            backgroundColor,
-            opacity: isDisabled ? 0.6 : 1,
-          },
-        ]}
-        {...(isDisabled ? {} : panResponder.panHandlers)}
-      >
-        <Pressable onPress={onPress} style={styles.taskCardPressable}>
+    <View style={[styles.taskCard, { backgroundColor, opacity: isDisabled ? 0.6 : 1 }]}>
+      <Pressable onPress={onPress} style={styles.taskCardPressable}>
           <View style={[styles.categoryIndicator, { backgroundColor: categoryColor }]} />
           <View style={styles.taskCardContent}>
             <View style={styles.taskHeader}>
@@ -214,8 +126,35 @@ function SwipeableTask({
             </View>
           </View>
         </Pressable>
-      </Animated.View>
-    </View>
+        {isActionable && (
+          <View style={styles.quickActions}>
+            <TouchableOpacity
+              style={styles.quickActionButton}
+              onPress={(e) => {
+                e.stopPropagation();
+                if (Platform.OS !== 'web') {
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                }
+                onComplete();
+              }}
+            >
+              <CheckCircle2 size={20} color="#10B981" strokeWidth={2.5} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.quickActionButton}
+              onPress={(e) => {
+                e.stopPropagation();
+                if (Platform.OS !== 'web') {
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                }
+                onFail();
+              }}
+            >
+              <XCircle size={20} color="#EF4444" strokeWidth={2.5} />
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
   );
 }
 
@@ -542,7 +481,7 @@ export default function TasksScreen() {
             {filteredTasks.map((task) => {
               const categoryMeta = currentList?.categories[task.category];
               return (
-                <SwipeableTask
+                <TaskCard
                   key={task.id}
                   task={task}
                   userName={Array.isArray(task.assignedTo) ? task.assignedTo : task.assignedTo}
@@ -817,53 +756,23 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   taskList: {
-    gap: 16,
-  },
-  taskWrapper: {
-    height: 140,
-    position: 'relative',
-  },
-  swipeActions: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    flexDirection: 'row',
-  },
-  swipeActionLeft: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'flex-start',
-    paddingLeft: 24,
-    borderRadius: 16,
-  },
-  swipeActionRight: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'flex-end',
-    paddingRight: 24,
-    borderRadius: 16,
-  },
-  swipeActionText: {
-    fontSize: 14,
-    fontWeight: '600' as const,
-    marginTop: 4,
+    gap: 12,
   },
   taskCard: {
-    height: 140,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+    flexDirection: 'row',
   },
   taskCardPressable: {
     flex: 1,
     flexDirection: 'row',
+    minHeight: 120,
   },
   categoryIndicator: {
     width: 6,
@@ -925,6 +834,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: 2,
+  },
+  quickActions: {
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    gap: 8,
+    borderLeftWidth: 1,
+    borderLeftColor: '#F3F4F6',
+  },
+  quickActionButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
   },
   dueContainer: {
     flexDirection: 'row',
