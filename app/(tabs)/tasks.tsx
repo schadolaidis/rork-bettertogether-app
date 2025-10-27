@@ -647,7 +647,7 @@ const styles = StyleSheet.create({
   },
   filterScroll: {
     backgroundColor: '#FFFFFF',
-    paddingVertical: 6,
+    paddingVertical: 4,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
@@ -655,6 +655,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     gap: 6,
     alignItems: 'center',
+    paddingVertical: 2,
   },
   filterChip: {
     paddingHorizontal: 12,
@@ -753,7 +754,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 8,
     paddingBottom: 40,
   },
   taskList: {
