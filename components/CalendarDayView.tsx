@@ -4,8 +4,8 @@ import {
   Text,
   View,
   ScrollView,
-  PanResponder,
   Platform,
+  GestureResponderEvent,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Clock } from 'lucide-react-native';
@@ -22,8 +22,9 @@ interface CalendarDayViewProps {
   locale?: string;
 }
 
-const HOUR_HEIGHT = 60;
+const HOUR_HEIGHT = 64;
 const TOTAL_HEIGHT = 24 * HOUR_HEIGHT;
+const MIN_SELECTION_HEIGHT = 30;
 
 export function CalendarDayView({
   selectedDate,
@@ -34,10 +35,11 @@ export function CalendarDayView({
   allDay,
 }: CalendarDayViewProps) {
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState<number | null>(null);
+  const [dragStartY, setDragStartY] = useState<number | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
-  const containerRef = useRef<View>(null);
-  const [containerY, setContainerY] = useState(0);
+  const timelineRef = useRef<View>(null);
+  const [timelineTop, setTimelineTop] = useState(0);
+  const [scrollOffset, setScrollOffset] = useState(0);
 
   const hours = useMemo(() => Array.from({ length: 24 }, (_, i) => i), []);
 
@@ -49,7 +51,9 @@ export function CalendarDayView({
   useEffect(() => {
     if (scrollViewRef.current && startHour > 0) {
       setTimeout(() => {
-        scrollViewRef.current?.scrollTo({ y: Math.max(0, startHour * HOUR_HEIGHT - 100), animated: false });
+        const scrollY = Math.max(0, (startHour - 1) * HOUR_HEIGHT);
+        scrollViewRef.current?.scrollTo({ y: scrollY, animated: false });
+        setScrollOffset(scrollY);
       }, 100);
     }
   }, [startHour]);
@@ -59,70 +63,80 @@ export function CalendarDayView({
   }, []);
 
   const yToTime = useCallback((y: number): { hour: number; minute: number } => {
-    const totalMinutes = Math.max(0, Math.min(24 * 60 - 1, (y / TOTAL_HEIGHT) * 24 * 60));
+    const clampedY = Math.max(0, Math.min(TOTAL_HEIGHT - 1, y));
+    const totalMinutes = (clampedY / TOTAL_HEIGHT) * 24 * 60;
     const hour = Math.floor(totalMinutes / 60);
     const minute = Math.round((totalMinutes % 60) / 15) * 15;
-    return { hour, minute: minute === 60 ? 0 : minute };
+    return { 
+      hour: minute === 60 ? Math.min(23, hour + 1) : hour, 
+      minute: minute === 60 ? 0 : minute 
+    };
   }, []);
 
   const timeToY = useCallback((hour: number, minute: number): number => {
-    return ((hour * 60 + minute) / (24 * 60)) * TOTAL_HEIGHT;
+    const totalMinutes = hour * 60 + minute;
+    return (totalMinutes / (24 * 60)) * TOTAL_HEIGHT;
   }, []);
 
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: () => true,
-        onPanResponderGrant: (evt, gestureState) => {
-          if (allDay) return;
-          
-          const y = gestureState.y0 - containerY;
-          setDragStart(y);
-          setIsDragging(true);
+  const handleTouchStart = useCallback((event: GestureResponderEvent) => {
+    if (allDay) return;
 
-          const time = yToTime(y);
-          const newStart = new Date(selectedDate);
-          newStart.setHours(time.hour, time.minute, 0, 0);
-          onTimeRangeChange(newStart, newStart);
+    const touch = event.nativeEvent;
+    const localY = touch.pageY - timelineTop + scrollOffset;
+    
+    setDragStartY(localY);
+    setIsDragging(true);
 
-          if (Platform.OS !== 'web') {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          }
-        },
-        onPanResponderMove: (evt, gestureState) => {
-          if (!isDragging || dragStart === null || allDay) return;
+    const time = yToTime(localY);
+    const newStart = new Date(selectedDate);
+    newStart.setHours(time.hour, time.minute, 0, 0);
+    const newEnd = new Date(newStart.getTime() + 60 * 60 * 1000);
+    onTimeRangeChange(newStart, newEnd);
 
-          const currentY = gestureState.moveY - containerY;
-          const startY = Math.min(dragStart, currentY);
-          const endY = Math.max(dragStart, currentY);
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+  }, [allDay, timelineTop, scrollOffset, yToTime, selectedDate, onTimeRangeChange]);
 
-          const startTime = yToTime(startY);
-          const endTime = yToTime(endY);
+  const handleTouchMove = useCallback((event: GestureResponderEvent) => {
+    if (!isDragging || dragStartY === null || allDay) return;
 
-          const newStart = new Date(selectedDate);
-          newStart.setHours(startTime.hour, startTime.minute, 0, 0);
-          
-          const newEnd = new Date(selectedDate);
-          if (endTime.hour === startTime.hour && endTime.minute === startTime.minute) {
-            newEnd.setTime(newStart.getTime() + 30 * 60 * 1000);
-          } else {
-            newEnd.setHours(endTime.hour, endTime.minute, 0, 0);
-          }
+    const touch = event.nativeEvent;
+    const localY = touch.pageY - timelineTop + scrollOffset;
 
-          onTimeRangeChange(newStart, newEnd);
-        },
-        onPanResponderRelease: () => {
-          setIsDragging(false);
-          setDragStart(null);
+    const startY = Math.min(dragStartY, localY);
+    const endY = Math.max(dragStartY, localY);
+    
+    if (endY - startY < MIN_SELECTION_HEIGHT) {
+      return;
+    }
 
-          if (Platform.OS !== 'web') {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          }
-        },
-      }),
-    [isDragging, dragStart, allDay, containerY, yToTime, selectedDate, onTimeRangeChange]
-  );
+    const startTime = yToTime(startY);
+    const endTime = yToTime(endY);
+
+    const newStart = new Date(selectedDate);
+    newStart.setHours(startTime.hour, startTime.minute, 0, 0);
+    
+    const newEnd = new Date(selectedDate);
+    newEnd.setHours(endTime.hour, endTime.minute, 0, 0);
+
+    if (newEnd > newStart) {
+      onTimeRangeChange(newStart, newEnd);
+    }
+  }, [isDragging, dragStartY, allDay, timelineTop, scrollOffset, yToTime, selectedDate, onTimeRangeChange]);
+
+  const handleTouchEnd = useCallback(() => {
+    setIsDragging(false);
+    setDragStartY(null);
+
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  }, []);
+
+  const handleScroll = useCallback((event: any) => {
+    setScrollOffset(event.nativeEvent.contentOffset.y);
+  }, []);
 
   const renderTimeSlot = useCallback((hour: number) => {
     return (
@@ -172,45 +186,54 @@ export function CalendarDayView({
         showsVerticalScrollIndicator={true}
         contentContainerStyle={styles.scrollContent}
         scrollEnabled={!isDragging}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
       >
         <View
-          ref={containerRef}
+          ref={timelineRef}
           style={styles.timelineContainer}
           onLayout={(event) => {
-            containerRef.current?.measureInWindow((x, y) => {
-              setContainerY(y);
+            timelineRef.current?.measureInWindow((x, y) => {
+              setTimelineTop(y);
             });
           }}
-          {...panResponder.panHandlers}
+          onStartShouldSetResponder={() => true}
+          onResponderGrant={handleTouchStart}
+          onResponderMove={handleTouchMove}
+          onResponderRelease={handleTouchEnd}
+          onResponderTerminate={handleTouchEnd}
         >
           {hours.map(renderTimeSlot)}
           
-          <View
-            style={[
-              styles.selectedRange,
-              {
-                top: timeToY(startHour, startMinute),
-                height: Math.max(30, timeToY(endHour, endMinute) - timeToY(startHour, startMinute)),
-                backgroundColor: categoryColor + '20',
-                borderColor: categoryColor,
-              },
-            ]}
-          >
-            <View style={[styles.rangeHandle, styles.rangeHandleTop, { backgroundColor: categoryColor }]}>
-              <View style={styles.rangeHandleBar} />
+          {!allDay && (
+            <View
+              style={[
+                styles.selectedRange,
+                {
+                  top: timeToY(startHour, startMinute),
+                  height: Math.max(MIN_SELECTION_HEIGHT, timeToY(endHour, endMinute) - timeToY(startHour, startMinute)),
+                  backgroundColor: categoryColor + '20',
+                  borderColor: categoryColor,
+                },
+              ]}
+              pointerEvents="none"
+            >
+              <View style={[styles.rangeHandle, styles.rangeHandleTop, { backgroundColor: categoryColor }]}>
+                <View style={styles.rangeHandleBar} />
+              </View>
+              <View style={styles.rangeContent}>
+                <Text style={[styles.rangeTime, { color: categoryColor }]}>
+                  {format24Hour(startHour, startMinute)}
+                </Text>
+                <Text style={[styles.rangeTime, { color: categoryColor }]}>
+                  {format24Hour(endHour, endMinute)}
+                </Text>
+              </View>
+              <View style={[styles.rangeHandle, styles.rangeHandleBottom, { backgroundColor: categoryColor }]}>
+                <View style={styles.rangeHandleBar} />
+              </View>
             </View>
-            <View style={styles.rangeContent}>
-              <Text style={[styles.rangeTime, { color: categoryColor }]}>
-                {format24Hour(startHour, startMinute)}
-              </Text>
-              <Text style={[styles.rangeTime, { color: categoryColor }]}>
-                {format24Hour(endHour, endMinute)}
-              </Text>
-            </View>
-            <View style={[styles.rangeHandle, styles.rangeHandleBottom, { backgroundColor: categoryColor }]}>
-              <View style={styles.rangeHandleBar} />
-            </View>
-          </View>
+          )}
         </View>
       </ScrollView>
     </View>
@@ -293,11 +316,12 @@ const styles = StyleSheet.create({
   hourSlot: {
     height: HOUR_HEIGHT,
     paddingVertical: 0,
-    paddingLeft: 20,
-    paddingRight: 20,
+    paddingLeft: 16,
+    paddingRight: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: '#E5E7EB',
     justifyContent: 'flex-start',
+    backgroundColor: '#FAFAFA',
   },
   hourSlotContent: {
     paddingTop: 8,
@@ -310,11 +334,16 @@ const styles = StyleSheet.create({
   },
   selectedRange: {
     position: 'absolute',
-    left: 70,
-    right: 20,
+    left: 64,
+    right: 16,
     borderRadius: 12,
     borderWidth: 2,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   rangeHandle: {
     height: 24,
