@@ -43,6 +43,10 @@ export const MONTH_LABELS_SHORT_DE = [
 
 export class EUDateFormatter {
   static formatDate(date: Date, format: 'short' | 'long' | 'full' = 'short'): string {
+    if (!date || isNaN(date.getTime())) {
+      console.warn('[EUDateFormatter] Invalid date passed to formatDate:', date);
+      return 'Invalid Date';
+    }
     const day = date.getDate();
     const month = date.getMonth() + 1;
     const year = date.getFullYear();
@@ -61,6 +65,10 @@ export class EUDateFormatter {
   }
 
   static formatTime(date: Date, includeSeconds: boolean = false): string {
+    if (!date || isNaN(date.getTime())) {
+      console.warn('[EUDateFormatter] Invalid date passed to formatTime:', date);
+      return 'Invalid Time';
+    }
     const hours = date.getHours();
     const minutes = date.getMinutes();
     const seconds = date.getSeconds();
