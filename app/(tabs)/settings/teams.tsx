@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert, Platform, Share } from 'react-native';
-import { Users, Trash2, Crown, UserPlus, Check } from 'lucide-react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert, Platform, Share, TextInput } from 'react-native';
+import { Users, Trash2, Crown, UserPlus, Check, Calendar, Mail, User as UserIcon } from 'lucide-react-native';
 import { useApp } from '@/contexts/AppContext';
 import * as Haptics from 'expo-haptics';
 
 export default function TeamsScreen() {
   const { currentList, currentListMembers, removeMember, currentUserRole, generateInviteLink } = useApp();
   const [copied, setCopied] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleRemoveMember = (userId: string, userName: string) => {
     Alert.alert(
@@ -104,27 +105,71 @@ export default function TeamsScreen() {
           </TouchableOpacity>
         )}
 
+        {currentListMembers.length > 5 && (
+          <View style={styles.searchContainer}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search members..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholderTextColor="#9CA3AF"
+            />
+          </View>
+        )}
+
         <View style={styles.header}>
           <Users size={20} color="#6B7280" />
-          <Text style={styles.headerText}>{currentListMembers.length} Members</Text>
+          <Text style={styles.headerText}>{currentListMembers.length} {currentListMembers.length === 1 ? 'Member' : 'Members'}</Text>
         </View>
 
-      {currentListMembers.map((member) => {
+      {currentListMembers
+        .filter((member) => 
+          searchQuery === '' || 
+          member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (member.email && member.email.toLowerCase().includes(searchQuery.toLowerCase()))
+        )
+        .sort((a, b) => {
+          if (currentList?.ownerId === a.id) return -1;
+          if (currentList?.ownerId === b.id) return 1;
+          return a.name.localeCompare(b.name);
+        })
+        .map((member) => {
         const isOwner = currentList.ownerId === member.id;
         const canRemove = currentUserRole === 'Owner' && !isOwner;
+
+        const joinDate = currentList?.memberIds.includes(member.id) 
+          ? new Date(currentList.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+          : 'Recently joined';
 
         return (
           <View key={member.id} style={styles.memberCard}>
             <View style={[styles.avatar, { backgroundColor: member.color }]}>
-              <Text style={styles.avatarText}>{member.name.charAt(0).toUpperCase()}</Text>
+              {member.avatarUrl ? (
+                <View style={styles.avatarImage} />
+              ) : (
+                <Text style={styles.avatarText}>{member.name.charAt(0).toUpperCase()}</Text>
+              )}
             </View>
             <View style={styles.memberInfo}>
               <View style={styles.memberNameRow}>
                 <Text style={styles.memberName}>{member.name}</Text>
-                {isOwner && <Crown size={16} color="#F59E0B" />}
+                {isOwner && (
+                  <View style={styles.ownerBadge}>
+                    <Crown size={12} color="#F59E0B" />
+                    <Text style={styles.ownerBadgeText}>Owner</Text>
+                  </View>
+                )}
               </View>
-              <Text style={styles.memberEmail}>{member.email || 'No email'}</Text>
-              <Text style={styles.memberRole}>{isOwner ? 'Owner' : 'Member'}</Text>
+              {member.email && (
+                <View style={styles.memberDetailRow}>
+                  <Mail size={12} color="#9CA3AF" />
+                  <Text style={styles.memberEmail}>{member.email}</Text>
+                </View>
+              )}
+              <View style={styles.memberDetailRow}>
+                <Calendar size={12} color="#9CA3AF" />
+                <Text style={styles.memberJoinDate}>Joined {joinDate}</Text>
+              </View>
             </View>
             {canRemove && (
               <TouchableOpacity
@@ -142,6 +187,18 @@ export default function TeamsScreen() {
           </View>
         );
       })}
+
+      {currentListMembers.filter((member) => 
+        searchQuery === '' || 
+        member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (member.email && member.email.toLowerCase().includes(searchQuery.toLowerCase()))
+      ).length === 0 && searchQuery !== '' && (
+        <View style={styles.emptySearch}>
+          <UserIcon size={40} color="#D1D5DB" />
+          <Text style={styles.emptySearchText}>No members found</Text>
+          <Text style={styles.emptySearchSubtext}>Try a different search term</Text>
+        </View>
+      )}
       </ScrollView>
     </View>
   );
@@ -158,6 +215,18 @@ const styles = StyleSheet.create({
   content: {
     padding: 20,
     paddingBottom: 40,
+  },
+  searchContainer: {
+    marginBottom: 20,
+  },
+  searchInput: {
+    backgroundColor: '#FFFFFF',
+    padding: 12,
+    borderRadius: 10,
+    fontSize: 15,
+    color: '#111827',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   infoCard: {
     backgroundColor: '#EFF6FF',
@@ -256,22 +325,45 @@ const styles = StyleSheet.create({
   memberNameRow: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
+    gap: 8,
+    marginBottom: 6,
+  },
+  ownerBadge: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    gap: 4,
+  },
+  ownerBadgeText: {
+    fontSize: 11,
+    fontWeight: '700' as const,
+    color: '#F59E0B',
+  },
+  memberDetailRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 6,
+    marginBottom: 3,
+  },
+  avatarImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
   },
   memberName: {
     fontSize: 16,
     fontWeight: '700' as const,
     color: '#111827',
-    marginBottom: 2,
   },
   memberEmail: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#6B7280',
-    marginBottom: 4,
   },
-  memberRole: {
+  memberJoinDate: {
     fontSize: 12,
-    fontWeight: '600' as const,
     color: '#9CA3AF',
   },
   removeButton: {
@@ -287,5 +379,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6B7280',
     textAlign: 'center' as const,
+  },
+  emptySearch: {
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    padding: 40,
+  },
+  emptySearchText: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: '#6B7280',
+    marginTop: 12,
+  },
+  emptySearchSubtext: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    marginTop: 4,
   },
 });
