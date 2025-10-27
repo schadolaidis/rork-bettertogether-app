@@ -477,7 +477,7 @@ export function TaskFormModal({
           <View style={styles.mainSection}>
             <TextInput
               style={[styles.titleInput, titleError ? styles.inputError : null]}
-              placeholder="Task name"
+              placeholder="Task Name"
               placeholderTextColor="#9CA3AF"
               value={title}
               onChangeText={(text) => {
