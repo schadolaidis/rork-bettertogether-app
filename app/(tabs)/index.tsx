@@ -120,6 +120,7 @@ interface CompactCalendarSummaryProps {
   categoryColors: Record<TaskCategory, string>;
   onDateSelect: (date: Date) => void;
   onOpenCalendar: () => void;
+  onDayPress: (date: Date) => void;
 }
 
 function CompactCalendarSummary({
@@ -128,6 +129,7 @@ function CompactCalendarSummary({
   categoryColors,
   onDateSelect,
   onOpenCalendar,
+  onDayPress,
 }: CompactCalendarSummaryProps) {
   const weekDays = useMemo(() => {
     return CalendarService.getWeekDays(selectedDate);
@@ -158,8 +160,9 @@ function CompactCalendarSummary({
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
       onDateSelect(date);
+      onDayPress(date);
     },
-    [onDateSelect]
+    [onDateSelect, onDayPress]
   );
 
   const today = new Date();
@@ -252,6 +255,120 @@ function CompactCalendarSummary({
   );
 }
 
+interface DayAgendaModalProps {
+  date: Date;
+  tasks: Task[];
+  categoryColors: Record<TaskCategory, string>;
+  categoryEmojis: Record<TaskCategory, string>;
+  onClose: () => void;
+}
+
+function DayAgendaModal({
+  date,
+  tasks,
+  categoryColors,
+  categoryEmojis,
+  onClose,
+}: DayAgendaModalProps) {
+  const router = useRouter();
+  const sortedTasks = useMemo(() => {
+    return [...tasks].sort((a, b) => {
+      return new Date(a.endAt).getTime() - new Date(b.endAt).getTime();
+    });
+  }, [tasks]);
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return '#10B981';
+      case 'overdue':
+        return '#F59E0B';
+      case 'failed':
+        return '#EF4444';
+      default:
+        return '#6B7280';
+    }
+  };
+
+  return (
+    <Modal visible animationType="slide" presentationStyle="pageSheet">
+      <View style={agendaModalStyles.agendaContainer}>
+        <View style={agendaModalStyles.agendaHeader}>
+          <View>
+            <Text style={agendaModalStyles.agendaTitle}>Tasks</Text>
+            <Text style={agendaModalStyles.agendaDate}>{CalendarService.formatDayDate(date)}</Text>
+          </View>
+          <TouchableOpacity
+            style={agendaModalStyles.closeButton}
+            onPress={() => {
+              if (Platform.OS !== 'web') {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+              onClose();
+            }}
+          >
+            <X size={24} color="#6B7280" />
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView style={agendaModalStyles.agendaScroll} contentContainerStyle={agendaModalStyles.agendaContent}>
+          {sortedTasks.length > 0 ? (
+            sortedTasks.map((task) => {
+              const categoryColor = categoryColors[task.category] || '#6B7280';
+              const categoryEmoji = categoryEmojis[task.category] || '📋';
+              const statusColor = getStatusColor(task.status);
+              const time = new Date(task.endAt).toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+              });
+
+              return (
+                <TouchableOpacity
+                  key={task.id}
+                  style={agendaModalStyles.agendaTask}
+                  onPress={() => {
+                    if (Platform.OS !== 'web') {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }
+                    onClose();
+                    router.push(`/task-detail?id=${task.id}`);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View style={[agendaModalStyles.agendaTaskIndicator, { backgroundColor: categoryColor }]} />
+                  <View style={agendaModalStyles.agendaTaskContent}>
+                    <View style={agendaModalStyles.agendaTaskHeader}>
+                      <Text style={agendaModalStyles.agendaTaskTime}>{time}</Text>
+                      <View style={[agendaModalStyles.agendaTaskStatus, { backgroundColor: statusColor }]}>
+                        <Text style={agendaModalStyles.agendaTaskStatusText}>
+                          {task.status.charAt(0).toUpperCase() + task.status.slice(1)}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={agendaModalStyles.agendaTaskTitle} numberOfLines={2}>
+                      {task.title}
+                    </Text>
+                    <View style={agendaModalStyles.agendaTaskMeta}>
+                      <Text style={agendaModalStyles.agendaTaskEmoji}>{categoryEmoji}</Text>
+                      <Text style={agendaModalStyles.agendaTaskCategory}>{task.category}</Text>
+                      <Text style={agendaModalStyles.agendaTaskStake}>${task.stake}</Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })
+          ) : (
+            <View style={agendaModalStyles.agendaEmpty}>
+              <CheckCircle2 size={48} color="#D1D5DB" />
+              <Text style={agendaModalStyles.agendaEmptyText}>No tasks for this day</Text>
+            </View>
+          )}
+        </ScrollView>
+      </View>
+    </Modal>
+  );
+}
+
 export default function DashboardScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -268,6 +385,8 @@ export default function DashboardScreen() {
   } = useApp();
 
   const [showCalendarModal, setShowCalendarModal] = useState(false);
+  const [showDayAgenda, setShowDayAgenda] = useState(false);
+  const [agendaDate, setAgendaDate] = useState<Date>(new Date());
 
   const upcomingTasks = useMemo(() => {
     return tasks
@@ -283,6 +402,16 @@ export default function DashboardScreen() {
       Finance: currentList.categories.Finance.color,
       Work: currentList.categories.Work.color,
       Leisure: currentList.categories.Leisure.color,
+    };
+  }, [currentList]);
+
+  const categoryEmojis = useMemo(() => {
+    if (!currentList) return {} as Record<TaskCategory, string>;
+    return {
+      Household: currentList.categories.Household.emoji,
+      Finance: currentList.categories.Finance.emoji,
+      Work: currentList.categories.Work.emoji,
+      Leisure: currentList.categories.Leisure.emoji,
     };
   }, [currentList]);
 
@@ -313,6 +442,18 @@ export default function DashboardScreen() {
   const handleBalanceTap = useCallback(() => {
     router.push('/balances?month=current');
   }, [router]);
+
+  const handleDayPress = useCallback(
+    (date: Date) => {
+      setAgendaDate(date);
+      setShowDayAgenda(true);
+    },
+    []
+  );
+
+  const agendaTasks = useMemo(() => {
+    return CalendarService.getTasksForDate(agendaDate, tasks);
+  }, [agendaDate, tasks]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -347,6 +488,7 @@ export default function DashboardScreen() {
           categoryColors={categoryColors}
           onDateSelect={setCalendarSelectedDate}
           onOpenCalendar={handleOpenCalendar}
+          onDayPress={handleDayPress}
         />
 
         <View style={styles.statsGrid}>
@@ -461,6 +603,16 @@ export default function DashboardScreen() {
           />
         </View>
       </Modal>
+
+      {showDayAgenda && (
+        <DayAgendaModal
+          date={agendaDate}
+          tasks={agendaTasks}
+          categoryColors={categoryColors}
+          categoryEmojis={categoryEmojis}
+          onClose={() => setShowDayAgenda(false)}
+        />
+      )}
     </View>
   );
 }
@@ -804,5 +956,116 @@ const modalStyles = StyleSheet.create({
     padding: 8,
     borderRadius: 8,
     backgroundColor: '#F3F4F6',
+  },
+});
+
+const agendaModalStyles = StyleSheet.create({
+  agendaContainer: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
+  agendaHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  agendaTitle: {
+    fontSize: 24,
+    fontWeight: '700' as const,
+    color: '#111827',
+  },
+  agendaDate: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 4,
+  },
+  closeButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+  },
+  agendaScroll: {
+    flex: 1,
+  },
+  agendaContent: {
+    padding: 20,
+    gap: 12,
+  },
+  agendaTask: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  agendaTaskIndicator: {
+    width: 4,
+  },
+  agendaTaskContent: {
+    flex: 1,
+    padding: 16,
+  },
+  agendaTaskHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  agendaTaskTime: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: '#6B7280',
+  },
+  agendaTaskStatus: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  agendaTaskStatusText: {
+    fontSize: 11,
+    fontWeight: '600' as const,
+    color: '#FFFFFF',
+  },
+  agendaTaskTitle: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: '#111827',
+    marginBottom: 8,
+  },
+  agendaTaskMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  agendaTaskEmoji: {
+    fontSize: 16,
+  },
+  agendaTaskCategory: {
+    fontSize: 14,
+    color: '#6B7280',
+    flex: 1,
+  },
+  agendaTaskStake: {
+    fontSize: 14,
+    fontWeight: '700' as const,
+    color: '#111827',
+  },
+  agendaEmpty: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 80,
+  },
+  agendaEmptyText: {
+    fontSize: 16,
+    color: '#9CA3AF',
+    marginTop: 12,
   },
 });
