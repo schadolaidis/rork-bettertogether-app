@@ -651,16 +651,18 @@ const styles = StyleSheet.create({
   },
   filterScroll: {
     backgroundColor: '#F9FAFB',
-    paddingVertical: 8,
+    paddingVertical: 6,
+    maxHeight: 50,
   },
   filterScrollContent: {
     paddingHorizontal: 16,
-    gap: 8,
+    gap: 6,
+    alignItems: 'center',
   },
   filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E5E7EB',
@@ -670,12 +672,13 @@ const styles = StyleSheet.create({
     borderColor: '#3B82F6',
   },
   filterChipText: {
-    fontSize: 13,
-    fontWeight: '600' as const,
+    fontSize: 12,
+    fontWeight: '500' as const,
     color: '#6B7280',
   },
   filterChipTextActive: {
     color: '#FFFFFF',
+    fontWeight: '600' as const,
   },
   undoBar: {
     flexDirection: 'row',
