@@ -789,28 +789,77 @@ interface DateTimePickerModalProps {
 }
 
 function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onSave }: DateTimePickerModalProps) {
-  const [start, setStart] = useState(startDate);
-  const [end, setEnd] = useState(endDate);
+  const [start, setStart] = useState(() => {
+    const d = new Date(startDate);
+    return isNaN(d.getTime()) ? new Date() : d;
+  });
+  const [end, setEnd] = useState(() => {
+    const d = new Date(endDate);
+    return isNaN(d.getTime()) ? new Date(new Date().getTime() + 3600000) : d;
+  });
   const [isAllDay, setIsAllDay] = useState(allDay);
-  const [tempStartDate, setTempStartDate] = useState(startDate);
+  const [tempStartDate, setTempStartDate] = useState(() => {
+    const d = new Date(startDate);
+    return isNaN(d.getTime()) ? new Date() : d;
+  });
   const [showPickerType, setShowPickerType] = useState<'start-date' | 'start-time' | null>(null);
 
   useEffect(() => {
     if (visible) {
-      setStart(startDate);
-      setEnd(endDate);
+      const validStart = new Date(startDate);
+      const validEnd = new Date(endDate);
+      
+      console.log('[DateTimePickerModal] Opening with dates:', {
+        startDate,
+        endDate,
+        validStart: isNaN(validStart.getTime()) ? 'Invalid' : validStart.toISOString(),
+        validEnd: isNaN(validEnd.getTime()) ? 'Invalid' : validEnd.toISOString(),
+        isStartValid: !isNaN(validStart.getTime()),
+        isEndValid: !isNaN(validEnd.getTime())
+      });
+      
+      if (!isNaN(validStart.getTime())) {
+        setStart(validStart);
+        setTempStartDate(validStart);
+        
+        if (!isNaN(validEnd.getTime())) {
+          setEnd(validEnd);
+        } else {
+          const later = new Date(validStart.getTime() + 3600000);
+          setEnd(later);
+        }
+      } else {
+        const now = new Date();
+        setStart(now);
+        setTempStartDate(now);
+        
+        if (!isNaN(validEnd.getTime())) {
+          setEnd(validEnd);
+        } else {
+          const later = new Date(now.getTime() + 3600000);
+          setEnd(later);
+        }
+      }
+      
       setIsAllDay(allDay);
-      setTempStartDate(startDate);
     }
   }, [visible, startDate, endDate, allDay]);
 
   if (!visible) return null;
 
   const formatDate = (date: Date) => {
+    if (!date || isNaN(date.getTime())) {
+      console.warn('[DateTimePickerModal] Invalid date passed to formatDate:', date);
+      return 'Invalid Date';
+    }
     return EUDateFormatter.formatDate(date, 'long');
   };
 
   const formatTime = (date: Date) => {
+    if (!date || isNaN(date.getTime())) {
+      console.warn('[DateTimePickerModal] Invalid date passed to formatTime:', date);
+      return 'Invalid Time';
+    }
     return EUDateFormatter.formatTime(date);
   };
 
