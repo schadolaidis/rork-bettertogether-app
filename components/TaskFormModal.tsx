@@ -590,23 +590,22 @@ export function TaskFormModal({
             </View>
           ) : null}
 
-          <View style={styles.todoistSection}>
+          <View style={styles.mainSection}>
             <TextInput
-              style={[styles.todoistTitleInput, titleError ? styles.inputError : null]}
-              placeholder="What's your task?"
+              style={[styles.titleInput, titleError ? styles.inputError : null]}
+              placeholder="Task name"
               placeholderTextColor="#9CA3AF"
               value={title}
               onChangeText={(text) => {
                 setTitle(text);
                 if (titleError) setTitleError('');
               }}
-              multiline
               maxLength={100}
               autoFocus={mode === 'create'}
             />
             
             <TextInput
-              style={styles.todoistDescriptionInput}
+              style={styles.descriptionInput}
               placeholder="Description (optional)"
               placeholderTextColor="#9CA3AF"
               value={description}
@@ -616,9 +615,11 @@ export function TaskFormModal({
             />
           </View>
 
-          <View style={styles.todoistChipsSection}>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Details</Text>
+            
             <TouchableOpacity
-              style={styles.todoistChip}
+              style={styles.fieldRow}
               onPress={() => {
                 if (Platform.OS !== 'web') {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -626,14 +627,22 @@ export function TaskFormModal({
                 setShowDatePicker(true);
               }}
             >
-              <Calendar size={18} color="#3B82F6" />
-              <Text style={styles.todoistChipText}>
-                {formatDateTimeChip(startDate, endDate, allDay)}
-              </Text>
+              <View style={styles.fieldRowLeft}>
+                <View style={styles.fieldIcon}>
+                  <Calendar size={20} color="#6B7280" />
+                </View>
+                <View style={styles.fieldContent}>
+                  <Text style={styles.fieldLabel}>Time</Text>
+                  <Text style={styles.fieldValue}>
+                    {formatDateTimeChip(startDate, endDate, allDay)}
+                  </Text>
+                </View>
+              </View>
+              <ChevronRight size={20} color="#9CA3AF" />
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.todoistChip}
+              style={styles.fieldRow}
               onPress={() => {
                 if (Platform.OS !== 'web') {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -641,12 +650,20 @@ export function TaskFormModal({
                 setShowCategoryPicker(true);
               }}
             >
-              <View style={[styles.chipCategoryDot, { backgroundColor: categoryMeta.color }]} />
-              <Text style={styles.todoistChipText}>{categoryMeta.label}</Text>
+              <View style={styles.fieldRowLeft}>
+                <View style={styles.fieldIcon}>
+                  <View style={[styles.categoryDot, { backgroundColor: categoryMeta.color }]} />
+                </View>
+                <View style={styles.fieldContent}>
+                  <Text style={styles.fieldLabel}>Category</Text>
+                  <Text style={styles.fieldValue}>{categoryMeta.emoji} {categoryMeta.label}</Text>
+                </View>
+              </View>
+              <ChevronRight size={20} color="#9CA3AF" />
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.todoistChip}
+              style={styles.fieldRow}
               onPress={() => {
                 if (Platform.OS !== 'web') {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -654,12 +671,20 @@ export function TaskFormModal({
                 setShowMemberPicker(true);
               }}
             >
-              <Users size={18} color="#6B7280" />
-              <Text style={styles.todoistChipText}>{selectedMembersText}</Text>
+              <View style={styles.fieldRowLeft}>
+                <View style={styles.fieldIcon}>
+                  <Users size={20} color="#6B7280" />
+                </View>
+                <View style={styles.fieldContent}>
+                  <Text style={styles.fieldLabel}>Assigned To</Text>
+                  <Text style={styles.fieldValue}>{selectedMembersText}</Text>
+                </View>
+              </View>
+              <ChevronRight size={20} color="#9CA3AF" />
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.todoistChip}
+              style={styles.fieldRow}
               onPress={() => {
                 if (Platform.OS !== 'web') {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -667,13 +692,21 @@ export function TaskFormModal({
                 setShowStakePicker(true);
               }}
             >
-              <Text style={styles.todoistChipEmoji}>💶</Text>
-              <Text style={styles.todoistChipText}>{currencySymbol}{stake}</Text>
+              <View style={styles.fieldRowLeft}>
+                <View style={styles.fieldIcon}>
+                  <Text style={styles.fieldIconEmoji}>💶</Text>
+                </View>
+                <View style={styles.fieldContent}>
+                  <Text style={styles.fieldLabel}>Stake</Text>
+                  <Text style={styles.fieldValue}>{currencySymbol}{stake}</Text>
+                </View>
+              </View>
+              <ChevronRight size={20} color="#9CA3AF" />
             </TouchableOpacity>
 
             {fundTargets && fundTargets.length > 0 && (
               <TouchableOpacity
-                style={styles.todoistChip}
+                style={styles.fieldRow}
                 onPress={() => {
                   if (Platform.OS !== 'web') {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -681,25 +714,33 @@ export function TaskFormModal({
                   setShowFundTargetPicker(true);
                 }}
               >
-                <Text style={styles.todoistChipEmoji}>
-                  {selectedFundTarget
-                    ? fundTargets.find((f) => f.id === selectedFundTarget)?.emoji || '🎯'
-                    : '🎯'}
-                </Text>
-                <Text style={styles.todoistChipText}>
-                  {selectedFundTarget
-                    ? fundTargets.find((f) => f.id === selectedFundTarget)?.name || 'Purpose'
-                    : 'Purpose'}
-                </Text>
+                <View style={styles.fieldRowLeft}>
+                  <View style={styles.fieldIcon}>
+                    <Text style={styles.fieldIconEmoji}>
+                      {selectedFundTarget
+                        ? fundTargets.find((f) => f.id === selectedFundTarget)?.emoji || '🎯'
+                        : '🎯'}
+                    </Text>
+                  </View>
+                  <View style={styles.fieldContent}>
+                    <Text style={styles.fieldLabel}>Fund Target</Text>
+                    <Text style={styles.fieldValue}>
+                      {selectedFundTarget
+                        ? fundTargets.find((f) => f.id === selectedFundTarget)?.name || 'None'
+                        : 'None'}
+                    </Text>
+                  </View>
+                </View>
+                <ChevronRight size={20} color="#9CA3AF" />
               </TouchableOpacity>
             )}
           </View>
 
-          <View style={styles.todoistAdvanced}>
-            <Text style={styles.advancedTitle}>Additional Settings</Text>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Settings</Text>
             
             <TouchableOpacity
-              style={styles.advancedRow}
+              style={styles.fieldRow}
               onPress={() => {
                 if (Platform.OS !== 'web') {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -707,17 +748,22 @@ export function TaskFormModal({
                 setShowPriorityPicker(true);
               }}
             >
-              <View style={styles.advancedRowLeft}>
-                <Flag size={18} color={priorityConfig[priority].color} />
-                <Text style={styles.advancedRowLabel}>Priority</Text>
+              <View style={styles.fieldRowLeft}>
+                <View style={styles.fieldIcon}>
+                  <Flag size={20} color={priorityConfig[priority].color} />
+                </View>
+                <View style={styles.fieldContent}>
+                  <Text style={styles.fieldLabel}>Priority</Text>
+                  <Text style={[styles.fieldValue, { color: priorityConfig[priority].color }]}>
+                    {priorityConfig[priority].label}
+                  </Text>
+                </View>
               </View>
-              <Text style={[styles.advancedRowValue, { color: priorityConfig[priority].color }]}>
-                {priorityConfig[priority].label}
-              </Text>
+              <ChevronRight size={20} color="#9CA3AF" />
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.advancedRow}
+              style={styles.fieldRow}
               onPress={() => {
                 if (Platform.OS !== 'web') {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -725,19 +771,24 @@ export function TaskFormModal({
                 setShowReminderPicker(true);
               }}
             >
-              <View style={styles.advancedRowLeft}>
-                <Bell size={18} color="#6B7280" />
-                <Text style={styles.advancedRowLabel}>Reminder</Text>
+              <View style={styles.fieldRowLeft}>
+                <View style={styles.fieldIcon}>
+                  <Bell size={20} color="#6B7280" />
+                </View>
+                <View style={styles.fieldContent}>
+                  <Text style={styles.fieldLabel}>Reminder</Text>
+                  <Text style={styles.fieldValue}>
+                    {reminder === 'custom'
+                      ? `${customReminderMinutes} min before`
+                      : reminderConfig[reminder].label}
+                  </Text>
+                </View>
               </View>
-              <Text style={styles.advancedRowValue}>
-                {reminder === 'custom'
-                  ? `${customReminderMinutes} min before`
-                  : reminderConfig[reminder].label}
-              </Text>
+              <ChevronRight size={20} color="#9CA3AF" />
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.advancedRow}
+              style={styles.fieldRow}
               onPress={() => {
                 if (Platform.OS !== 'web') {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -745,18 +796,28 @@ export function TaskFormModal({
                 setShowRecurrencePicker(true);
               }}
             >
-              <View style={styles.advancedRowLeft}>
-                <RefreshCw size={18} color="#6B7280" />
-                <Text style={styles.advancedRowLabel}>Recurrence</Text>
+              <View style={styles.fieldRowLeft}>
+                <View style={styles.fieldIcon}>
+                  <RefreshCw size={20} color="#6B7280" />
+                </View>
+                <View style={styles.fieldContent}>
+                  <Text style={styles.fieldLabel}>Recurrence</Text>
+                  <Text style={styles.fieldValue}>{recurrenceConfig[recurrence].label}</Text>
+                </View>
               </View>
-              <Text style={styles.advancedRowValue}>{recurrenceConfig[recurrence].label}</Text>
+              <ChevronRight size={20} color="#9CA3AF" />
             </TouchableOpacity>
 
             {selectedMembers.length > 1 && (
-              <View style={[styles.advancedRow, { borderBottomWidth: 0 }]}>
-                <View style={styles.advancedRowLeft}>
-                  <Users size={18} color="#6B7280" />
-                  <Text style={styles.advancedRowLabel}>Shared Task</Text>
+              <View style={styles.fieldRow}>
+                <View style={styles.fieldRowLeft}>
+                  <View style={styles.fieldIcon}>
+                    <Users size={20} color="#6B7280" />
+                  </View>
+                  <View style={styles.fieldContent}>
+                    <Text style={styles.fieldLabel}>Shared Task</Text>
+                    <Text style={styles.fieldValue}>{isShared ? 'Yes' : 'No'}</Text>
+                  </View>
                 </View>
                 <Switch
                   value={isShared}
@@ -1364,7 +1425,7 @@ const calendarStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F9FAFB',
   },
   header: {
     flexDirection: 'row',
@@ -1405,90 +1466,91 @@ const styles = StyleSheet.create({
     fontWeight: '500' as const,
     color: '#EF4444',
   },
-  todoistSection: {
-    marginBottom: 20,
+  mainSection: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 16,
+    marginBottom: 12,
   },
-  todoistTitleInput: {
-    fontSize: 16,
+  titleInput: {
+    fontSize: 20,
     fontWeight: '600' as const,
     color: '#111827',
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: 0,
-    minHeight: 44,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
   inputError: {
-    color: '#EF4444',
+    borderBottomColor: '#EF4444',
   },
-  todoistDescriptionInput: {
+  descriptionInput: {
     fontSize: 15,
     color: '#6B7280',
-    paddingVertical: 8,
+    paddingVertical: 12,
     paddingHorizontal: 0,
-    minHeight: 60,
-    marginTop: 4,
+    minHeight: 80,
+    textAlignVertical: 'top',
   },
-  todoistChipsSection: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 24,
+  section: {
+    backgroundColor: '#FFFFFF',
+    marginBottom: 12,
   },
-  todoistChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  todoistChipText: {
-    fontSize: 14,
-    fontWeight: '500' as const,
-    color: '#374151',
-  },
-  todoistChipEmoji: {
-    fontSize: 16,
-  },
-  chipCategoryDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-  },
-  todoistAdvanced: {
-    marginBottom: 20,
-  },
-  advancedTitle: {
+  sectionTitle: {
     fontSize: 13,
     fontWeight: '600' as const,
     color: '#9CA3AF',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginBottom: 12,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 8,
   },
-  advancedRow: {
+  fieldRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingVertical: 12,
+    paddingHorizontal: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
   },
-  advancedRowLeft: {
+  fieldRowLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    flex: 1,
+    gap: 12,
   },
-  advancedRowLabel: {
-    fontSize: 15,
-    color: '#374151',
+  fieldIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  advancedRowValue: {
-    fontSize: 15,
+  fieldIconEmoji: {
+    fontSize: 20,
+  },
+  categoryDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+  },
+  fieldContent: {
+    flex: 1,
+    gap: 2,
+  },
+  fieldLabel: {
+    fontSize: 13,
     fontWeight: '500' as const,
-    color: '#6B7280',
+    color: '#9CA3AF',
+  },
+  fieldValue: {
+    fontSize: 16,
+    fontWeight: '500' as const,
+    color: '#111827',
   },
   infoBox: {
     flexDirection: 'row',
