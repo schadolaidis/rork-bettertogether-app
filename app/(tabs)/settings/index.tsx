@@ -235,7 +235,7 @@ export default function SettingsScreen() {
               icon={<Users size={20} color="#F59E0B" />}
               title="Team Members"
               subtitle={`${currentListMembers.length} members`}
-              onPress={() => router.push('./teams' as any)}
+              onPress={() => router.push('/(tabs)/settings/teams')}
             />
           </View>
         </View>
