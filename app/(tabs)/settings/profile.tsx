@@ -8,7 +8,7 @@ import { Camera, Palette, Mail, User as UserIcon } from 'lucide-react-native';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { currentUser, currentUserId, updateUserProfile } = useApp();
+  const { currentUser, currentUserId, updateUserProfile, t } = useApp();
 
   const [displayName, setDisplayName] = useState(currentUser?.displayName || currentUser?.name || '');
   const [email, setEmail] = useState(currentUser?.email || '');
@@ -26,7 +26,7 @@ export default function ProfileScreen() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'We need camera roll permissions to change your profile picture');
+      Alert.alert(t.profile.permissionNeeded, t.profile.cameraPermission);
       return;
     }
 
@@ -64,10 +64,10 @@ export default function ProfileScreen() {
       if (Platform.OS !== 'web') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
-      Alert.alert('Success', 'Profile updated!');
+      Alert.alert(t.alerts.success, t.profile.profileUpdated);
       router.back();
     } else {
-      Alert.alert('Error', 'Failed to update profile');
+      Alert.alert(t.alerts.error, t.profile.failedToUpdate);
     }
   };
 
@@ -89,39 +89,39 @@ export default function ProfileScreen() {
           </View>
         </TouchableOpacity>
         
-        <Text style={styles.avatarHint}>Tap to change photo</Text>
+        <Text style={styles.avatarHint}>{t.profile.tapToChange}</Text>
         {avatar && (
           <TouchableOpacity onPress={removeAvatar} style={styles.removeAvatarButton}>
-            <Text style={styles.removeAvatarText}>Remove photo</Text>
+            <Text style={styles.removeAvatarText}>{t.profile.removePhoto}</Text>
           </TouchableOpacity>
         )}
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Personal Info</Text>
+        <Text style={styles.sectionTitle}>{t.profile.personalInfo}</Text>
         <View style={styles.inputGroup}>
           <View style={styles.labelRow}>
             <UserIcon size={16} color="#6B7280" />
-            <Text style={styles.label}>Display Name</Text>
+            <Text style={styles.label}>{t.profile.displayName}</Text>
           </View>
           <TextInput
             style={styles.input}
             value={displayName}
             onChangeText={setDisplayName}
-            placeholder="Enter your name"
+            placeholder={t.profile.enterYourName}
             placeholderTextColor="#9CA3AF"
           />
         </View>
         <View style={styles.inputGroup}>
           <View style={styles.labelRow}>
             <Mail size={16} color="#6B7280" />
-            <Text style={styles.label}>Email</Text>
+            <Text style={styles.label}>{t.profile.email}</Text>
           </View>
           <TextInput
             style={styles.input}
             value={email}
             onChangeText={setEmail}
-            placeholder="your@email.com"
+            placeholder={t.profile.yourEmail}
             placeholderTextColor="#9CA3AF"
             keyboardType="email-address"
             autoCapitalize="none"
@@ -132,7 +132,7 @@ export default function ProfileScreen() {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Palette size={16} color="#6B7280" />
-          <Text style={styles.sectionTitle}>Avatar Color</Text>
+          <Text style={styles.sectionTitle}>{t.profile.avatarColor}</Text>
         </View>
         <View style={styles.colorGrid}>
           {PRESET_COLORS.map((color) => (
@@ -161,7 +161,7 @@ export default function ProfileScreen() {
       </View>
 
       <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-        <Text style={styles.saveButtonText}>Save Changes</Text>
+        <Text style={styles.saveButtonText}>{t.profile.saveChanges}</Text>
       </TouchableOpacity>
     </ScrollView>
   );

@@ -1,6 +1,9 @@
 import { Stack } from 'expo-router';
+import { useApp } from '@/contexts/AppContext';
 
 export default function SettingsLayout() {
+  const { t } = useApp();
+  
   return (
     <Stack
       screenOptions={{
@@ -12,7 +15,7 @@ export default function SettingsLayout() {
         name="list-settings"
         options={{
           headerShown: true,
-          title: 'List Settings',
+          title: t.listSettings.title,
           presentation: 'modal',
         }}
       />
@@ -20,7 +23,7 @@ export default function SettingsLayout() {
         name="categories"
         options={{
           headerShown: true,
-          title: 'Categories',
+          title: t.categories.title,
           presentation: 'modal',
         }}
       />
@@ -28,7 +31,7 @@ export default function SettingsLayout() {
         name="teams"
         options={{
           headerShown: true,
-          title: 'Team Members',
+          title: t.teams.title,
           presentation: 'modal',
         }}
       />
@@ -36,7 +39,7 @@ export default function SettingsLayout() {
         name="profile"
         options={{
           headerShown: true,
-          title: 'Profile',
+          title: t.profile.title,
           presentation: 'modal',
         }}
       />

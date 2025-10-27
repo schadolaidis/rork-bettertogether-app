@@ -1,8 +1,11 @@
 import { Tabs } from "expo-router";
 import { LayoutDashboard, CheckSquare, DollarSign, Settings } from "lucide-react-native";
 import React from "react";
+import { useApp } from "@/contexts/AppContext";
 
 export default function TabLayout() {
+  const { t } = useApp();
+  
   return (
     <Tabs
       screenOptions={{
@@ -19,28 +22,28 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Dashboard",
+          title: t.tabs.dashboard,
           tabBarIcon: ({ color, size }) => <LayoutDashboard color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="tasks"
         options={{
-          title: "Tasks",
+          title: t.tabs.tasks,
           tabBarIcon: ({ color, size }) => <CheckSquare color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="balances"
         options={{
-          title: "Balances",
+          title: t.tabs.balances,
           tabBarIcon: ({ color, size }) => <DollarSign color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
-          title: "Settings",
+          title: t.tabs.settings,
           tabBarIcon: ({ color, size }) => <Settings color={color} size={size} />,
         }}
       />
