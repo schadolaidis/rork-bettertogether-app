@@ -10,23 +10,22 @@ import {
   Platform,
   Switch,
 } from 'react-native';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import {
   X,
   Calendar,
   Clock,
   Users,
-  ChevronLeft,
-  ChevronRight,
   Flag,
   Bell,
   RefreshCw,
   AlertCircle,
+  ChevronRight,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TaskCategory, User, TaskPriority, ReminderType, RecurrenceType, Task } from '@/types';
-import { CalendarDayView } from '@/components/CalendarDayView';
-import { EUDateFormatter, WEEKDAY_LABELS_SHORT_DE } from '@/utils/EULocale';
+import { EUDateFormatter } from '@/utils/EULocale';
 
 export interface TaskFormData {
   title: string;
@@ -68,116 +67,6 @@ interface TaskFormModalProps {
 }
 
 const DRAFT_KEY = '@bettertogether/task_draft';
-
-interface CalendarPickerProps {
-  selectedDate: Date;
-  onSelect: (date: Date) => void;
-  onClose: () => void;
-  tasks?: { date: Date; color: string }[];
-}
-
-const MONTH_NAMES_DE = [
-  'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
-  'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'
-];
-
-function CalendarPicker({ selectedDate, onSelect, onClose, tasks = [] }: CalendarPickerProps) {
-  const [currentMonth, setCurrentMonth] = useState({
-    year: selectedDate.getFullYear(),
-    month: selectedDate.getMonth(),
-  });
-
-  const monthDays = useMemo(() => {
-    return EUDateFormatter.getMonthDaysEU(currentMonth.year, currentMonth.month);
-  }, [currentMonth]);
-
-  const handlePrevMonth = () => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    const newMonth = currentMonth.month - 1;
-    setCurrentMonth({
-      year: newMonth < 0 ? currentMonth.year - 1 : currentMonth.year,
-      month: newMonth < 0 ? 11 : newMonth,
-    });
-  };
-
-  const handleNextMonth = () => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    const newMonth = currentMonth.month + 1;
-    setCurrentMonth({
-      year: newMonth > 11 ? currentMonth.year + 1 : currentMonth.year,
-      month: newMonth > 11 ? 0 : newMonth,
-    });
-  };
-
-  const monthName = `${MONTH_NAMES_DE[currentMonth.month]} ${currentMonth.year}`;
-
-  const weekDayNames = WEEKDAY_LABELS_SHORT_DE;
-  const today = new Date();
-
-  return (
-    <View style={calendarStyles.container}>
-      <View style={calendarStyles.header}>
-        <TouchableOpacity style={calendarStyles.navButton} onPress={handlePrevMonth}>
-          <ChevronLeft size={20} color="#3B82F6" />
-        </TouchableOpacity>
-        <Text style={calendarStyles.monthTitle}>{monthName}</Text>
-        <TouchableOpacity style={calendarStyles.navButton} onPress={handleNextMonth}>
-          <ChevronRight size={20} color="#3B82F6" />
-        </TouchableOpacity>
-      </View>
-
-      <View style={calendarStyles.weekHeader}>
-        {weekDayNames.map((name) => (
-          <Text key={name} style={calendarStyles.weekDayName}>
-            {name}
-          </Text>
-        ))}
-      </View>
-
-      <View style={calendarStyles.grid}>
-        {monthDays.map((date, index) => {
-          const isToday =
-            date.toDateString() === today.toDateString();
-          const isSelected =
-            date.toDateString() === selectedDate.toDateString();
-          const isCurrentMonth = date.getMonth() === currentMonth.month;
-          const isPast = date < today && !isToday;
-
-          return (
-            <TouchableOpacity
-              key={index}
-              style={[
-                calendarStyles.dayCell,
-                isToday && calendarStyles.dayCellToday,
-                isSelected && calendarStyles.dayCellSelected,
-              ]}
-              onPress={() => {
-                onSelect(date);
-              }}
-              disabled={isPast}
-            >
-              <Text
-                style={[
-                  calendarStyles.dayNumber,
-                  !isCurrentMonth && calendarStyles.dayNumberOther,
-                  isToday && calendarStyles.dayNumberToday,
-                  isSelected && calendarStyles.dayNumberSelected,
-                  isPast && calendarStyles.dayNumberPast,
-                ]}
-              >
-                {date.getDate()}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-    </View>
-  );
-}
 
 export function TaskFormModal({
   visible,
@@ -257,8 +146,6 @@ export function TaskFormModal({
 
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showMemberPicker, setShowMemberPicker] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
   const [showPriorityPicker, setShowPriorityPicker] = useState(false);
   const [showReminderPicker, setShowReminderPicker] = useState(false);
   const [showCustomReminderInput, setShowCustomReminderInput] = useState(false);
@@ -266,6 +153,9 @@ export function TaskFormModal({
   const [showFundTargetPicker, setShowFundTargetPicker] = useState(false);
   const [showStakePicker, setShowStakePicker] = useState(false);
   const [titleError, setTitleError] = useState('');
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showStartTimePicker, setShowStartTimePicker] = useState(false);
+  const [tempStartDate, setTempStartDate] = useState(new Date());
 
   const loadDraft = useCallback(async () => {
     if (mode === 'edit') return;
@@ -423,70 +313,54 @@ export function TaskFormModal({
     });
   }, []);
 
-  const handleTimeRangeChange = useCallback((start: Date, end: Date) => {
-    setStartDate(start);
-    setEndDate(end);
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  const handleStartDateChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowStartDatePicker(false);
     }
-  }, []);
-
-  const applyTimePreset = useCallback((preset: 'morning' | 'afternoon' | 'evening') => {
-    const newStart = new Date(startDate);
-    const newEnd = new Date(startDate);
-
-    switch (preset) {
-      case 'morning':
-        newStart.setHours(9, 0, 0, 0);
-        newEnd.setHours(11, 0, 0, 0);
-        break;
-      case 'afternoon':
-        newStart.setHours(14, 0, 0, 0);
-        newEnd.setHours(16, 0, 0, 0);
-        break;
-      case 'evening':
-        newStart.setHours(19, 0, 0, 0);
-        newEnd.setHours(21, 0, 0, 0);
-        break;
+    
+    if (selectedDate) {
+      const newStart = new Date(selectedDate);
+      newStart.setHours(startDate.getHours(), startDate.getMinutes(), 0, 0);
+      setStartDate(newStart);
+      
+      const duration = endDate.getTime() - startDate.getTime();
+      if (duration > 0) {
+        const newEnd = new Date(newStart.getTime() + duration);
+        setEndDate(newEnd);
+      }
+      
+      if (Platform.OS !== 'web') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
     }
+  };
 
-    setStartDate(newStart);
-    setEndDate(newEnd);
-
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  const handleStartTimeChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowStartTimePicker(false);
     }
-  }, [startDate]);
+    
+    if (selectedDate) {
+      const newStart = new Date(startDate);
+      newStart.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
+      setStartDate(newStart);
+      
+      const newEnd = new Date(newStart);
+      newEnd.setHours(newStart.getHours() + 1, newStart.getMinutes(), 0, 0);
+      setEndDate(newEnd);
+      
+      if (Platform.OS !== 'web') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+    }
+  };
+
+  const formatDate = (date: Date) => {
+    return EUDateFormatter.formatDate(date, 'long');
+  };
 
   const formatTime = (date: Date) => {
     return EUDateFormatter.formatTime(date);
-  };
-
-  const formatDateTimeChip = (start: Date, end: Date, isAllDay: boolean) => {
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    
-    const startDateStr = start.toDateString();
-    const todayStr = today.toDateString();
-    const tomorrowStr = tomorrow.toDateString();
-    
-    let dateLabel = '';
-    if (startDateStr === todayStr) {
-      dateLabel = 'Today';
-    } else if (startDateStr === tomorrowStr) {
-      dateLabel = 'Tomorrow';
-    } else {
-      dateLabel = EUDateFormatter.formatDate(start, 'short');
-    }
-    
-    if (isAllDay) {
-      return `${dateLabel} (All-day)`;
-    }
-    
-    const startTime = formatTime(start);
-    const endTime = formatTime(end);
-    return `${dateLabel} • ${startTime}–${endTime}`;
   };
 
   const selectedMembersText = useMemo(() => {
@@ -577,28 +451,65 @@ export function TaskFormModal({
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Details</Text>
             
-            <TouchableOpacity
-              style={styles.fieldRow}
-              onPress={() => {
-                if (Platform.OS !== 'web') {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }
-                setShowDatePicker(true);
-              }}
-            >
-              <View style={styles.fieldRowLeft}>
-                <View style={styles.fieldIcon}>
-                  <Calendar size={20} color="#6B7280" />
+            <View style={styles.dateTimeSection}>
+              <View style={styles.allDayRow}>
+                <View style={styles.allDayContent}>
+                  <Text style={styles.allDayLabel}>Ganztägig</Text>
+                  <Text style={styles.allDayHint}>Keine bestimmte Zeit</Text>
                 </View>
-                <View style={styles.fieldContent}>
-                  <Text style={styles.fieldLabel}>Time</Text>
-                  <Text style={styles.fieldValue}>
-                    {formatDateTimeChip(startDate, endDate, allDay)}
-                  </Text>
-                </View>
+                <Switch
+                  value={allDay}
+                  onValueChange={(value) => {
+                    setAllDay(value);
+                    if (value) {
+                      const newStart = new Date(startDate);
+                      newStart.setHours(0, 0, 0, 0);
+                      const newEnd = new Date(startDate);
+                      newEnd.setHours(23, 59, 59, 999);
+                      setStartDate(newStart);
+                      setEndDate(newEnd);
+                    }
+                    if (Platform.OS !== 'web') {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }
+                  }}
+                  trackColor={{ false: '#D1D5DB', true: '#93C5FD' }}
+                  thumbColor={allDay ? '#3B82F6' : '#F3F4F6'}
+                />
               </View>
-              <ChevronRight size={20} color="#9CA3AF" />
-            </TouchableOpacity>
+
+              <View style={styles.dateTimeRow}>
+                <TouchableOpacity
+                  style={styles.dateTimeButton}
+                  onPress={() => {
+                    if (Platform.OS !== 'web') {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }
+                    setTempStartDate(startDate);
+                    setShowStartDatePicker(true);
+                  }}
+                >
+                  <Calendar size={18} color="#6B7280" />
+                  <Text style={styles.dateTimeValue}>{formatDate(startDate)}</Text>
+                </TouchableOpacity>
+
+                {!allDay && (
+                  <TouchableOpacity
+                    style={styles.dateTimeButton}
+                    onPress={() => {
+                      if (Platform.OS !== 'web') {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      }
+                      setTempStartDate(startDate);
+                      setShowStartTimePicker(true);
+                    }}
+                  >
+                    <Clock size={18} color="#6B7280" />
+                    <Text style={styles.dateTimeValue}>{formatTime(startDate)}</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
 
             <TouchableOpacity
               style={styles.fieldRow}
@@ -894,165 +805,75 @@ export function TaskFormModal({
         </View>
       </Modal>
 
-      <Modal visible={showDatePicker} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Date & Time</Text>
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={() => setShowDatePicker(false)}
-              >
-                <X size={24} color="#6B7280" />
+      {Platform.OS === 'ios' && showStartDatePicker && (
+        <View style={styles.iosPickerOverlay}>
+          <TouchableOpacity 
+            style={styles.iosPickerBackdrop}
+            activeOpacity={1}
+            onPress={() => setShowStartDatePicker(false)}
+          />
+          <View style={styles.iosPickerContainer}>
+            <View style={styles.iosPickerHeader}>
+              <TouchableOpacity onPress={() => setShowStartDatePicker(false)}>
+                <Text style={styles.iosPickerDoneButton}>Fertig</Text>
               </TouchableOpacity>
             </View>
-            
-            <ScrollView>
-              <View style={styles.datePickerSection}>
-                <View style={styles.allDayToggle}>
-                  <View style={styles.allDayLabelContainer}>
-                    <Text style={styles.allDayLabel}>All-day</Text>
-                    <Text style={styles.allDayHint}>No specific time</Text>
-                  </View>
-                  <Switch
-                    value={allDay}
-                    onValueChange={(value) => {
-                      setAllDay(value);
-                      if (value) {
-                        const newStart = new Date(startDate);
-                        newStart.setHours(0, 0, 0, 0);
-                        const newEnd = new Date(startDate);
-                        newEnd.setHours(23, 59, 59, 999);
-                        setStartDate(newStart);
-                        setEndDate(newEnd);
-                      }
-                      if (Platform.OS !== 'web') {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      }
-                    }}
-                    trackColor={{ false: '#D1D5DB', true: '#93C5FD' }}
-                    thumbColor={allDay ? '#3B82F6' : '#F3F4F6'}
-                  />
-                </View>
-
-                <View style={styles.divider} />
-
-                <Text style={styles.pickerSectionTitle}>Date</Text>
-                <CalendarPicker
-                  selectedDate={startDate}
-                  onSelect={(date) => {
-                    const newStart = new Date(date);
-                    if (!allDay) {
-                      newStart.setHours(startDate.getHours(), startDate.getMinutes(), 0, 0);
-                    }
-                    const timeDiff = endDate.getTime() - startDate.getTime();
-                    const newEnd = new Date(newStart.getTime() + timeDiff);
-                    setStartDate(newStart);
-                    setEndDate(newEnd);
-                    if (Platform.OS !== 'web') {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    }
-                  }}
-                  onClose={() => {}}
-                />
-
-                {!allDay && (
-                  <>
-                    <View style={styles.divider} />
-                    <View style={styles.timeSection}>
-                      <Text style={styles.pickerSectionTitle}>Time</Text>
-                      <View style={styles.timeRangeDisplay}>
-                        <TouchableOpacity
-                          style={styles.timeButton}
-                          onPress={() => setShowTimePicker(true)}
-                        >
-                          <Clock size={18} color="#6B7280" />
-                          <Text style={styles.timeButtonText}>{formatTime(startDate)}</Text>
-                        </TouchableOpacity>
-                        <Text style={styles.timeRangeSeparator}>→</Text>
-                        <TouchableOpacity
-                          style={styles.timeButton}
-                          onPress={() => setShowTimePicker(true)}
-                        >
-                          <Clock size={18} color="#6B7280" />
-                          <Text style={styles.timeButtonText}>{formatTime(endDate)}</Text>
-                        </TouchableOpacity>
-                      </View>
-
-                      <Text style={styles.quickActionLabel}>Quick times</Text>
-                      <View style={styles.quickTimeChips}>
-                        {[
-                          { label: 'Morning', value: 'morning' as const, time: '9:00-11:00' },
-                          { label: 'Afternoon', value: 'afternoon' as const, time: '14:00-16:00' },
-                          { label: 'Evening', value: 'evening' as const, time: '19:00-21:00' },
-                        ].map((preset) => (
-                          <TouchableOpacity
-                            key={preset.value}
-                            style={styles.timePresetChip}
-                            onPress={() => {
-                              applyTimePreset(preset.value);
-                              if (Platform.OS !== 'web') {
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                              }
-                            }}
-                          >
-                            <Text style={styles.timePresetChipLabel}>{preset.label}</Text>
-                            <Text style={styles.timePresetChipTime}>{preset.time}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    </View>
-                  </>
-                )}
-              </View>
-            </ScrollView>
-
-            <View style={styles.modalFooter}>
-              <TouchableOpacity
-                style={styles.doneButton}
-                onPress={() => {
-                  setShowDatePicker(false);
-                  if (Platform.OS !== 'web') {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                  }
-                }}
-              >
-                <Text style={styles.doneButtonText}>Done</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      <Modal visible={showTimePicker} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Time Range</Text>
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={() => setShowTimePicker(false)}
-              >
-                <X size={24} color="#6B7280" />
-              </TouchableOpacity>
-            </View>
-            <CalendarDayView
-              selectedDate={startDate}
-              startTime={startDate}
-              endTime={endDate}
-              categoryColor={categoryMeta.color}
-              onTimeRangeChange={handleTimeRangeChange}
-              allDay={allDay}
+            <DateTimePicker
+              value={tempStartDate}
+              mode="date"
+              display="spinner"
+              onChange={handleStartDateChange}
+              minimumDate={mode === 'create' ? new Date() : undefined}
+              style={styles.iosPicker}
             />
-            <TouchableOpacity
-              style={[styles.doneButton, { marginHorizontal: 20, marginTop: 16 }]}
-              onPress={() => setShowTimePicker(false)}
-            >
-              <Text style={styles.doneButtonText}>Done</Text>
-            </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      )}
+
+      {Platform.OS === 'android' && showStartDatePicker && (
+        <DateTimePicker
+          value={startDate}
+          mode="date"
+          display="default"
+          onChange={handleStartDateChange}
+          minimumDate={mode === 'create' ? new Date() : undefined}
+        />
+      )}
+
+      {Platform.OS === 'ios' && showStartTimePicker && (
+        <View style={styles.iosPickerOverlay}>
+          <TouchableOpacity 
+            style={styles.iosPickerBackdrop}
+            activeOpacity={1}
+            onPress={() => setShowStartTimePicker(false)}
+          />
+          <View style={styles.iosPickerContainer}>
+            <View style={styles.iosPickerHeader}>
+              <TouchableOpacity onPress={() => setShowStartTimePicker(false)}>
+                <Text style={styles.iosPickerDoneButton}>Fertig</Text>
+              </TouchableOpacity>
+            </View>
+            <DateTimePicker
+              value={tempStartDate}
+              mode="time"
+              display="spinner"
+              onChange={handleStartTimeChange}
+              is24Hour={true}
+              style={styles.iosPicker}
+            />
+          </View>
+        </View>
+      )}
+
+      {Platform.OS === 'android' && showStartTimePicker && (
+        <DateTimePicker
+          value={startDate}
+          mode="time"
+          display="default"
+          onChange={handleStartTimeChange}
+          is24Hour={true}
+        />
+      )}
 
       <Modal visible={showPriorityPicker} transparent animationType="slide">
         <View style={styles.modalOverlay}>
@@ -1320,75 +1141,6 @@ export function TaskFormModal({
     </Modal>
   );
 }
-
-const calendarStyles = StyleSheet.create({
-  container: {
-    paddingHorizontal: 16,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  navButton: {
-    padding: 10,
-    borderRadius: 8,
-  },
-  monthTitle: {
-    fontSize: 17,
-    fontWeight: '600' as const,
-    color: '#111827',
-  },
-  weekHeader: {
-    flexDirection: 'row',
-    marginBottom: 8,
-  },
-  weekDayName: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: 12,
-    fontWeight: '600' as const,
-    color: '#9CA3AF',
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  dayCell: {
-    width: '14.28%',
-    aspectRatio: 1,
-    padding: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dayCellToday: {
-    backgroundColor: 'transparent',
-  },
-  dayCellSelected: {
-    backgroundColor: '#3B82F6',
-    borderRadius: 50,
-  },
-  dayNumber: {
-    fontSize: 16,
-    fontWeight: '400' as const,
-    color: '#111827',
-  },
-  dayNumberOther: {
-    color: '#D1D5DB',
-  },
-  dayNumberToday: {
-    color: '#3B82F6',
-    fontWeight: '700' as const,
-  },
-  dayNumberSelected: {
-    color: '#FFFFFF',
-    fontWeight: '600' as const,
-  },
-  dayNumberPast: {
-    color: '#E5E7EB',
-  },
-});
 
 const styles = StyleSheet.create({
   container: {
@@ -1716,54 +1468,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
-  switchRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  switchLabel: {
-    fontSize: 16,
-    fontWeight: '500' as const,
-    color: '#111827',
-  },
-  timeRangeDisplay: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 16,
-  },
-  timeButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 12,
-  },
-  timeButtonText: {
-    fontSize: 17,
-    fontWeight: '500' as const,
-    color: '#111827',
-  },
-  timeRangeSeparator: {
-    fontSize: 18,
-    color: '#9CA3AF',
-  },
-  datePickerSection: {
-    paddingBottom: 20,
-  },
-  allDayToggle: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  dateTimeSection: {
     paddingHorizontal: 20,
     paddingVertical: 16,
+    backgroundColor: '#FFFFFF',
+    gap: 16,
   },
-  allDayLabelContainer: {
+  allDayRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  allDayContent: {
     gap: 2,
   },
   allDayLabel: {
@@ -1775,60 +1491,65 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#9CA3AF',
   },
-  divider: {
-    height: 1,
-    backgroundColor: '#F3F4F6',
-    marginVertical: 16,
-  },
-  pickerSectionTitle: {
-    fontSize: 13,
-    fontWeight: '600' as const,
-    color: '#9CA3AF',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    paddingHorizontal: 20,
-    marginBottom: 16,
-  },
-  timeSection: {
-    paddingHorizontal: 20,
-  },
-  quickActionLabel: {
-    fontSize: 13,
-    fontWeight: '600' as const,
-    color: '#9CA3AF',
-    marginBottom: 12,
-    marginTop: 20,
-  },
-  quickTimeChips: {
+  dateTimeRow: {
     flexDirection: 'row',
     gap: 12,
   },
-  timePresetChip: {
+  dateTimeButton: {
     flex: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    flexDirection: 'row',
     alignItems: 'center',
-  },
-  timePresetChipLabel: {
-    fontSize: 15,
-    fontWeight: '600' as const,
-    color: '#111827',
-    marginBottom: 2,
-  },
-  timePresetChipTime: {
-    fontSize: 12,
-    fontWeight: '400' as const,
-    color: '#6B7280',
-  },
-  modalFooter: {
-    paddingHorizontal: 20,
+    justifyContent: 'center',
+    gap: 8,
     paddingVertical: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    paddingHorizontal: 16,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+  },
+  dateTimeValue: {
+    fontSize: 15,
+    fontWeight: '500' as const,
+    color: '#111827',
+  },
+  iosPickerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'flex-end',
+  },
+  iosPickerBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  iosPickerContainer: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  iosPickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  iosPickerDoneButton: {
+    fontSize: 17,
+    fontWeight: '600' as const,
+    color: '#3B82F6',
+  },
+  iosPicker: {
+    height: 200,
   },
   quickReminderChips: {
     flexDirection: 'row',
