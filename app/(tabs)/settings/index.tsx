@@ -219,7 +219,17 @@ export default function SettingsScreen() {
               icon={<Palette size={20} color="#8B5CF6" />}
               title="Categories"
               subtitle="Manage task categories"
-              onPress={() => router.push('./categories' as any)}
+              onPress={() => {
+                if (currentUserRole !== 'Owner' && !currentList?.allowMemberCategoryManage) {
+                  Alert.alert(
+                    'Permission Required',
+                    'Only the list owner can manage categories. Ask the owner to enable member category management in List Settings.',
+                    [{ text: 'OK' }]
+                  );
+                } else {
+                  router.push('/(tabs)/settings/categories');
+                }
+              }}
             />
             <SettingItem
               icon={<Users size={20} color="#F59E0B" />}
