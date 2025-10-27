@@ -193,17 +193,20 @@ export default function TaskDetailScreen() {
   const [showAssignedToPicker, setShowAssignedToPicker] = useState(false);
   const [showStakeEditor, setShowStakeEditor] = useState(false);
   const [showDateTimePicker, setShowDateTimePicker] = useState(false);
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [editingDateTime, setEditingDateTime] = useState<{ startDate: Date; endDate: Date; allDay: boolean }>({
     startDate: new Date(),
     endDate: new Date(),
     allDay: false,
   });
 
-  const formatDateTime = useCallback((date: Date, allDay?: boolean) => {
-    if (allDay) {
-      return EUDateFormatter.formatDate(date, 'long');
-    }
-    return `${EUDateFormatter.formatDate(date, 'long')} • ${EUDateFormatter.formatTime(date)}`;
+  const formatDate = useCallback((date: Date) => {
+    return EUDateFormatter.formatDate(date, 'long');
+  }, []);
+
+  const formatTime = useCallback((date: Date) => {
+    return EUDateFormatter.formatTime(date);
   }, []);
 
   const handleUpdateField = useCallback((field: string, value: any) => {
@@ -381,11 +384,12 @@ export default function TaskDetailScreen() {
             onPress={() => setShowCategoryPicker(true)}
           />
 
-          <EditableField
-            label="Time"
-            value={`${formatDateTime(startDate, task.allDay)} → ${formatDateTime(endDate, task.allDay)}`}
-            icon={<Calendar size={20} color="#6B7280" />}
+          <TouchableOpacity
+            style={styles.dateTimeField}
             onPress={() => {
+              if (Platform.OS !== 'web') {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
               setEditingDateTime({
                 startDate: new Date(task.startAt),
                 endDate: new Date(task.endAt),
@@ -393,8 +397,23 @@ export default function TaskDetailScreen() {
               });
               setShowDateTimePicker(true);
             }}
-            multiline
-          />
+          >
+            <View style={styles.fieldRowLeft}>
+              <View style={styles.fieldIcon}>
+                <Calendar size={20} color="#6B7280" />
+              </View>
+              <View style={styles.fieldContent}>
+                <Text style={styles.fieldLabel}>Date & Time</Text>
+                <Text style={styles.dateTimePreview}>
+                  {task.allDay ? 'All Day' : formatTime(startDate)}
+                </Text>
+                <Text style={styles.dateValue}>
+                  {formatDate(startDate)}
+                </Text>
+              </View>
+            </View>
+            <ChevronRight size={20} color="#9CA3AF" />
+          </TouchableOpacity>
 
           <EditableField
             label="Assigned To"
@@ -581,6 +600,100 @@ export default function TaskDetailScreen() {
           setShowDateTimePicker(false);
         }}
       />
+
+      {Platform.OS === 'ios' && showStartDatePicker && (
+        <View style={styles.iosPickerOverlay}>
+          <TouchableOpacity 
+            style={styles.iosPickerBackdrop}
+            activeOpacity={1}
+            onPress={() => setShowStartDatePicker(false)}
+          />
+          <View style={styles.iosPickerContainer}>
+            <View style={styles.iosPickerHeader}>
+              <TouchableOpacity onPress={() => setShowStartDatePicker(false)}>
+                <Text style={styles.iosPickerDoneButton}>Done</Text>
+              </TouchableOpacity>
+            </View>
+            <DateTimePicker
+              value={editingDateTime.startDate}
+              mode="date"
+              display="spinner"
+              onChange={(_event: DateTimePickerEvent, date?: Date) => {
+                if (date) {
+                  const newStart = new Date(date);
+                  newStart.setHours(editingDateTime.startDate.getHours(), editingDateTime.startDate.getMinutes(), 0, 0);
+                  setEditingDateTime(prev => ({ ...prev, startDate: newStart }));
+                }
+              }}
+              style={styles.iosPicker}
+            />
+          </View>
+        </View>
+      )}
+
+      {Platform.OS === 'android' && showStartDatePicker && (
+        <DateTimePicker
+          value={editingDateTime.startDate}
+          mode="date"
+          display="default"
+          onChange={(_event: DateTimePickerEvent, date?: Date) => {
+            setShowStartDatePicker(false);
+            if (date) {
+              const newStart = new Date(date);
+              newStart.setHours(editingDateTime.startDate.getHours(), editingDateTime.startDate.getMinutes(), 0, 0);
+              setEditingDateTime(prev => ({ ...prev, startDate: newStart }));
+            }
+          }}
+        />
+      )}
+
+      {Platform.OS === 'ios' && showStartTimePicker && (
+        <View style={styles.iosPickerOverlay}>
+          <TouchableOpacity 
+            style={styles.iosPickerBackdrop}
+            activeOpacity={1}
+            onPress={() => setShowStartTimePicker(false)}
+          />
+          <View style={styles.iosPickerContainer}>
+            <View style={styles.iosPickerHeader}>
+              <TouchableOpacity onPress={() => setShowStartTimePicker(false)}>
+                <Text style={styles.iosPickerDoneButton}>Done</Text>
+              </TouchableOpacity>
+            </View>
+            <DateTimePicker
+              value={editingDateTime.startDate}
+              mode="time"
+              display="spinner"
+              onChange={(_event: DateTimePickerEvent, date?: Date) => {
+                if (date) {
+                  const newStart = new Date(editingDateTime.startDate);
+                  newStart.setHours(date.getHours(), date.getMinutes(), 0, 0);
+                  setEditingDateTime(prev => ({ ...prev, startDate: newStart }));
+                }
+              }}
+              is24Hour={true}
+              style={styles.iosPicker}
+            />
+          </View>
+        </View>
+      )}
+
+      {Platform.OS === 'android' && showStartTimePicker && (
+        <DateTimePicker
+          value={editingDateTime.startDate}
+          mode="time"
+          display="default"
+          onChange={(_event: DateTimePickerEvent, date?: Date) => {
+            setShowStartTimePicker(false);
+            if (date) {
+              const newStart = new Date(editingDateTime.startDate);
+              newStart.setHours(date.getHours(), date.getMinutes(), 0, 0);
+              setEditingDateTime(prev => ({ ...prev, startDate: newStart }));
+            }
+          }}
+          is24Hour={true}
+        />
+      )}
     </View>
   );
 }
@@ -675,15 +788,15 @@ function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onS
   const [start, setStart] = useState(startDate);
   const [end, setEnd] = useState(endDate);
   const [isAllDay, setIsAllDay] = useState(allDay);
-  const [editingField, setEditingField] = useState<'start-date' | 'start-time' | 'end-date' | 'end-time' | null>(null);
-  const [tempDate, setTempDate] = useState<Date>(new Date());
+  const [tempStartDate, setTempStartDate] = useState(startDate);
+  const [showPickerType, setShowPickerType] = useState<'start-date' | 'start-time' | null>(null);
 
   useEffect(() => {
     if (visible) {
       setStart(startDate);
       setEnd(endDate);
       setIsAllDay(allDay);
-      setEditingField(null);
+      setTempStartDate(startDate);
     }
   }, [visible, startDate, endDate, allDay]);
 
@@ -698,79 +811,41 @@ function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onS
   };
 
   const handleStartDateChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
-    if (selectedDate) {
-      setTempDate(selectedDate);
+    if (Platform.OS === 'android' && selectedDate) {
+      const newStart = new Date(selectedDate);
+      newStart.setHours(start.getHours(), start.getMinutes(), 0, 0);
+      setStart(newStart);
       
-      if (Platform.OS === 'android') {
-        const newStart = new Date(selectedDate);
-        newStart.setHours(start.getHours(), start.getMinutes(), 0, 0);
-        setStart(newStart);
-        
-        const timeDiff = end.getTime() - start.getTime();
-        if (timeDiff > 0 && timeDiff < 24 * 60 * 60 * 1000) {
-          const newEnd = new Date(newStart.getTime() + timeDiff);
-          setEnd(newEnd);
-        }
-        setEditingField(null);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      const duration = end.getTime() - start.getTime();
+      if (duration > 0) {
+        const newEnd = new Date(newStart.getTime() + duration);
+        setEnd(newEnd);
       }
+      
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
   };
 
   const handleStartTimeChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
-    if (selectedDate) {
-      setTempDate(selectedDate);
+    if (Platform.OS === 'android' && selectedDate) {
+      const newStart = new Date(start);
+      newStart.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
+      setStart(newStart);
       
-      if (Platform.OS === 'android') {
-        const newStart = new Date(start);
-        newStart.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
-        setStart(newStart);
-        
-        const timeDiff = end.getTime() - start.getTime();
-        if (timeDiff < 0 || timeDiff > 24 * 60 * 60 * 1000) {
-          const newEnd = new Date(newStart);
-          newEnd.setHours(newStart.getHours() + 1, newStart.getMinutes(), 0, 0);
-          setEnd(newEnd);
-        }
-        setEditingField(null);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      }
-    }
-  };
-
-  const handleEndDateChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
-    if (selectedDate) {
-      setTempDate(selectedDate);
+      const newEnd = new Date(newStart);
+      newEnd.setHours(newStart.getHours() + 1, newStart.getMinutes(), 0, 0);
+      setEnd(newEnd);
       
-      if (Platform.OS === 'android') {
-        const newEnd = new Date(selectedDate);
-        newEnd.setHours(end.getHours(), end.getMinutes(), 0, 0);
-        setEnd(newEnd);
-        setEditingField(null);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      }
-    }
-  };
-
-  const handleEndTimeChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
-    if (selectedDate) {
-      setTempDate(selectedDate);
-      
-      if (Platform.OS === 'android') {
-        const newEnd = new Date(end);
-        newEnd.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
-        setEnd(newEnd);
-        setEditingField(null);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      }
-    }
-  };
-
-  const handleAllDayToggle = (value: boolean) => {
-    setIsAllDay(value);
-    if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
+  };
+
+  const setShowDatePickerIOS = (type: 'start-date' | 'start-time') => {
+    setShowPickerType(type);
+  };
+
+  const setShowDatePickerAndroid = (type: 'start-date' | 'start-time') => {
+    setShowPickerType(type);
   };
 
   const isValidDateRange = end > start;
@@ -788,36 +863,50 @@ function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onS
         <ScrollView 
           style={styles.dateTimeScrollView} 
           contentContainerStyle={styles.dateTimeContent}
-          scrollEnabled={!editingField}
         >
           <View style={styles.allDayRow}>
-            <Text style={styles.dateTimeLabel}>All Day</Text>
+            <View style={styles.allDayContent}>
+              <Text style={styles.dateTimeLabel}>Ganztägig</Text>
+              <Text style={styles.allDayHint}>Keine bestimmte Zeit</Text>
+            </View>
             <Switch
               value={isAllDay}
-              onValueChange={handleAllDayToggle}
+              onValueChange={(value) => {
+                setIsAllDay(value);
+                if (value) {
+                  const newStart = new Date(start);
+                  newStart.setHours(0, 0, 0, 0);
+                  const newEnd = new Date(start);
+                  newEnd.setHours(23, 59, 59, 999);
+                  setStart(newStart);
+                  setEnd(newEnd);
+                }
+                if (Platform.OS !== 'web') {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+              }}
               trackColor={{ false: '#D1D5DB', true: '#93C5FD' }}
               thumbColor={isAllDay ? '#3B82F6' : '#F3F4F6'}
             />
           </View>
 
-          <View style={styles.dateTimeSection}>
-            <Text style={styles.dateTimeSectionTitle}>START</Text>
-            
+          <View style={styles.dateTimeRow}>
             <TouchableOpacity
               style={styles.dateTimeButton}
               onPress={() => {
                 if (Platform.OS !== 'web') {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 }
-                setTempDate(start);
-                setEditingField('start-date');
+                setTempStartDate(start);
+                if (Platform.OS === 'ios') {
+                  setShowDatePickerIOS('start-date');
+                } else {
+                  setShowDatePickerAndroid('start-date');
+                }
               }}
             >
-              <View style={styles.dateTimeButtonLeft}>
-                <Calendar size={20} color="#6B7280" />
-                <Text style={styles.dateTimeButtonLabel}>Date</Text>
-              </View>
-              <Text style={styles.dateTimeButtonValue}>{formatDate(start)}</Text>
+              <Calendar size={18} color="#6B7280" />
+              <Text style={styles.dateTimeValue}>{formatDate(start)}</Text>
             </TouchableOpacity>
 
             {!isAllDay && (
@@ -827,55 +916,16 @@ function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onS
                   if (Platform.OS !== 'web') {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   }
-                  setTempDate(start);
-                  setEditingField('start-time');
-                }}
-              >
-                <View style={styles.dateTimeButtonLeft}>
-                  <Clock size={20} color="#6B7280" />
-                  <Text style={styles.dateTimeButtonLabel}>Time</Text>
-                </View>
-                <Text style={styles.dateTimeButtonValue}>{formatTime(start)}</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          <View style={styles.dateTimeSection}>
-            <Text style={styles.dateTimeSectionTitle}>END</Text>
-            
-            <TouchableOpacity
-              style={styles.dateTimeButton}
-              onPress={() => {
-                if (Platform.OS !== 'web') {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }
-                setTempDate(end);
-                setEditingField('end-date');
-              }}
-            >
-              <View style={styles.dateTimeButtonLeft}>
-                <Calendar size={20} color="#6B7280" />
-                <Text style={styles.dateTimeButtonLabel}>Date</Text>
-              </View>
-              <Text style={styles.dateTimeButtonValue}>{formatDate(end)}</Text>
-            </TouchableOpacity>
-
-            {!isAllDay && (
-              <TouchableOpacity
-                style={styles.dateTimeButton}
-                onPress={() => {
-                  if (Platform.OS !== 'web') {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setTempStartDate(start);
+                  if (Platform.OS === 'ios') {
+                    setShowDatePickerIOS('start-time');
+                  } else {
+                    setShowDatePickerAndroid('start-time');
                   }
-                  setTempDate(end);
-                  setEditingField('end-time');
                 }}
               >
-                <View style={styles.dateTimeButtonLeft}>
-                  <Clock size={20} color="#6B7280" />
-                  <Text style={styles.dateTimeButtonLabel}>Time</Text>
-                </View>
-                <Text style={styles.dateTimeButtonValue}>{formatTime(end)}</Text>
+                <Clock size={18} color="#6B7280" />
+                <Text style={styles.dateTimeValue}>{formatTime(start)}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -904,22 +954,22 @@ function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onS
         </View>
       </View>
 
-      {Platform.OS === 'ios' && editingField === 'start-date' && (
+      {Platform.OS === 'ios' && showPickerType === 'start-date' && (
         <View style={styles.iosPickerOverlay}>
           <TouchableOpacity 
             style={styles.iosPickerBackdrop}
             activeOpacity={1}
             onPress={() => {
-              const newStart = new Date(tempDate);
+              const newStart = new Date(tempStartDate);
               newStart.setHours(start.getHours(), start.getMinutes(), 0, 0);
               setStart(newStart);
               
-              const timeDiff = end.getTime() - start.getTime();
-              if (timeDiff > 0 && timeDiff < 24 * 60 * 60 * 1000) {
-                const newEnd = new Date(newStart.getTime() + timeDiff);
+              const duration = end.getTime() - start.getTime();
+              if (duration > 0) {
+                const newEnd = new Date(newStart.getTime() + duration);
                 setEnd(newEnd);
               }
-              setEditingField(null);
+              setShowPickerType(null);
               if (Platform.OS !== 'web') {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               }
@@ -928,16 +978,16 @@ function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onS
           <View style={styles.iosPickerContainer}>
             <View style={styles.iosPickerHeader}>
               <TouchableOpacity onPress={() => {
-                const newStart = new Date(tempDate);
+                const newStart = new Date(tempStartDate);
                 newStart.setHours(start.getHours(), start.getMinutes(), 0, 0);
                 setStart(newStart);
                 
-                const timeDiff = end.getTime() - start.getTime();
-                if (timeDiff > 0 && timeDiff < 24 * 60 * 60 * 1000) {
-                  const newEnd = new Date(newStart.getTime() + timeDiff);
+                const duration = end.getTime() - start.getTime();
+                if (duration > 0) {
+                  const newEnd = new Date(newStart.getTime() + duration);
                   setEnd(newEnd);
                 }
-                setEditingField(null);
+                setShowPickerType(null);
                 if (Platform.OS !== 'web') {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 }
@@ -946,18 +996,21 @@ function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onS
               </TouchableOpacity>
             </View>
             <DateTimePicker
-              value={tempDate}
+              value={tempStartDate}
               mode="date"
               display="spinner"
-              onChange={handleStartDateChange}
-              minimumDate={new Date()}
+              onChange={(_event: DateTimePickerEvent, date?: Date) => {
+                if (date) {
+                  setTempStartDate(date);
+                }
+              }}
               style={styles.iosPicker}
             />
           </View>
         </View>
       )}
 
-      {Platform.OS === 'android' && editingField === 'start-date' && (
+      {Platform.OS === 'android' && showPickerType === 'start-date' && (
         <DateTimePicker
           value={start}
           mode="date"
@@ -967,23 +1020,21 @@ function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onS
         />
       )}
 
-      {Platform.OS === 'ios' && editingField === 'start-time' && (
+      {Platform.OS === 'ios' && showPickerType === 'start-time' && (
         <View style={styles.iosPickerOverlay}>
           <TouchableOpacity 
             style={styles.iosPickerBackdrop}
             activeOpacity={1}
             onPress={() => {
               const newStart = new Date(start);
-              newStart.setHours(tempDate.getHours(), tempDate.getMinutes(), 0, 0);
+              newStart.setHours(tempStartDate.getHours(), tempStartDate.getMinutes(), 0, 0);
               setStart(newStart);
               
-              const timeDiff = end.getTime() - start.getTime();
-              if (timeDiff < 0 || timeDiff > 24 * 60 * 60 * 1000) {
-                const newEnd = new Date(newStart);
-                newEnd.setHours(newStart.getHours() + 1, newStart.getMinutes(), 0, 0);
-                setEnd(newEnd);
-              }
-              setEditingField(null);
+              const newEnd = new Date(newStart);
+              newEnd.setHours(newStart.getHours() + 1, newStart.getMinutes(), 0, 0);
+              setEnd(newEnd);
+              
+              setShowPickerType(null);
               if (Platform.OS !== 'web') {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               }
@@ -993,16 +1044,14 @@ function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onS
             <View style={styles.iosPickerHeader}>
               <TouchableOpacity onPress={() => {
                 const newStart = new Date(start);
-                newStart.setHours(tempDate.getHours(), tempDate.getMinutes(), 0, 0);
+                newStart.setHours(tempStartDate.getHours(), tempStartDate.getMinutes(), 0, 0);
                 setStart(newStart);
                 
-                const timeDiff = end.getTime() - start.getTime();
-                if (timeDiff < 0 || timeDiff > 24 * 60 * 60 * 1000) {
-                  const newEnd = new Date(newStart);
-                  newEnd.setHours(newStart.getHours() + 1, newStart.getMinutes(), 0, 0);
-                  setEnd(newEnd);
-                }
-                setEditingField(null);
+                const newEnd = new Date(newStart);
+                newEnd.setHours(newStart.getHours() + 1, newStart.getMinutes(), 0, 0);
+                setEnd(newEnd);
+                
+                setShowPickerType(null);
                 if (Platform.OS !== 'web') {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 }
@@ -1011,10 +1060,14 @@ function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onS
               </TouchableOpacity>
             </View>
             <DateTimePicker
-              value={tempDate}
+              value={tempStartDate}
               mode="time"
               display="spinner"
-              onChange={handleStartTimeChange}
+              onChange={(_event: DateTimePickerEvent, date?: Date) => {
+                if (date) {
+                  setTempStartDate(date);
+                }
+              }}
               is24Hour={true}
               style={styles.iosPicker}
             />
@@ -1022,7 +1075,7 @@ function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onS
         </View>
       )}
 
-      {Platform.OS === 'android' && editingField === 'start-time' && (
+      {Platform.OS === 'android' && showPickerType === 'start-time' && (
         <DateTimePicker
           value={start}
           mode="time"
@@ -1032,107 +1085,7 @@ function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onS
         />
       )}
 
-      {Platform.OS === 'ios' && editingField === 'end-date' && (
-        <View style={styles.iosPickerOverlay}>
-          <TouchableOpacity 
-            style={styles.iosPickerBackdrop}
-            activeOpacity={1}
-            onPress={() => {
-              const newEnd = new Date(tempDate);
-              newEnd.setHours(end.getHours(), end.getMinutes(), 0, 0);
-              setEnd(newEnd);
-              setEditingField(null);
-              if (Platform.OS !== 'web') {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              }
-            }}
-          />
-          <View style={styles.iosPickerContainer}>
-            <View style={styles.iosPickerHeader}>
-              <TouchableOpacity onPress={() => {
-                const newEnd = new Date(tempDate);
-                newEnd.setHours(end.getHours(), end.getMinutes(), 0, 0);
-                setEnd(newEnd);
-                setEditingField(null);
-                if (Platform.OS !== 'web') {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }
-              }}>
-                <Text style={styles.iosPickerDoneButton}>Done</Text>
-              </TouchableOpacity>
-            </View>
-            <DateTimePicker
-              value={tempDate}
-              mode="date"
-              display="spinner"
-              onChange={handleEndDateChange}
-              minimumDate={start}
-              style={styles.iosPicker}
-            />
-          </View>
-        </View>
-      )}
 
-      {Platform.OS === 'android' && editingField === 'end-date' && (
-        <DateTimePicker
-          value={end}
-          mode="date"
-          display="default"
-          onChange={handleEndDateChange}
-          minimumDate={start}
-        />
-      )}
-
-      {Platform.OS === 'ios' && editingField === 'end-time' && (
-        <View style={styles.iosPickerOverlay}>
-          <TouchableOpacity 
-            style={styles.iosPickerBackdrop}
-            activeOpacity={1}
-            onPress={() => {
-              const newEnd = new Date(end);
-              newEnd.setHours(tempDate.getHours(), tempDate.getMinutes(), 0, 0);
-              setEnd(newEnd);
-              setEditingField(null);
-              if (Platform.OS !== 'web') {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              }
-            }}
-          />
-          <View style={styles.iosPickerContainer}>
-            <View style={styles.iosPickerHeader}>
-              <TouchableOpacity onPress={() => {
-                const newEnd = new Date(end);
-                newEnd.setHours(tempDate.getHours(), tempDate.getMinutes(), 0, 0);
-                setEnd(newEnd);
-                setEditingField(null);
-                if (Platform.OS !== 'web') {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }
-              }}>
-                <Text style={styles.iosPickerDoneButton}>Done</Text>
-              </TouchableOpacity>
-            </View>
-            <DateTimePicker
-              value={tempDate}
-              mode="time"
-              display="spinner"
-              onChange={handleEndTimeChange}
-              is24Hour={true}
-              style={styles.iosPicker}
-            />
-          </View>
-        </View>
-      )}
-
-      {Platform.OS === 'android' && editingField === 'end-time' && (
-        <DateTimePicker
-          value={end}
-          mode="time"
-          display="default"
-          onChange={handleEndTimeChange}
-          is24Hour={true}
-        />
-      )}
     </View>
   );
 }
@@ -1276,6 +1229,12 @@ const styles = StyleSheet.create({
   },
   fieldValueMultiline: {
     lineHeight: 22,
+  },
+  fieldRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
   },
   infoRow: {
     flexDirection: 'row',
@@ -1474,56 +1433,64 @@ const styles = StyleSheet.create({
   },
   dateTimeContent: {
     padding: 20,
-    gap: 24,
+    gap: 16,
   },
   allDayRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 4,
+  },
+  allDayContent: {
+    gap: 2,
   },
   dateTimeLabel: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '500' as const,
     color: '#111827',
   },
-  dateTimeSection: {
-    gap: 8,
-  },
-  dateTimeSectionTitle: {
-    fontSize: 12,
-    fontWeight: '600' as const,
+  allDayHint: {
+    fontSize: 13,
     color: '#9CA3AF',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: 4,
+  },
+  dateTimeRow: {
+    flexDirection: 'row',
+    gap: 12,
   },
   dateTimeButton: {
+    flex: 1,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 14,
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 16,
     paddingHorizontal: 16,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F3F4F6',
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
-  dateTimeButtonLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  dateTimeButtonLabel: {
+  dateTimeValue: {
     fontSize: 15,
     fontWeight: '500' as const,
-    color: '#6B7280',
-  },
-  dateTimeButtonValue: {
-    fontSize: 16,
-    fontWeight: '600' as const,
     color: '#111827',
+  },
+  dateTimeField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  dateTimePreview: {
+    fontSize: 16,
+    fontWeight: '500' as const,
+    color: '#111827',
+  },
+  dateValue: {
+    fontSize: 14,
+    fontWeight: '400' as const,
+    color: '#6B7280',
+    marginTop: 2,
   },
   errorMessage: {
     padding: 12,
