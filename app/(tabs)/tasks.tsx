@@ -244,10 +244,6 @@ export default function TasksScreen() {
     { label: 'Overdue', value: 'overdue' },
     { label: 'Completed', value: 'completed' },
     { label: 'Failed', value: 'failed' },
-    { label: 'Household', value: 'Household' },
-    { label: 'Finance', value: 'Finance' },
-    { label: 'Work', value: 'Work' },
-    { label: 'Leisure', value: 'Leisure' },
   ];
 
   const toggleFilters = () => {
@@ -650,20 +646,21 @@ const styles = StyleSheet.create({
     color: '#3B82F6',
   },
   filterScroll: {
-    backgroundColor: '#F9FAFB',
-    paddingVertical: 6,
-    maxHeight: 50,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
   filterScrollContent: {
-    paddingHorizontal: 16,
-    gap: 6,
+    paddingHorizontal: 20,
+    gap: 8,
     alignItems: 'center',
   },
   filterChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#F3F4F6',
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
@@ -672,8 +669,8 @@ const styles = StyleSheet.create({
     borderColor: '#3B82F6',
   },
   filterChipText: {
-    fontSize: 12,
-    fontWeight: '500' as const,
+    fontSize: 13,
+    fontWeight: '600' as const,
     color: '#6B7280',
   },
   filterChipTextActive: {
