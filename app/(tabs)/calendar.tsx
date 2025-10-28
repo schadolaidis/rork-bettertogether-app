@@ -224,6 +224,16 @@ export default function CalendarScreen() {
     return CalendarService.getTasksForDate(selectedDate, tasks);
   }, [selectedDate, tasks]);
 
+  const tasksByHour = useMemo(() => {
+    const map = new Map<number, typeof dayViewTasks>();
+    dayViewTasks.forEach(task => {
+      const hour = new Date(task.endAt).getHours();
+      const existing = map.get(hour) || [];
+      map.set(hour, [...existing, task]);
+    });
+    return map;
+  }, [dayViewTasks]);
+
   const renderMonthView = () => {
     const today = new Date();
     const weekDayNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -368,60 +378,82 @@ export default function CalendarScreen() {
   };
 
   const renderDayView = () => {
+    const hours = Array.from({ length: 24 }, (_, i) => i);
+
     return (
       <ScrollView style={styles.dayView} contentContainerStyle={styles.dayViewContent}>
         {dayViewTasks.length > 0 ? (
-          dayViewTasks.map((task) => {
-            const categoryColor = categoryColors[task.category] || '#6B7280';
-            const categoryEmoji = categoryEmojis[task.category] || '📋';
-            const statusColor = getStatusColor(task.status);
-            const time = new Date(task.endAt).toLocaleTimeString('en-US', {
-              hour: 'numeric',
-              minute: '2-digit',
-            });
+          <View style={styles.timelineView}>
+            {hours.map((hour) => {
+              const hourTasks = tasksByHour.get(hour) || [];
+              const displayTime = `${hour.toString().padStart(2, '0')}:00`;
+              
+              return (
+                <View key={hour} style={styles.timelineSlot}>
+                  <View style={styles.timelineSlotHeader}>
+                    <Text style={styles.timelineHour}>{displayTime}</Text>
+                    <View style={styles.timelineLine} />
+                  </View>
+                  {hourTasks.length > 0 ? (
+                    <View style={styles.timelineTasksContainer}>
+                      {hourTasks.map((task) => {
+                        const categoryColor = categoryColors[task.category] || '#6B7280';
+                        const categoryEmoji = categoryEmojis[task.category] || '📋';
+                        const statusColor = getStatusColor(task.status);
+                        const time = new Date(task.endAt).toLocaleTimeString('en-US', {
+                          hour: 'numeric',
+                          minute: '2-digit',
+                        });
 
-            return (
-              <TouchableOpacity
-                key={task.id}
-                style={styles.dayTaskCard}
-                onPress={() => {
-                  if (Platform.OS !== 'web') {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }
-                  router.push(`/task-detail?id=${task.id}`);
-                }}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.dayTaskIndicator, { backgroundColor: categoryColor }]} />
-                <View style={styles.dayTaskContent}>
-                  <View style={styles.dayTaskHeader}>
-                    <Text style={[styles.dayTaskTime, { color: statusColor }]}>{time}</Text>
-                    <View style={[styles.dayTaskStatus, { backgroundColor: statusColor }]}>
-                      <Text style={styles.dayTaskStatusText}>
-                        {task.status.charAt(0).toUpperCase() + task.status.slice(1)}
-                      </Text>
+                        return (
+                          <TouchableOpacity
+                            key={task.id}
+                            style={styles.dayTaskCard}
+                            onPress={() => {
+                              if (Platform.OS !== 'web') {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                              }
+                              router.push(`/task-detail?id=${task.id}`);
+                            }}
+                            activeOpacity={0.7}
+                          >
+                            <View style={[styles.dayTaskIndicator, { backgroundColor: categoryColor }]} />
+                            <View style={styles.dayTaskContent}>
+                              <View style={styles.dayTaskHeader}>
+                                <Text style={[styles.dayTaskTime, { color: statusColor }]}>{time}</Text>
+                                <View style={[styles.dayTaskStatus, { backgroundColor: statusColor }]}>
+                                  <Text style={styles.dayTaskStatusText}>
+                                    {task.status.charAt(0).toUpperCase() + task.status.slice(1)}
+                                  </Text>
+                                </View>
+                              </View>
+                              <Text style={styles.dayTaskTitle} numberOfLines={2}>
+                                {task.title}
+                              </Text>
+                              <View style={styles.dayTaskFooter}>
+                                <View style={styles.dayTaskCategory}>
+                                  <Text style={styles.dayTaskEmoji}>{categoryEmoji}</Text>
+                                  <Text style={[styles.dayTaskCategoryText, { color: categoryColor }]}>
+                                    {task.category}
+                                  </Text>
+                                </View>
+                                <Text style={styles.dayTaskStake}>${task.stake}</Text>
+                              </View>
+                            </View>
+                          </TouchableOpacity>
+                        );
+                      })}
                     </View>
-                  </View>
-                  <Text style={styles.dayTaskTitle} numberOfLines={2}>
-                    {task.title}
-                  </Text>
-                  <View style={styles.dayTaskFooter}>
-                    <View style={styles.dayTaskCategory}>
-                      <Text style={styles.dayTaskEmoji}>{categoryEmoji}</Text>
-                      <Text style={[styles.dayTaskCategoryText, { color: categoryColor }]}>
-                        {task.category}
-                      </Text>
-                    </View>
-                    <Text style={styles.dayTaskStake}>${task.stake}</Text>
-                  </View>
+                  ) : null}
                 </View>
-              </TouchableOpacity>
-            );
-          })
+              );
+            })}
+          </View>
         ) : (
           <View style={styles.dayEmpty}>
             <CheckCircle2 size={64} color="#D1D5DB" />
             <Text style={styles.dayEmptyText}>{t.calendar.noTasks}</Text>
+            <Text style={styles.dayEmptySubtext}>Start planning your day</Text>
             <TouchableOpacity
               style={styles.createTaskButton}
               onPress={() => handleCreateTaskForDate(selectedDate)}
@@ -512,11 +544,11 @@ export default function CalendarScreen() {
       </ScrollView>
 
       <View style={styles.hint}>
-        <CalendarIcon size={16} color="#6B7280" />
+        <CalendarIcon size={16} color="#3B82F6" />
         <Text style={styles.hintText}>
           {calendarView === 'day'
-            ? 'Tap + to create a task for today'
-            : 'Long press a date to create a task, tap to view'}
+            ? '💡 Tap + to create a task for today'
+            : '💡 Long press a date to quickly create a task'}
         </Text>
       </View>
 
@@ -756,14 +788,17 @@ const styles = StyleSheet.create({
   monthGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    gap: 4,
   },
   dayCell: {
-    width: '14.28%',
+    width: 'calc(14.28% - 4px)' as any,
     aspectRatio: 1,
     padding: 4,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
   },
   dayCellToday: {
     backgroundColor: '#DBEAFE',
@@ -883,6 +918,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 2,
+    marginBottom: 0,
   },
   dayTaskIndicator: {
     width: 4,
@@ -945,10 +981,44 @@ const styles = StyleSheet.create({
     paddingVertical: 80,
   },
   dayEmptyText: {
-    fontSize: 16,
-    color: '#9CA3AF',
+    fontSize: 18,
+    fontWeight: '600' as const,
+    color: '#6B7280',
     marginTop: 16,
+  },
+  dayEmptySubtext: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    marginTop: 8,
     marginBottom: 24,
+  },
+  timelineView: {
+    flex: 1,
+  },
+  timelineSlot: {
+    marginBottom: 4,
+  },
+  timelineSlotHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  timelineHour: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    color: '#9CA3AF',
+    width: 50,
+  },
+  timelineLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E5E7EB',
+    marginLeft: 8,
+  },
+  timelineTasksContainer: {
+    marginLeft: 58,
+    gap: 8,
+    marginBottom: 8,
   },
   createTaskButton: {
     flexDirection: 'row',
@@ -974,14 +1044,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     paddingHorizontal: 20,
-    paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
+    paddingVertical: 14,
+    backgroundColor: '#EFF6FF',
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: '#DBEAFE',
   },
   hintText: {
     fontSize: 13,
-    color: '#6B7280',
+    fontWeight: '500' as const,
+    color: '#1E40AF',
+    flex: 1,
   },
 });
 
