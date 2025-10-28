@@ -177,6 +177,8 @@ export default function TasksScreen() {
       }));
   }, [currentList]);
 
+  const memberIdParam = params.memberId as string | undefined;
+
   const initialFilter = useMemo(() => {
     const filterParam = params.filter as string;
     if (filterParam === 'open') return 'pending';
@@ -194,16 +196,25 @@ export default function TasksScreen() {
     if (initialFilter !== 'all' && initialFilter !== filter) {
       setFilter(initialFilter);
     }
-  }, [initialFilter]);
+  }, [initialFilter, filter]);
 
   const filteredTasks = useMemo(() => {
     let filtered = tasks;
 
+    if (memberIdParam) {
+      filtered = filtered.filter((t) => {
+        if (Array.isArray(t.assignedTo)) {
+          return t.assignedTo.includes(memberIdParam);
+        }
+        return t.assignedTo === memberIdParam;
+      });
+    }
+
     if (filter !== 'all') {
       if (['pending', 'completed', 'failed', 'overdue'].includes(filter)) {
-        filtered = tasks.filter((t) => t.status === filter);
+        filtered = filtered.filter((t) => t.status === filter);
       } else {
-        filtered = tasks.filter((t) => t.category === filter);
+        filtered = filtered.filter((t) => t.category === filter);
       }
     }
 
@@ -226,7 +237,7 @@ export default function TasksScreen() {
       const bTime = new Date(b.endAt).getTime();
       return aTime - bTime;
     });
-  }, [tasks, filter]);
+  }, [tasks, filter, memberIdParam]);
 
   const nextDueTask = useMemo(() => {
     return tasks
@@ -258,7 +269,7 @@ export default function TasksScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     setFilter('all');
-    router.setParams({ filter: undefined });
+    router.setParams({ filter: undefined, memberId: undefined });
   }, [router]);
 
   const [undoExpiration, setUndoExpiration] = useState<number>(0);
@@ -395,23 +406,49 @@ export default function TasksScreen() {
         </View>
       )}
 
-      {filter !== 'all' && (
+      {(filter !== 'all' || memberIdParam) && (
         <View style={styles.activeFiltersBar}>
-          <View style={styles.activeFilterPill}>
-            <Text style={styles.activeFilterText}>
-              {filters.find(f => f.value === filter)?.label}
-            </Text>
-            <TouchableOpacity
-              onPress={clearFilters}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <X size={16} color="#3B82F6" strokeWidth={2} />
-            </TouchableOpacity>
-          </View>
+          {memberIdParam && (
+            <View style={styles.activeFilterPill}>
+              <Text style={styles.activeFilterText}>
+                {currentListMembers.find(m => m.id === memberIdParam)?.name || 'Member'}
+              </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  if (Platform.OS !== 'web') {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }
+                  router.setParams({ memberId: undefined });
+                }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <X size={16} color="#3B82F6" strokeWidth={2} />
+              </TouchableOpacity>
+            </View>
+          )}
+          {filter !== 'all' && (
+            <View style={styles.activeFilterPill}>
+              <Text style={styles.activeFilterText}>
+                {filters.find(f => f.value === filter)?.label}
+              </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  if (Platform.OS !== 'web') {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }
+                  setFilter('all');
+                  router.setParams({ filter: undefined });
+                }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <X size={16} color="#3B82F6" strokeWidth={2} />
+              </TouchableOpacity>
+            </View>
+          )}
           <TouchableOpacity
             onPress={clearFilters}
           >
-            <Text style={styles.clearFiltersText}>Clear Filters</Text>
+            <Text style={styles.clearFiltersText}>Clear All</Text>
           </TouchableOpacity>
         </View>
       )}

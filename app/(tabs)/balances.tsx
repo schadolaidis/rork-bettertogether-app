@@ -336,7 +336,11 @@ export default function BalancesScreen() {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-    console.log('[Balance] View member details:', memberId);
+    router.push({
+      pathname: '/(tabs)/tasks',
+      params: { memberId },
+    });
+    console.log('[Balance] Navigate to member tasks:', memberId);
   };
 
   const handleTransactionPress = (taskId: string) => {
