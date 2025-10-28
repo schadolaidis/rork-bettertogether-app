@@ -19,6 +19,10 @@ import {
   Users,
   Calendar as CalendarIcon,
   X,
+  ChevronDown,
+  Check,
+  Plus,
+  CheckSquare,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useApp } from '@/contexts/AppContext';
@@ -385,17 +389,21 @@ export default function DashboardScreen() {
   const {
     dashboardStats,
     tasks,
+    allTasks,
     currentUser,
     currentList,
     currentListMembers,
+    lists,
     calendarView,
     selectedDate,
     setCalendarViewType,
     setCalendarSelectedDate,
+    switchList,
   } = useApp();
 
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [showDayAgenda, setShowDayAgenda] = useState(false);
+  const [showListSwitcher, setShowListSwitcher] = useState(false);
   const [agendaDate, setAgendaDate] = useState<Date>(new Date());
 
   const upcomingTasks = useMemo(() => {
@@ -484,13 +492,23 @@ export default function DashboardScreen() {
           </View>
         </View>
 
-        <View style={styles.listBanner}>
+        <TouchableOpacity
+          style={styles.listBanner}
+          onPress={() => {
+            if (Platform.OS !== 'web') {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            }
+            setShowListSwitcher(true);
+          }}
+          activeOpacity={0.7}
+        >
           <Users size={16} color="#3B82F6" />
           <Text style={styles.listName}>{currentList?.name || 'List'}</Text>
           <Text style={styles.listMembers}>
             {currentListMembers.length} member{currentListMembers.length !== 1 ? 's' : ''}
           </Text>
-        </View>
+          <ChevronDown size={16} color="#3B82F6" />
+        </TouchableOpacity>
 
         <CompactCalendarSummary
           selectedDate={selectedDate}
@@ -624,6 +642,112 @@ export default function DashboardScreen() {
           onClose={() => setShowDayAgenda(false)}
         />
       )}
+
+      <Modal
+        visible={showListSwitcher}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowListSwitcher(false)}
+      >
+        <View style={listSwitcherStyles.container}>
+          <View style={listSwitcherStyles.header}>
+            <Text style={listSwitcherStyles.title}>Switch List</Text>
+            <TouchableOpacity
+              style={listSwitcherStyles.closeButton}
+              onPress={() => {
+                if (Platform.OS !== 'web') {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+                setShowListSwitcher(false);
+              }}
+            >
+              <X size={24} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView
+            style={listSwitcherStyles.scroll}
+            contentContainerStyle={listSwitcherStyles.content}
+          >
+            {lists
+              .filter((l) => !l.archived)
+              .map((list) => {
+                const listTasks = allTasks.filter((t) => t.listId === list.id);
+                const openTasks = listTasks.filter(
+                  (t) => t.status === 'pending' || t.status === 'overdue'
+                ).length;
+                const isActive = list.id === currentList?.id;
+
+                return (
+                  <TouchableOpacity
+                    key={list.id}
+                    style={[
+                      listSwitcherStyles.listCard,
+                      isActive && listSwitcherStyles.listCardActive,
+                    ]}
+                    onPress={() => {
+                      if (Platform.OS !== 'web') {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                      }
+                      switchList(list.id);
+                      setShowListSwitcher(false);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <View style={listSwitcherStyles.listCardContent}>
+                      <View style={listSwitcherStyles.listCardHeader}>
+                        <Text
+                          style={[
+                            listSwitcherStyles.listCardName,
+                            isActive && listSwitcherStyles.listCardNameActive,
+                          ]}
+                        >
+                          {list.name}
+                        </Text>
+                        {isActive && (
+                          <View style={listSwitcherStyles.activeIndicator}>
+                            <Check size={16} color="#FFFFFF" />
+                          </View>
+                        )}
+                      </View>
+                      <View style={listSwitcherStyles.listCardMeta}>
+                        <View style={listSwitcherStyles.listCardMetaItem}>
+                          <Users size={14} color="#6B7280" />
+                          <Text style={listSwitcherStyles.listCardMetaText}>
+                            {list.memberIds.length} member{list.memberIds.length !== 1 ? 's' : ''}
+                          </Text>
+                        </View>
+                        <View style={listSwitcherStyles.listCardMetaItem}>
+                          <CheckSquare size={14} color="#6B7280" />
+                          <Text style={listSwitcherStyles.listCardMetaText}>
+                            {openTasks} open task{openTasks !== 1 ? 's' : ''}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+
+            <TouchableOpacity
+              style={listSwitcherStyles.createButton}
+              onPress={() => {
+                if (Platform.OS !== 'web') {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+                setShowListSwitcher(false);
+                router.push('/settings/teams');
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={listSwitcherStyles.createIcon}>
+                <Plus size={20} color="#3B82F6" />
+              </View>
+              <Text style={listSwitcherStyles.createText}>Create New List</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -967,6 +1091,120 @@ const modalStyles = StyleSheet.create({
     padding: 8,
     borderRadius: 8,
     backgroundColor: '#F3F4F6',
+  },
+});
+
+const listSwitcherStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '700' as const,
+    color: '#111827',
+  },
+  closeButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+  },
+  scroll: {
+    flex: 1,
+  },
+  content: {
+    padding: 20,
+    gap: 12,
+  },
+  listCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: '#F3F4F6',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  listCardActive: {
+    borderColor: '#3B82F6',
+    backgroundColor: '#EFF6FF',
+  },
+  listCardContent: {
+    gap: 12,
+  },
+  listCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  listCardName: {
+    fontSize: 18,
+    fontWeight: '700' as const,
+    color: '#111827',
+    flex: 1,
+  },
+  listCardNameActive: {
+    color: '#1E40AF',
+  },
+  activeIndicator: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#3B82F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  listCardMeta: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  listCardMetaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  listCardMetaText: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  createButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#3B82F6',
+    borderStyle: 'dashed',
+    marginTop: 8,
+  },
+  createIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#EFF6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  createText: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: '#3B82F6',
   },
 });
 
