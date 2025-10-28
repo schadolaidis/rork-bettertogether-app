@@ -31,6 +31,7 @@ export interface Translations {
   };
   tabs: {
     dashboard: string;
+    calendar: string;
     tasks: string;
     balances: string;
     settings: string;
@@ -49,6 +50,16 @@ export interface Translations {
     thisMonth: string;
     tasks: string;
     noTasksForDay: string;
+  };
+  calendar: {
+    title: string;
+    createTask: string;
+    day: string;
+    week: string;
+    month: string;
+    noTasks: string;
+    tasksForDay: string;
+    selectDate: string;
   };
   tasks: {
     title: string;
@@ -258,6 +269,7 @@ const en: Translations = {
   },
   tabs: {
     dashboard: 'Dashboard',
+    calendar: 'Calendar',
     tasks: 'Tasks',
     balances: 'Balances',
     settings: 'Settings',
@@ -276,6 +288,16 @@ const en: Translations = {
     thisMonth: 'This month',
     tasks: 'tasks',
     noTasksForDay: 'No tasks for this day',
+  },
+  calendar: {
+    title: 'Calendar',
+    createTask: 'Create Task',
+    day: 'Day',
+    week: 'Week',
+    month: 'Month',
+    noTasks: 'No tasks scheduled',
+    tasksForDay: 'tasks for this day',
+    selectDate: 'Select a date to create a task',
   },
   tasks: {
     title: 'Tasks',
@@ -485,6 +507,7 @@ const de: Translations = {
   },
   tabs: {
     dashboard: 'Dashboard',
+    calendar: 'Kalender',
     tasks: 'Aufgaben',
     balances: 'Guthaben',
     settings: 'Einstellungen',
@@ -503,6 +526,16 @@ const de: Translations = {
     thisMonth: 'Diesen Monat',
     tasks: 'Aufgaben',
     noTasksForDay: 'Keine Aufgaben für diesen Tag',
+  },
+  calendar: {
+    title: 'Kalender',
+    createTask: 'Aufgabe erstellen',
+    day: 'Tag',
+    week: 'Woche',
+    month: 'Monat',
+    noTasks: 'Keine Aufgaben geplant',
+    tasksForDay: 'Aufgaben für diesen Tag',
+    selectDate: 'Wählen Sie ein Datum aus, um eine Aufgabe zu erstellen',
   },
   tasks: {
     title: 'Aufgaben',
