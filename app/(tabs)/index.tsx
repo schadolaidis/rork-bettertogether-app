@@ -61,9 +61,10 @@ function StatCard({ title, value, subtitle, icon, color, backgroundColor, onPres
 interface TaskItemProps {
   task: Task;
   categoryEmoji: string;
+  onPress: () => void;
 }
 
-function TaskItem({ task, categoryEmoji }: TaskItemProps) {
+function TaskItem({ task, categoryEmoji, onPress }: TaskItemProps) {
   const statusColor = useMemo(() => {
     switch (task.status) {
       case 'completed':
@@ -97,7 +98,16 @@ function TaskItem({ task, categoryEmoji }: TaskItemProps) {
   }
 
   return (
-    <View style={styles.taskItem}>
+    <TouchableOpacity
+      style={styles.taskItem}
+      onPress={() => {
+        if (Platform.OS !== 'web') {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        }
+        onPress();
+      }}
+      activeOpacity={0.7}
+    >
       <View style={[styles.taskStatusDot, { backgroundColor: statusColor }]} />
       <Text style={styles.taskEmoji}>{categoryEmoji}</Text>
       <View style={styles.taskContent}>
@@ -110,7 +120,7 @@ function TaskItem({ task, categoryEmoji }: TaskItemProps) {
           <Text style={styles.taskStake}>${task.stake}</Text>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -559,6 +569,7 @@ export default function DashboardScreen() {
                     key={task.id}
                     task={task}
                     categoryEmoji={categoryMeta?.emoji || '📋'}
+                    onPress={() => router.push(`/task-detail?id=${task.id}`)}
                   />
                 );
               })}
