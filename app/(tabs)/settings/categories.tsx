@@ -28,6 +28,15 @@ const COLORS = [
 ];
 
 export default function CategoriesScreen() {
+  const [editingCategory, setEditingCategory] = useState<CategoryMeta | null>(null);
+  const [isAddingNew, setIsAddingNew] = useState(false);
+  const [editedEmoji, setEditedEmoji] = useState('');
+  const [editedColor, setEditedColor] = useState('');
+  const [editedLabel, setEditedLabel] = useState('');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [emojiSearchQuery, setEmojiSearchQuery] = useState('');
+
   const {
     currentList,
     updateCategory,
@@ -36,19 +45,8 @@ export default function CategoriesScreen() {
     canManageCategories,
     getCategoryUsageCount,
     t,
+    isLoading,
   } = useApp();
-
-  const [editingCategory, setEditingCategory] = useState<CategoryMeta | null>(null);
-  const [isAddingNew, setIsAddingNew] = useState(false);
-
-
-  const [editedEmoji, setEditedEmoji] = useState('');
-  const [editedColor, setEditedColor] = useState('');
-  const [editedLabel, setEditedLabel] = useState('');
-  
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [showColorPicker, setShowColorPicker] = useState(false);
-  const [emojiSearchQuery, setEmojiSearchQuery] = useState('');
 
   const startEdit = (category: CategoryMeta) => {
     setEditingCategory(category);
@@ -167,6 +165,16 @@ export default function CategoriesScreen() {
   const filteredEmojis = emojiSearchQuery
     ? ALL_EMOJIS.filter((emoji) => emoji.includes(emojiSearchQuery))
     : ALL_EMOJIS;
+
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyText}>Loading...</Text>
+        </View>
+      </View>
+    );
+  }
 
   if (!currentList || !canManageCategories) {
     return (
