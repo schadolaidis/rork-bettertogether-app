@@ -415,22 +415,20 @@ export default function DashboardScreen() {
 
   const categoryColors = useMemo(() => {
     if (!currentList) return {} as Record<TaskCategory, string>;
-    return {
-      Household: currentList.categories.Household.color,
-      Finance: currentList.categories.Finance.color,
-      Work: currentList.categories.Work.color,
-      Leisure: currentList.categories.Leisure.color,
-    };
+    const colors: Record<string, string> = {};
+    currentList.categories.forEach((cat) => {
+      colors[cat.id] = cat.color;
+    });
+    return colors;
   }, [currentList]);
 
   const categoryEmojis = useMemo(() => {
     if (!currentList) return {} as Record<TaskCategory, string>;
-    return {
-      Household: currentList.categories.Household.emoji,
-      Finance: currentList.categories.Finance.emoji,
-      Work: currentList.categories.Work.emoji,
-      Leisure: currentList.categories.Leisure.emoji,
-    };
+    const emojis: Record<string, string> = {};
+    currentList.categories.forEach((cat) => {
+      emojis[cat.id] = cat.emoji;
+    });
+    return emojis;
   }, [currentList]);
 
   const currencySymbol = currentList?.currencySymbol || '$';
@@ -567,8 +565,8 @@ export default function DashboardScreen() {
             <Text style={styles.nextDueTitle}>{dashboardStats.nextDueTask.title}</Text>
             <View style={styles.nextDueMeta}>
               <Text style={styles.nextDueCategory}>
-                {currentList?.categories[dashboardStats.nextDueTask.category]?.emoji}{' '}
-                {dashboardStats.nextDueTask.category}
+                {currentList?.categories.find(c => c.id === dashboardStats.nextDueTask?.category)?.emoji || '📋'}{' '}
+                {dashboardStats.nextDueTask?.category}
               </Text>
               <Text style={styles.nextDueDot}>•</Text>
               <Text style={styles.nextDueStake}>${dashboardStats.nextDueTask.stake}</Text>
@@ -581,7 +579,7 @@ export default function DashboardScreen() {
           {upcomingTasks.length > 0 ? (
             <View style={styles.taskList}>
               {upcomingTasks.map((task) => {
-                const categoryMeta = currentList?.categories[task.category];
+                const categoryMeta = currentList?.categories.find(c => c.id === task.category);
                 return (
                   <TaskItem
                     key={task.id}
