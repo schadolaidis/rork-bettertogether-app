@@ -236,6 +236,34 @@ export interface Translations {
     listSwitched: string;
     failedToGenerate: string;
   };
+  notifications: {
+    title: string;
+    markAllRead: string;
+    noNotifications: string;
+    noNotificationsDescription: string;
+    taskAssigned: string;
+    taskCompleted: string;
+    taskFailed: string;
+    taskOverdue: string;
+    taskReminder: string;
+    memberJoined: string;
+    memberRemoved: string;
+    balanceChanged: string;
+    listInvite: string;
+    preferences: string;
+    taskAssignments: string;
+    taskCompletions: string;
+    taskFailures: string;
+    taskOverdueAlerts: string;
+    taskReminders: string;
+    memberActivity: string;
+    balanceUpdates: string;
+    listInvites: string;
+    enableSounds: string;
+    enableBadges: string;
+    general: string;
+    whatToNotify: string;
+  };
 }
 
 const en: Translations = {
@@ -474,6 +502,34 @@ const en: Translations = {
     listSwitched: 'Switched list successfully!',
     failedToGenerate: 'Failed to generate invite link',
   },
+  notifications: {
+    title: 'Notifications',
+    markAllRead: 'Mark all as read',
+    noNotifications: 'No notifications',
+    noNotificationsDescription: 'You\'re all caught up!',
+    taskAssigned: 'Task Assigned',
+    taskCompleted: 'Task Completed',
+    taskFailed: 'Task Failed',
+    taskOverdue: 'Task Overdue',
+    taskReminder: 'Task Reminder',
+    memberJoined: 'Member Joined',
+    memberRemoved: 'Member Removed',
+    balanceChanged: 'Balance Changed',
+    listInvite: 'List Invitation',
+    preferences: 'Notification Preferences',
+    taskAssignments: 'Task Assignments',
+    taskCompletions: 'Task Completions',
+    taskFailures: 'Task Failures',
+    taskOverdueAlerts: 'Overdue Alerts',
+    taskReminders: 'Task Reminders',
+    memberActivity: 'Member Activity',
+    balanceUpdates: 'Balance Updates',
+    listInvites: 'List Invitations',
+    enableSounds: 'Enable Sounds',
+    enableBadges: 'Enable Badge Counters',
+    general: 'General',
+    whatToNotify: 'Choose what you want to be notified about',
+  },
 };
 
 const de: Translations = {
@@ -711,6 +767,34 @@ const de: Translations = {
     inviteLinkCopied: 'Einladungslink in Zwischenablage kopiert!',
     listSwitched: 'Liste erfolgreich gewechselt!',
     failedToGenerate: 'Einladungslink konnte nicht generiert werden',
+  },
+  notifications: {
+    title: 'Benachrichtigungen',
+    markAllRead: 'Alle als gelesen markieren',
+    noNotifications: 'Keine Benachrichtigungen',
+    noNotificationsDescription: 'Alles erledigt!',
+    taskAssigned: 'Aufgabe zugewiesen',
+    taskCompleted: 'Aufgabe erledigt',
+    taskFailed: 'Aufgabe fehlgeschlagen',
+    taskOverdue: 'Aufgabe überfällig',
+    taskReminder: 'Aufgabenerinnerung',
+    memberJoined: 'Mitglied beigetreten',
+    memberRemoved: 'Mitglied entfernt',
+    balanceChanged: 'Guthaben geändert',
+    listInvite: 'Listeneinladung',
+    preferences: 'Benachrichtigungseinstellungen',
+    taskAssignments: 'Aufgabenzuweisungen',
+    taskCompletions: 'Aufgabenerledigungen',
+    taskFailures: 'Aufgabenfehlschläge',
+    taskOverdueAlerts: 'Überfälligkeitswarnungen',
+    taskReminders: 'Aufgabenerinnerungen',
+    memberActivity: 'Mitgliederaktivität',
+    balanceUpdates: 'Guthabenänderungen',
+    listInvites: 'Listeneinladungen',
+    enableSounds: 'Töne aktivieren',
+    enableBadges: 'Badge-Zähler aktivieren',
+    general: 'Allgemein',
+    whatToNotify: 'Wählen Sie aus, worüber Sie benachrichtigt werden möchten',
   },
 };
 
