@@ -414,7 +414,7 @@ export default function DashboardScreen() {
   }, [tasks]);
 
   const categoryColors = useMemo(() => {
-    if (!currentList) return {} as Record<TaskCategory, string>;
+    if (!currentList || !currentList.categories) return {} as Record<TaskCategory, string>;
     const colors: Record<string, string> = {};
     currentList.categories.forEach((cat) => {
       colors[cat.id] = cat.color;
@@ -423,7 +423,7 @@ export default function DashboardScreen() {
   }, [currentList]);
 
   const categoryEmojis = useMemo(() => {
-    if (!currentList) return {} as Record<TaskCategory, string>;
+    if (!currentList || !currentList.categories) return {} as Record<TaskCategory, string>;
     const emojis: Record<string, string> = {};
     currentList.categories.forEach((cat) => {
       emojis[cat.id] = cat.emoji;
@@ -565,7 +565,7 @@ export default function DashboardScreen() {
             <Text style={styles.nextDueTitle}>{dashboardStats.nextDueTask.title}</Text>
             <View style={styles.nextDueMeta}>
               <Text style={styles.nextDueCategory}>
-                {currentList?.categories.find(c => c.id === dashboardStats.nextDueTask?.category)?.emoji || '📋'}{' '}
+                {currentList?.categories?.find(c => c.id === dashboardStats.nextDueTask?.category)?.emoji || '📋'}{' '}
                 {dashboardStats.nextDueTask?.category}
               </Text>
               <Text style={styles.nextDueDot}>•</Text>
@@ -579,7 +579,7 @@ export default function DashboardScreen() {
           {upcomingTasks.length > 0 ? (
             <View style={styles.taskList}>
               {upcomingTasks.map((task) => {
-                const categoryMeta = currentList?.categories.find(c => c.id === task.category);
+                const categoryMeta = currentList?.categories?.find(c => c.id === task.category);
                 return (
                   <TaskItem
                     key={task.id}
