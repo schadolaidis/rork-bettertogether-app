@@ -162,8 +162,8 @@ export default function ListSettingsScreen() {
         <Text style={styles.sectionTitle}>Categories</Text>
         <View style={styles.categoryInfo}>
           <Text style={styles.categoryInfoText}>
-            This list has {Object.keys(currentList?.categories || {}).length} categories.
-            Manage categories from the Settings → Categories menu.
+            This list has {currentList?.categories?.length || 0} categories.
+            Categories are managed automatically for your list.
           </Text>
         </View>
       </View>
