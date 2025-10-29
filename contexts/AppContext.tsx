@@ -741,6 +741,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
 
   const isCategoryInUse = useCallback(
     (categoryId: string): boolean => {
+      if (!currentListTasks) return false;
       return CategoryService.isInUse(currentListTasks, categoryId);
     },
     [currentListTasks]
@@ -748,6 +749,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
 
   const getCategoryUsageCount = useCallback(
     (categoryId: string): number => {
+      if (!currentListTasks) return 0;
       return CategoryService.getUsageCount(currentListTasks, categoryId);
     },
     [currentListTasks]

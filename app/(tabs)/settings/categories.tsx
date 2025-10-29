@@ -82,7 +82,7 @@ export default function CategoriesScreen() {
 
   const handleSave = () => {
     if (!editedLabel.trim()) {
-      Alert.alert(t.common.error, 'Please enter a category name');
+      Alert.alert(t?.common?.error || 'Error', 'Please enter a category name');
       return;
     }
 
@@ -90,7 +90,7 @@ export default function CategoriesScreen() {
       const categoryId = editedLabel.toLowerCase().replace(/\s+/g, '-');
       
       if (currentList?.categories.find((c) => c.id === categoryId)) {
-        Alert.alert(t.common.error, 'A category with this name already exists');
+        Alert.alert(t?.common?.error || 'Error', 'A category with this name already exists');
         return;
       }
 
@@ -133,19 +133,19 @@ export default function CategoriesScreen() {
 
   const handleDelete = (category: CategoryMeta) => {
     if (category.isDefault) {
-      Alert.alert(t.common.error, 'Cannot delete default categories');
+      Alert.alert(t?.common?.error || 'Error', 'Cannot delete default categories');
       return;
     }
 
     const usageCount = getCategoryUsageCount(category.id);
     if (usageCount > 0) {
       Alert.alert(
-        t.common.confirm,
+        t?.common?.confirm || 'Confirm',
         `This category is used by ${usageCount} task(s). Delete it anyway? Tasks will be uncategorized.`,
         [
-          { text: t.common.cancel, style: 'cancel' },
+          { text: t?.common?.cancel || 'Cancel', style: 'cancel' },
           {
-            text: t.common.delete,
+            text: t?.common?.delete || 'Delete',
             style: 'destructive',
             onPress: () => {
               const firstCategory = currentList?.categories.find((c) => c.id !== category.id);
