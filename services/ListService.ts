@@ -1,4 +1,4 @@
-import { List, TaskCategory, CategoryMeta } from '@/types';
+import { List, CategoryMeta } from '@/types';
 
 export interface ListSettingsPayload {
   name?: string;
@@ -22,7 +22,7 @@ export class ListService {
   static createList(
     name: string,
     ownerId: string,
-    categories: Record<TaskCategory, CategoryMeta>,
+    categories: CategoryMeta[],
     currency: string,
     currencySymbol: string
   ): List {
