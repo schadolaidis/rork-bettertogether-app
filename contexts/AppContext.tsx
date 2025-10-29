@@ -40,7 +40,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [language, setLanguage] = useState<Language>('en');
   const [t, setT] = useState<Translations>(getTranslations('en'));
-  const [isInitialized, setIsInitialized] = useState(false);
+
 
   const tasksQuery = useQuery({
     queryKey: ['tasks'],
@@ -178,34 +178,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
     }
   }, [languageQuery.data]);
 
-  useEffect(() => {
-    const allLoaded =
-      tasksQuery.data &&
-      ledgerQuery.data &&
-      usersQuery.data &&
-      listsQuery.data &&
-      currentUserQuery.data &&
-      currentListQuery.data &&
-      calendarViewQuery.data &&
-      calendarDateQuery.data &&
-      languageQuery.data;
 
-    if (allLoaded && !isInitialized) {
-      setIsInitialized(true);
-      console.log('[AppContext] Initialized');
-    }
-  }, [
-    tasksQuery.data,
-    ledgerQuery.data,
-    usersQuery.data,
-    listsQuery.data,
-    currentUserQuery.data,
-    currentListQuery.data,
-    calendarViewQuery.data,
-    calendarDateQuery.data,
-    languageQuery.data,
-    isInitialized,
-  ]);
 
   const { mutate: mutateTasks } = useMutation({
     mutationFn: async (newTasks: Task[]) => {
@@ -922,7 +895,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       getCategoryColor,
       getCategoryEmoji,
       getCategoryLabel,
-      isLoading: !isInitialized,
+      isLoading: tasksQuery.isLoading || ledgerQuery.isLoading || usersQuery.isLoading || listsQuery.isLoading,
     }),
     [
       currentListTasks,
@@ -970,7 +943,10 @@ export const [AppProvider, useApp] = createContextHook(() => {
       getCategoryColor,
       getCategoryEmoji,
       getCategoryLabel,
-      isInitialized,
+      tasksQuery.isLoading,
+      ledgerQuery.isLoading,
+      usersQuery.isLoading,
+      listsQuery.isLoading,
     ]
   );
 });

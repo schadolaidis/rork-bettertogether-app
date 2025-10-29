@@ -1,19 +1,10 @@
 import { Tabs } from "expo-router";
 import { LayoutDashboard, Calendar, CheckSquare, DollarSign, Settings } from "lucide-react-native";
 import React from "react";
-import { View, ActivityIndicator, StyleSheet } from "react-native";
 import { useApp } from "@/contexts/AppContext";
 
 export default function TabLayout() {
-  const { t, isLoading } = useApp();
-
-  if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3B82F6" />
-      </View>
-    );
-  }
+  const { t } = useApp();
   
   return (
     <Tabs
@@ -66,12 +57,3 @@ export default function TabLayout() {
     </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-  },
-});
