@@ -29,10 +29,10 @@ const STORAGE_KEYS = {
 };
 
 export const [AppProvider, useApp] = createContextHook(() => {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [lists, setLists] = useState<List[]>([]);
+  const [tasks, setTasks] = useState<Task[]>(MOCK_TASKS);
+  const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>(MOCK_LEDGER_ENTRIES);
+  const [users, setUsers] = useState<User[]>(MOCK_USERS);
+  const [lists, setLists] = useState<List[]>(MOCK_LISTS);
   const [currentUserId, setCurrentUserId] = useState<string>('user-1');
   const [currentListId, setCurrentListId] = useState<string>('list-1');
   const [undoAction, setUndoAction] = useState<UndoAction | null>(null);
@@ -40,6 +40,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [language, setLanguage] = useState<Language>('en');
   const [t, setT] = useState<Translations>(getTranslations('en'));
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const tasksQuery = useQuery({
     queryKey: ['tasks'],
@@ -47,6 +48,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       const stored = await AsyncStorage.getItem(STORAGE_KEYS.TASKS);
       return stored ? JSON.parse(stored) : MOCK_TASKS;
     },
+    staleTime: Infinity,
   });
 
   const ledgerQuery = useQuery({
@@ -55,6 +57,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       const stored = await AsyncStorage.getItem(STORAGE_KEYS.LEDGER_ENTRIES);
       return stored ? JSON.parse(stored) : MOCK_LEDGER_ENTRIES;
     },
+    staleTime: Infinity,
   });
 
   const usersQuery = useQuery({
@@ -63,6 +66,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       const stored = await AsyncStorage.getItem(STORAGE_KEYS.USERS);
       return stored ? JSON.parse(stored) : MOCK_USERS;
     },
+    staleTime: Infinity,
   });
 
   const listsQuery = useQuery({
@@ -71,6 +75,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       const stored = await AsyncStorage.getItem(STORAGE_KEYS.LISTS);
       return stored ? JSON.parse(stored) : MOCK_LISTS;
     },
+    staleTime: Infinity,
   });
 
   const currentUserQuery = useQuery({
@@ -79,6 +84,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       const stored = await AsyncStorage.getItem(STORAGE_KEYS.CURRENT_USER);
       return stored || 'user-1';
     },
+    staleTime: Infinity,
   });
 
   const currentListQuery = useQuery({
@@ -87,6 +93,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       const stored = await AsyncStorage.getItem(STORAGE_KEYS.CURRENT_LIST);
       return stored || 'list-1';
     },
+    staleTime: Infinity,
   });
 
   const calendarViewQuery = useQuery({
@@ -95,6 +102,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       const stored = await AsyncStorage.getItem(STORAGE_KEYS.CALENDAR_VIEW);
       return (stored as CalendarViewType) || 'month';
     },
+    staleTime: Infinity,
   });
 
   const calendarDateQuery = useQuery({
@@ -103,6 +111,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       const stored = await AsyncStorage.getItem(STORAGE_KEYS.CALENDAR_SELECTED_DATE);
       return stored ? new Date(stored) : new Date();
     },
+    staleTime: Infinity,
   });
 
   const languageQuery = useQuery({
@@ -111,6 +120,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       const stored = await AsyncStorage.getItem(STORAGE_KEYS.LANGUAGE);
       return (stored as Language) || 'en';
     },
+    staleTime: Infinity,
   });
 
   useEffect(() => {
@@ -167,6 +177,35 @@ export const [AppProvider, useApp] = createContextHook(() => {
       setT(getTranslations(languageQuery.data));
     }
   }, [languageQuery.data]);
+
+  useEffect(() => {
+    const allLoaded =
+      tasksQuery.data &&
+      ledgerQuery.data &&
+      usersQuery.data &&
+      listsQuery.data &&
+      currentUserQuery.data &&
+      currentListQuery.data &&
+      calendarViewQuery.data &&
+      calendarDateQuery.data &&
+      languageQuery.data;
+
+    if (allLoaded && !isInitialized) {
+      setIsInitialized(true);
+      console.log('[AppContext] Initialized');
+    }
+  }, [
+    tasksQuery.data,
+    ledgerQuery.data,
+    usersQuery.data,
+    listsQuery.data,
+    currentUserQuery.data,
+    currentListQuery.data,
+    calendarViewQuery.data,
+    calendarDateQuery.data,
+    languageQuery.data,
+    isInitialized,
+  ]);
 
   const { mutate: mutateTasks } = useMutation({
     mutationFn: async (newTasks: Task[]) => {
@@ -883,7 +922,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       getCategoryColor,
       getCategoryEmoji,
       getCategoryLabel,
-      isLoading: tasksQuery.isLoading || ledgerQuery.isLoading,
+      isLoading: !isInitialized,
     }),
     [
       currentListTasks,
@@ -931,8 +970,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       getCategoryColor,
       getCategoryEmoji,
       getCategoryLabel,
-      tasksQuery.isLoading,
-      ledgerQuery.isLoading,
+      isInitialized,
     ]
   );
 });
