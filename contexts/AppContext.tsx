@@ -2,7 +2,7 @@ import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { Task, LedgerEntry, User, DashboardStats, List, UndoAction, CategoryMeta, ListMember, MemberRole } from '@/types';
+import { Task, LedgerEntry, User, DashboardStats, List, UndoAction, MemberRole } from '@/types';
 import { Language, getTranslations, Translations } from '@/constants/translations';
 import { MOCK_TASKS, MOCK_USERS, MOCK_LISTS, MOCK_LEDGER_ENTRIES } from '@/mocks/data';
 import { ClockService } from '@/services/ClockService';
@@ -10,8 +10,7 @@ import { LedgerService } from '@/services/LedgerService';
 import { SchedulerService } from '@/services/SchedulerService';
 import { InviteService } from '@/services/InviteService';
 import { ListService, ListSettingsPayload } from '@/services/ListService';
-import { CategoryService } from '@/services/CategoryService';
-import { MemberService } from '@/services/MemberService';
+
 
 export type CalendarViewType = 'day' | 'week' | 'month';
 
@@ -654,119 +653,6 @@ export const [AppProvider, useApp] = createContextHook(() => {
     [lists, currentUserId, currentListId, mutateLists, switchList]
   );
 
-  const updateCategory = useCallback(
-    (categoryId: string, updates: Partial<Omit<CategoryMeta, 'id' | 'createdAt' | 'isDefault'>>) => {
-      if (!currentList) return false;
-
-      const updatedCategories = CategoryService.updateCategory(
-        currentList.categories,
-        categoryId,
-        updates
-      );
-      
-      const updatedLists = lists.map((l) => {
-        if (l.id === currentListId) {
-          return { ...l, categories: updatedCategories };
-        }
-        return l;
-      });
-      
-      setLists(updatedLists);
-      mutateLists(updatedLists);
-      console.log(`[Category] Updated ${categoryId}`);
-      return true;
-    },
-    [currentList, currentListId, lists, mutateLists]
-  );
-
-  const addCategory = useCallback(
-    (category: Omit<CategoryMeta, 'createdAt'>) => {
-      if (!currentList) return false;
-
-      const updatedCategories = CategoryService.addCategory(
-        currentList.categories,
-        category
-      );
-      
-      const updatedLists = lists.map((l) => {
-        if (l.id === currentListId) {
-          return { ...l, categories: updatedCategories };
-        }
-        return l;
-      });
-      
-      setLists(updatedLists);
-      mutateLists(updatedLists);
-      console.log(`[Category] Added ${category.label}`);
-      return true;
-    },
-    [currentList, currentListId, lists, mutateLists]
-  );
-
-  const deleteCategory = useCallback(
-    (categoryId: string, replacementCategoryId?: string) => {
-      if (!currentList) return false;
-
-      const category = currentList.categories.find((c) => c.id === categoryId);
-      if (!category) return false;
-
-      if (CategoryService.isInUse(currentListTasks, categoryId)) {
-        if (!replacementCategoryId) {
-          console.error('[Category] Cannot delete category in use without replacement');
-          return false;
-        }
-        const updatedTasks = CategoryService.reassign(tasks, categoryId, replacementCategoryId);
-        setTasks(updatedTasks);
-        mutateTasks(updatedTasks);
-      }
-
-      const updatedCategories = CategoryService.deleteCategory(
-        currentList.categories,
-        categoryId
-      );
-      
-      const updatedLists = lists.map((l) => {
-        if (l.id === currentListId) {
-          return { ...l, categories: updatedCategories };
-        }
-        return l;
-      });
-      
-      setLists(updatedLists);
-      mutateLists(updatedLists);
-      console.log(`[Category] Deleted ${categoryId}`);
-      return true;
-    },
-    [currentList, currentListId, currentListTasks, lists, tasks, mutateLists, mutateTasks]
-  );
-
-  const reassignCategory = useCallback(
-    (oldCategoryId: string, newCategoryId: string) => {
-      const updatedTasks = CategoryService.reassign(tasks, oldCategoryId, newCategoryId);
-      setTasks(updatedTasks);
-      mutateTasks(updatedTasks);
-      console.log(`[Category] Reassigned ${oldCategoryId} to ${newCategoryId}`);
-      return true;
-    },
-    [tasks, mutateTasks]
-  );
-
-  const isCategoryInUse = useCallback(
-    (categoryId: string): boolean => {
-      if (!currentListTasks) return false;
-      return CategoryService.isInUse(currentListTasks, categoryId);
-    },
-    [currentListTasks]
-  );
-
-  const getCategoryUsageCount = useCallback(
-    (categoryId: string): number => {
-      if (!currentListTasks) return 0;
-      return CategoryService.getUsageCount(currentListTasks, categoryId);
-    },
-    [currentListTasks]
-  );
-
   const removeMember = useCallback(
     (userId: string) => {
       if (!currentList) return false;
@@ -815,12 +701,6 @@ export const [AppProvider, useApp] = createContextHook(() => {
     if (!currentList) return 'Member';
     return currentList.ownerId === currentUserId ? 'Owner' : 'Member';
   }, [currentList, currentUserId]);
-
-  const canManageCategories = useMemo((): boolean => {
-    if (!currentList) return false;
-    if (currentUserRole === 'Owner') return true;
-    return currentList.allowMemberCategoryManage;
-  }, [currentList, currentUserRole]);
 
   const currentUser = users.find((u) => u.id === currentUserId);
 
@@ -879,16 +759,9 @@ export const [AppProvider, useApp] = createContextHook(() => {
       updateListSettings,
       createList,
       archiveList,
-      updateCategory,
-      addCategory,
-      deleteCategory,
-      reassignCategory,
-      isCategoryInUse,
-      getCategoryUsageCount,
       removeMember,
       updateUserProfile,
       currentUserRole,
-      canManageCategories,
       language,
       t,
       changeLanguage,
@@ -927,16 +800,9 @@ export const [AppProvider, useApp] = createContextHook(() => {
       updateListSettings,
       createList,
       archiveList,
-      updateCategory,
-      addCategory,
-      deleteCategory,
-      reassignCategory,
-      isCategoryInUse,
-      getCategoryUsageCount,
       removeMember,
       updateUserProfile,
       currentUserRole,
-      canManageCategories,
       language,
       t,
       changeLanguage,

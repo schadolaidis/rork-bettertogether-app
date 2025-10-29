@@ -19,14 +19,7 @@ export default function SettingsLayout() {
           presentation: 'modal',
         }}
       />
-      <Stack.Screen
-        name="categories"
-        options={{
-          headerShown: true,
-          title: t.categories.title,
-          presentation: 'modal',
-        }}
-      />
+
       <Stack.Screen
         name="teams"
         options={{
