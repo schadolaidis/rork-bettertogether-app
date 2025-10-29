@@ -44,33 +44,48 @@ export default function CalendarScreen() {
 
   const categoryColors = useMemo(() => {
     if (!currentList) return {} as Record<TaskCategory, string>;
-    const colors: Record<string, string> = {};
-    currentList.categories.forEach((cat) => {
-      colors[cat.id] = cat.color;
-    });
-    return colors;
+    return {
+      Household: currentList.categories.Household.color,
+      Finance: currentList.categories.Finance.color,
+      Work: currentList.categories.Work.color,
+      Leisure: currentList.categories.Leisure.color,
+    };
   }, [currentList]);
 
   const categoryEmojis = useMemo(() => {
     if (!currentList) return {} as Record<TaskCategory, string>;
-    const emojis: Record<string, string> = {};
-    currentList.categories.forEach((cat) => {
-      emojis[cat.id] = cat.emoji;
-    });
-    return emojis;
+    return {
+      Household: currentList.categories.Household.emoji,
+      Finance: currentList.categories.Finance.emoji,
+      Work: currentList.categories.Work.emoji,
+      Leisure: currentList.categories.Leisure.emoji,
+    };
   }, [currentList]);
 
   const categoryMeta = useMemo(() => {
     if (!currentList) return {} as Record<TaskCategory, { emoji: string; color: string; label: string }>;
-    const meta: Record<string, { emoji: string; color: string; label: string }> = {};
-    currentList.categories.forEach((cat) => {
-      meta[cat.id] = {
-        emoji: cat.emoji,
-        color: cat.color,
-        label: cat.label,
-      };
-    });
-    return meta;
+    return {
+      Household: {
+        emoji: currentList.categories.Household.emoji,
+        color: currentList.categories.Household.color,
+        label: 'Household',
+      },
+      Finance: {
+        emoji: currentList.categories.Finance.emoji,
+        color: currentList.categories.Finance.color,
+        label: 'Finance',
+      },
+      Work: {
+        emoji: currentList.categories.Work.emoji,
+        color: currentList.categories.Work.color,
+        label: 'Work',
+      },
+      Leisure: {
+        emoji: currentList.categories.Leisure.emoji,
+        color: currentList.categories.Leisure.color,
+        label: 'Leisure',
+      },
+    };
   }, [currentList]);
 
   const monthDays = useMemo(() => {
@@ -555,7 +570,7 @@ export default function CalendarScreen() {
               ? ({
                   startAt: preselectedDate.toISOString(),
                   endAt: new Date(preselectedDate.getTime() + 3600000).toISOString(),
-                  category: currentList?.categories[0]?.id || 'household',
+                  category: 'Household',
                   allDay: false,
                 } as any)
               : undefined

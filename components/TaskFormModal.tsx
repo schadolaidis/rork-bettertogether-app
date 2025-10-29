@@ -55,7 +55,7 @@ interface TaskFormModalProps {
   visible: boolean;
   onClose: () => void;
   onSubmit: (data: TaskFormData) => void;
-  categories: { id: string; emoji: string; color: string; label: string }[];
+  categories: Record<TaskCategory, { emoji: string; color: string; label: string }>;
   members: User[];
   fundTargets?: FundTargetOption[];
   defaultGraceMinutes: number;
@@ -407,7 +407,7 @@ export function TaskFormModal({
     return `${selectedMembers.length} members`;
   }, [selectedMembers, members]);
 
-  const categoryMeta = categories.find(c => c.id === selectedCategory) || categories[0];
+  const categoryMeta = categories[selectedCategory];
 
   const priorityConfig = {
     low: { label: 'Low', color: '#6B7280', icon: '↓' },
@@ -764,8 +764,8 @@ export function TaskFormModal({
                 <X size={24} color="#6B7280" />
               </TouchableOpacity>
             </View>
-            {categories.map((meta) => {
-              const cat = meta.id;
+            {(Object.keys(categories) as TaskCategory[]).map((cat) => {
+              const meta = categories[cat];
               return (
                 <TouchableOpacity
                   key={cat}

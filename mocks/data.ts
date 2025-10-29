@@ -1,4 +1,4 @@
-import { Task, User, List, CategoryMeta, LedgerEntry, FundTarget } from '@/types';
+import { Task, User, List, TaskCategory, CategoryMeta, LedgerEntry, FundTarget } from '@/types';
 
 export const MOCK_USERS: User[] = [
   {
@@ -21,40 +21,28 @@ export const MOCK_USERS: User[] = [
   },
 ];
 
-export const DEFAULT_CATEGORIES: CategoryMeta[] = [
-  {
-    id: 'household',
+export const DEFAULT_CATEGORIES: Record<TaskCategory, CategoryMeta> = {
+  Household: {
     emoji: '🏠',
     color: '#10B981',
     label: 'Household',
-    isDefault: true,
-    createdAt: new Date().toISOString(),
   },
-  {
-    id: 'finance',
+  Finance: {
     emoji: '💰',
     color: '#F59E0B',
     label: 'Finance',
-    isDefault: true,
-    createdAt: new Date().toISOString(),
   },
-  {
-    id: 'work',
+  Work: {
     emoji: '💼',
     color: '#3B82F6',
     label: 'Work',
-    isDefault: true,
-    createdAt: new Date().toISOString(),
   },
-  {
-    id: 'leisure',
+  Leisure: {
     emoji: '🎮',
     color: '#8B5CF6',
     label: 'Leisure',
-    isDefault: true,
-    createdAt: new Date().toISOString(),
   },
-];
+};
 
 export const MOCK_LISTS: List[] = [
   {
@@ -76,11 +64,14 @@ export const MOCK_LISTS: List[] = [
     name: 'Work Team',
     ownerId: 'user-1',
     memberIds: ['user-1', 'user-3'],
-    categories: DEFAULT_CATEGORIES.map((cat) =>
-      cat.id === 'work'
-        ? { ...cat, emoji: '🚀', color: '#EC4899' }
-        : cat
-    ),
+    categories: {
+      ...DEFAULT_CATEGORIES,
+      Work: {
+        emoji: '🚀',
+        color: '#EC4899',
+        label: 'Work',
+      },
+    },
     currency: 'EUR',
     currencySymbol: '€',
     defaultGraceMinutes: 60,
@@ -95,7 +86,7 @@ export const MOCK_TASKS: Task[] = [
   {
     id: 'task-1',
     title: 'Do the dishes',
-    category: 'household',
+    category: 'Household',
     startAt: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
     endAt: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(),
     gracePeriod: 15,
@@ -108,7 +99,7 @@ export const MOCK_TASKS: Task[] = [
   {
     id: 'task-2',
     title: 'Pay electricity bill',
-    category: 'finance',
+    category: 'Finance',
     startAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
     endAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000).toISOString(),
     gracePeriod: 60,
@@ -121,7 +112,7 @@ export const MOCK_TASKS: Task[] = [
   {
     id: 'task-3',
     title: 'Take out trash',
-    category: 'household',
+    category: 'Household',
     startAt: new Date(Date.now() - 90 * 60 * 1000).toISOString(),
     endAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
     gracePeriod: 15,
@@ -134,7 +125,7 @@ export const MOCK_TASKS: Task[] = [
   {
     id: 'task-4',
     title: 'Grocery shopping',
-    category: 'household',
+    category: 'Household',
     startAt: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(),
     endAt: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000).toISOString(),
     gracePeriod: 30,
@@ -147,7 +138,7 @@ export const MOCK_TASKS: Task[] = [
   {
     id: 'task-5',
     title: 'Submit project report',
-    category: 'work',
+    category: 'Work',
     startAt: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
     endAt: new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString(),
     gracePeriod: 120,
@@ -160,7 +151,7 @@ export const MOCK_TASKS: Task[] = [
   {
     id: 'task-6',
     title: 'Plan team building',
-    category: 'leisure',
+    category: 'Leisure',
     startAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     endAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000 + 4 * 60 * 60 * 1000).toISOString(),
     allDay: true,
@@ -174,7 +165,7 @@ export const MOCK_TASKS: Task[] = [
   {
     id: 'task-7',
     title: 'Clean bathroom',
-    category: 'household',
+    category: 'Household',
     startAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000 - 60 * 60 * 1000).toISOString(),
     endAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     gracePeriod: 30,
@@ -188,7 +179,7 @@ export const MOCK_TASKS: Task[] = [
   {
     id: 'task-8',
     title: 'Code review with grace time test',
-    category: 'work',
+    category: 'Work',
     startAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
     endAt: new Date(Date.now() + 5 * 60 * 1000 + 30 * 60 * 1000).toISOString(),
     gracePeriod: 15,
@@ -201,7 +192,7 @@ export const MOCK_TASKS: Task[] = [
   {
     id: 'task-9',
     title: 'Water plants',
-    category: 'household',
+    category: 'Household',
     startAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
     endAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000 + 15 * 60 * 1000).toISOString(),
     gracePeriod: 20,
@@ -214,7 +205,7 @@ export const MOCK_TASKS: Task[] = [
   {
     id: 'task-10',
     title: 'Review budget',
-    category: 'finance',
+    category: 'Finance',
     startAt: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
     endAt: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000).toISOString(),
     gracePeriod: 60,
@@ -227,7 +218,7 @@ export const MOCK_TASKS: Task[] = [
   {
     id: 'task-11',
     title: 'Movie night prep',
-    category: 'leisure',
+    category: 'Leisure',
     startAt: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString(),
     endAt: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000 + 3 * 60 * 60 * 1000).toISOString(),
     gracePeriod: 30,
@@ -240,7 +231,7 @@ export const MOCK_TASKS: Task[] = [
   {
     id: 'task-12',
     title: 'Fix leaky faucet',
-    category: 'household',
+    category: 'Household',
     startAt: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000).toISOString(),
     endAt: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000).toISOString(),
     gracePeriod: 45,
@@ -253,7 +244,7 @@ export const MOCK_TASKS: Task[] = [
   {
     id: 'task-13',
     title: 'Pay rent',
-    category: 'finance',
+    category: 'Finance',
     startAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
     endAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
     allDay: true,
@@ -267,7 +258,7 @@ export const MOCK_TASKS: Task[] = [
   {
     id: 'task-14',
     title: 'Team standup',
-    category: 'work',
+    category: 'Work',
     startAt: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(),
     endAt: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000 + 30 * 60 * 1000).toISOString(),
     gracePeriod: 15,
@@ -280,7 +271,7 @@ export const MOCK_TASKS: Task[] = [
   {
     id: 'task-15',
     title: 'Clean garage',
-    category: 'household',
+    category: 'Household',
     startAt: new Date(Date.now() + 12 * 24 * 60 * 60 * 1000).toISOString(),
     endAt: new Date(Date.now() + 12 * 24 * 60 * 60 * 1000 + 4 * 60 * 60 * 1000).toISOString(),
     gracePeriod: 60,
@@ -293,7 +284,7 @@ export const MOCK_TASKS: Task[] = [
   {
     id: 'task-16',
     title: 'Game night',
-    category: 'leisure',
+    category: 'Leisure',
     startAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
     endAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000 + 4 * 60 * 60 * 1000).toISOString(),
     gracePeriod: 30,
@@ -306,7 +297,7 @@ export const MOCK_TASKS: Task[] = [
   {
     id: 'task-17',
     title: 'Vacuum living room',
-    category: 'household',
+    category: 'Household',
     startAt: new Date(Date.now() + 9 * 24 * 60 * 60 * 1000).toISOString(),
     endAt: new Date(Date.now() + 9 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000).toISOString(),
     gracePeriod: 20,
@@ -319,7 +310,7 @@ export const MOCK_TASKS: Task[] = [
   {
     id: 'task-18',
     title: 'Update insurance',
-    category: 'finance',
+    category: 'Finance',
     startAt: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
     endAt: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000).toISOString(),
     gracePeriod: 180,
@@ -398,7 +389,12 @@ export const MOCK_LEDGER_ENTRIES: LedgerEntry[] = [
   },
 ];
 
-
+export const CATEGORY_COLORS: Record<TaskCategory, string> = {
+  Household: '#10B981',
+  Finance: '#F59E0B',
+  Work: '#3B82F6',
+  Leisure: '#8B5CF6',
+};
 
 export const STATUS_COLORS = {
   pending: '#6B7280',

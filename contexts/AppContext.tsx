@@ -2,7 +2,7 @@ import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { Task, LedgerEntry, User, DashboardStats, List, UndoAction, MemberRole } from '@/types';
+import { Task, LedgerEntry, User, DashboardStats, List, UndoAction, TaskCategory, CategoryMeta, ListMember, MemberRole } from '@/types';
 import { Language, getTranslations, Translations } from '@/constants/translations';
 import { MOCK_TASKS, MOCK_USERS, MOCK_LISTS, MOCK_LEDGER_ENTRIES } from '@/mocks/data';
 import { ClockService } from '@/services/ClockService';
@@ -10,7 +10,8 @@ import { LedgerService } from '@/services/LedgerService';
 import { SchedulerService } from '@/services/SchedulerService';
 import { InviteService } from '@/services/InviteService';
 import { ListService, ListSettingsPayload } from '@/services/ListService';
-
+import { CategoryService } from '@/services/CategoryService';
+import { MemberService } from '@/services/MemberService';
 
 export type CalendarViewType = 'day' | 'week' | 'month';
 
@@ -28,10 +29,10 @@ const STORAGE_KEYS = {
 };
 
 export const [AppProvider, useApp] = createContextHook(() => {
-  const [tasks, setTasks] = useState<Task[]>(MOCK_TASKS);
-  const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>(MOCK_LEDGER_ENTRIES);
-  const [users, setUsers] = useState<User[]>(MOCK_USERS);
-  const [lists, setLists] = useState<List[]>(MOCK_LISTS);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [lists, setLists] = useState<List[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string>('user-1');
   const [currentListId, setCurrentListId] = useState<string>('list-1');
   const [undoAction, setUndoAction] = useState<UndoAction | null>(null);
@@ -40,14 +41,12 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const [language, setLanguage] = useState<Language>('en');
   const [t, setT] = useState<Translations>(getTranslations('en'));
 
-
   const tasksQuery = useQuery({
     queryKey: ['tasks'],
     queryFn: async () => {
       const stored = await AsyncStorage.getItem(STORAGE_KEYS.TASKS);
       return stored ? JSON.parse(stored) : MOCK_TASKS;
     },
-    staleTime: Infinity,
   });
 
   const ledgerQuery = useQuery({
@@ -56,7 +55,6 @@ export const [AppProvider, useApp] = createContextHook(() => {
       const stored = await AsyncStorage.getItem(STORAGE_KEYS.LEDGER_ENTRIES);
       return stored ? JSON.parse(stored) : MOCK_LEDGER_ENTRIES;
     },
-    staleTime: Infinity,
   });
 
   const usersQuery = useQuery({
@@ -65,7 +63,6 @@ export const [AppProvider, useApp] = createContextHook(() => {
       const stored = await AsyncStorage.getItem(STORAGE_KEYS.USERS);
       return stored ? JSON.parse(stored) : MOCK_USERS;
     },
-    staleTime: Infinity,
   });
 
   const listsQuery = useQuery({
@@ -74,7 +71,6 @@ export const [AppProvider, useApp] = createContextHook(() => {
       const stored = await AsyncStorage.getItem(STORAGE_KEYS.LISTS);
       return stored ? JSON.parse(stored) : MOCK_LISTS;
     },
-    staleTime: Infinity,
   });
 
   const currentUserQuery = useQuery({
@@ -83,7 +79,6 @@ export const [AppProvider, useApp] = createContextHook(() => {
       const stored = await AsyncStorage.getItem(STORAGE_KEYS.CURRENT_USER);
       return stored || 'user-1';
     },
-    staleTime: Infinity,
   });
 
   const currentListQuery = useQuery({
@@ -92,7 +87,6 @@ export const [AppProvider, useApp] = createContextHook(() => {
       const stored = await AsyncStorage.getItem(STORAGE_KEYS.CURRENT_LIST);
       return stored || 'list-1';
     },
-    staleTime: Infinity,
   });
 
   const calendarViewQuery = useQuery({
@@ -101,7 +95,6 @@ export const [AppProvider, useApp] = createContextHook(() => {
       const stored = await AsyncStorage.getItem(STORAGE_KEYS.CALENDAR_VIEW);
       return (stored as CalendarViewType) || 'month';
     },
-    staleTime: Infinity,
   });
 
   const calendarDateQuery = useQuery({
@@ -110,7 +103,6 @@ export const [AppProvider, useApp] = createContextHook(() => {
       const stored = await AsyncStorage.getItem(STORAGE_KEYS.CALENDAR_SELECTED_DATE);
       return stored ? new Date(stored) : new Date();
     },
-    staleTime: Infinity,
   });
 
   const languageQuery = useQuery({
@@ -119,7 +111,6 @@ export const [AppProvider, useApp] = createContextHook(() => {
       const stored = await AsyncStorage.getItem(STORAGE_KEYS.LANGUAGE);
       return (stored as Language) || 'en';
     },
-    staleTime: Infinity,
   });
 
   useEffect(() => {
@@ -176,8 +167,6 @@ export const [AppProvider, useApp] = createContextHook(() => {
       setT(getTranslations(languageQuery.data));
     }
   }, [languageQuery.data]);
-
-
 
   const { mutate: mutateTasks } = useMutation({
     mutationFn: async (newTasks: Task[]) => {
@@ -653,6 +642,56 @@ export const [AppProvider, useApp] = createContextHook(() => {
     [lists, currentUserId, currentListId, mutateLists, switchList]
   );
 
+  const updateCategory = useCallback(
+    (category: TaskCategory, updates: Partial<CategoryMeta>) => {
+      if (!currentList) return false;
+
+      const updatedCategories = CategoryService.updateCategory(
+        currentList.categories,
+        category,
+        updates
+      );
+      
+      const updatedLists = lists.map((l) => {
+        if (l.id === currentListId) {
+          return { ...l, categories: updatedCategories };
+        }
+        return l;
+      });
+      
+      setLists(updatedLists);
+      mutateLists(updatedLists);
+      console.log(`[Category] Updated ${category}`);
+      return true;
+    },
+    [currentList, currentListId, lists, mutateLists]
+  );
+
+  const reassignCategory = useCallback(
+    (oldCategory: TaskCategory, newCategory: TaskCategory) => {
+      const updatedTasks = CategoryService.reassign(tasks, oldCategory, newCategory);
+      setTasks(updatedTasks);
+      mutateTasks(updatedTasks);
+      console.log(`[Category] Reassigned ${oldCategory} to ${newCategory}`);
+      return true;
+    },
+    [tasks, mutateTasks]
+  );
+
+  const isCategoryInUse = useCallback(
+    (category: TaskCategory): boolean => {
+      return CategoryService.isInUse(currentListTasks, category);
+    },
+    [currentListTasks]
+  );
+
+  const getCategoryUsageCount = useCallback(
+    (category: TaskCategory): number => {
+      return CategoryService.getUsageCount(currentListTasks, category);
+    },
+    [currentListTasks]
+  );
+
   const removeMember = useCallback(
     (userId: string) => {
       if (!currentList) return false;
@@ -702,31 +741,13 @@ export const [AppProvider, useApp] = createContextHook(() => {
     return currentList.ownerId === currentUserId ? 'Owner' : 'Member';
   }, [currentList, currentUserId]);
 
+  const canManageCategories = useMemo((): boolean => {
+    if (!currentList) return false;
+    if (currentUserRole === 'Owner') return true;
+    return currentList.allowMemberCategoryManage;
+  }, [currentList, currentUserRole]);
+
   const currentUser = users.find((u) => u.id === currentUserId);
-
-  const getCategoryColor = useCallback(
-    (categoryId: string): string => {
-      const category = currentList?.categories.find((c) => c.id === categoryId);
-      return category?.color || '#6B7280';
-    },
-    [currentList]
-  );
-
-  const getCategoryEmoji = useCallback(
-    (categoryId: string): string => {
-      const category = currentList?.categories.find((c) => c.id === categoryId);
-      return category?.emoji || '📁';
-    },
-    [currentList]
-  );
-
-  const getCategoryLabel = useCallback(
-    (categoryId: string): string => {
-      const category = currentList?.categories.find((c) => c.id === categoryId);
-      return category?.label || categoryId;
-    },
-    [currentList]
-  );
 
   return useMemo(
     () => ({
@@ -759,16 +780,18 @@ export const [AppProvider, useApp] = createContextHook(() => {
       updateListSettings,
       createList,
       archiveList,
+      updateCategory,
+      reassignCategory,
+      isCategoryInUse,
+      getCategoryUsageCount,
       removeMember,
       updateUserProfile,
       currentUserRole,
+      canManageCategories,
       language,
       t,
       changeLanguage,
-      getCategoryColor,
-      getCategoryEmoji,
-      getCategoryLabel,
-      isLoading: tasksQuery.isLoading || ledgerQuery.isLoading || usersQuery.isLoading || listsQuery.isLoading,
+      isLoading: tasksQuery.isLoading || ledgerQuery.isLoading,
     }),
     [
       currentListTasks,
@@ -800,19 +823,19 @@ export const [AppProvider, useApp] = createContextHook(() => {
       updateListSettings,
       createList,
       archiveList,
+      updateCategory,
+      reassignCategory,
+      isCategoryInUse,
+      getCategoryUsageCount,
       removeMember,
       updateUserProfile,
       currentUserRole,
+      canManageCategories,
       language,
       t,
       changeLanguage,
-      getCategoryColor,
-      getCategoryEmoji,
-      getCategoryLabel,
       tasksQuery.isLoading,
       ledgerQuery.isLoading,
-      usersQuery.isLoading,
-      listsQuery.isLoading,
     ]
   );
 });

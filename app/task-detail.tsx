@@ -21,7 +21,7 @@ import {
 import { useApp } from '@/contexts/AppContext';
 import { FundTargetOption } from '@/components/TaskFormModal';
 import { MOCK_FUND_TARGETS } from '@/mocks/data';
-import { TaskPriority, ReminderType, RecurrenceType } from '@/types';
+import { TaskCategory, TaskPriority, ReminderType, RecurrenceType } from '@/types';
 import { EUDateFormatter } from '@/utils/EULocale';
 
 interface EditableFieldProps {
@@ -290,7 +290,7 @@ export default function TaskDetailScreen() {
     );
   }
 
-  const categoryMeta = currentList.categories.find((c) => c.id === task.category) || currentList.categories[0];
+  const categoryMeta = currentList.categories[task.category];
   const assignedMembers = Array.isArray(task.assignedTo)
     ? currentListMembers.filter((m) => task.assignedTo.includes(m.id))
     : currentListMembers.filter((m) => m.id === task.assignedTo);
@@ -539,9 +539,9 @@ export default function TaskDetailScreen() {
       <PickerModal
         visible={showCategoryPicker}
         title="Select Category"
-        options={currentList.categories.map((cat) => ({
-          label: `${cat.emoji} ${cat.label}`,
-          value: cat.id,
+        options={Object.keys(currentList.categories).map((key) => ({
+          label: `${currentList.categories[key as TaskCategory].emoji} ${currentList.categories[key as TaskCategory].label}`,
+          value: key,
         }))}
         selected={task.category}
         onClose={() => setShowCategoryPicker(false)}

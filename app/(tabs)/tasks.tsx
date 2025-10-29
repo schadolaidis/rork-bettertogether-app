@@ -511,7 +511,7 @@ export default function TasksScreen() {
         {filteredTasks.length > 0 ? (
           <View style={styles.taskList}>
             {filteredTasks.map((task) => {
-              const categoryMeta = currentList?.categories?.find(c => c.id === task.category);
+              const categoryMeta = currentList?.categories[task.category];
               return (
                 <TaskCard
                   key={task.id}

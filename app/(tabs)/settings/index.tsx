@@ -19,6 +19,7 @@ import {
   Share2,
   Check,
   List as ListIcon,
+  Palette,
   Settings as SettingsIcon,
   LogOut,
   Languages,
@@ -218,6 +219,22 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t.settings.manage}</Text>
           <View style={styles.settingsList}>
+            <SettingItem
+              icon={<Palette size={20} color="#8B5CF6" />}
+              title={t.settings.categories}
+              subtitle={t.settings.manageCategories}
+              onPress={() => {
+                if (currentUserRole !== 'Owner' && !currentList?.allowMemberCategoryManage) {
+                  Alert.alert(
+                    t.settings.permissionRequired,
+                    t.settings.ownerOnly,
+                    [{ text: t.common.ok }]
+                  );
+                } else {
+                  router.push('/(tabs)/settings/categories');
+                }
+              }}
+            />
             <SettingItem
               icon={<Users size={20} color="#F59E0B" />}
               title={t.settings.teamMembers}

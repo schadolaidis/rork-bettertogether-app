@@ -18,7 +18,7 @@ interface QuickAddModalProps {
   visible: boolean;
   onClose: () => void;
   onSubmit: (data: QuickTaskData) => void;
-  categories: { id: string; emoji: string; color: string; label: string }[];
+  categories: Record<TaskCategory, { emoji: string; color: string; label: string }>;
 }
 
 export interface QuickTaskData {
@@ -293,14 +293,12 @@ export function QuickAddModal({ visible, onClose, onSubmit, categories }: QuickA
     }
     
     if (parsedData.category) {
-      const categoryMeta = categories.find(c => c.id === parsedData.category);
-      if (categoryMeta) {
-        items.push({
-          label: 'Category',
-          value: `${categoryMeta.emoji} ${categoryMeta.label}`,
-          color: categoryMeta.color,
-        });
-      }
+      const categoryMeta = categories[parsedData.category];
+      items.push({
+        label: 'Category',
+        value: `${categoryMeta.emoji} ${categoryMeta.label}`,
+        color: categoryMeta.color,
+      });
     }
     
     if (parsedData.stake) {

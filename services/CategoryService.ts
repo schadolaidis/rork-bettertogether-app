@@ -1,73 +1,47 @@
-import { Task, CategoryMeta } from '@/types';
+import { Task, TaskCategory, CategoryMeta } from '@/types';
 
 export class CategoryService {
   static updateCategory(
-    categories: CategoryMeta[],
-    categoryId: string,
-    updates: Partial<Omit<CategoryMeta, 'id' | 'createdAt' | 'isDefault'>>
-  ): CategoryMeta[] {
-    console.log(`[CategoryService] Updating category ${categoryId}:`, updates);
+    categories: Record<TaskCategory, CategoryMeta>,
+    category: TaskCategory,
+    updates: Partial<CategoryMeta>
+  ): Record<TaskCategory, CategoryMeta> {
+    console.log(`[CategoryService] Updating category ${category}:`, updates);
     
-    return categories.map((cat) =>
-      cat.id === categoryId ? { ...cat, ...updates } : cat
-    );
-  }
-
-  static addCategory(
-    categories: CategoryMeta[],
-    category: Omit<CategoryMeta, 'createdAt'>
-  ): CategoryMeta[] {
-    console.log(`[CategoryService] Adding new category:`, category);
-    
-    const newCategory: CategoryMeta = {
-      ...category,
-      createdAt: new Date().toISOString(),
+    return {
+      ...categories,
+      [category]: {
+        ...categories[category],
+        ...updates,
+      },
     };
-    
-    return [...categories, newCategory];
-  }
-
-  static deleteCategory(
-    categories: CategoryMeta[],
-    categoryId: string
-  ): CategoryMeta[] {
-    console.log(`[CategoryService] Deleting category ${categoryId}`);
-    
-    return categories.filter((cat) => cat.id !== categoryId);
-  }
-
-  static getCategoryById(
-    categories: CategoryMeta[],
-    categoryId: string
-  ): CategoryMeta | undefined {
-    return categories.find((cat) => cat.id === categoryId);
   }
 
   static reassign(
     tasks: Task[],
-    oldCategoryId: string,
-    newCategoryId: string
+    oldCategory: TaskCategory,
+    newCategory: TaskCategory
   ): Task[] {
     console.log(
-      `[CategoryService] Reassigning tasks from ${oldCategoryId} to ${newCategoryId}`
+      `[CategoryService] Reassigning tasks from ${oldCategory} to ${newCategory}`
     );
     
     return tasks.map((task) => {
-      if (task.category === oldCategoryId) {
+      if (task.category === oldCategory) {
         return {
           ...task,
-          category: newCategoryId,
+          category: newCategory,
         };
       }
       return task;
     });
   }
 
-  static isInUse(tasks: Task[], categoryId: string): boolean {
-    return tasks.some((task) => task.category === categoryId);
+  static isInUse(tasks: Task[], category: TaskCategory): boolean {
+    return tasks.some((task) => task.category === category);
   }
 
-  static getUsageCount(tasks: Task[], categoryId: string): number {
-    return tasks.filter((task) => task.category === categoryId).length;
+  static getUsageCount(tasks: Task[], category: TaskCategory): number {
+    return tasks.filter((task) => task.category === category).length;
   }
 }
