@@ -23,6 +23,7 @@ import {
   Settings as SettingsIcon,
   LogOut,
   Languages,
+  Target,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useApp } from '@/contexts/AppContext';
@@ -240,6 +241,12 @@ export default function SettingsScreen() {
               title={t.settings.teamMembers}
               subtitle={`${currentListMembers.length} ${currentListMembers.length === 1 ? t.common.member : t.common.members}`}
               onPress={() => router.push('/(tabs)/settings/teams')}
+            />
+            <SettingItem
+              icon={<Target size={20} color="#10B981" />}
+              title="Fund Manager"
+              subtitle="Create and manage fund goals"
+              onPress={() => router.push('/(tabs)/settings/funds')}
             />
           </View>
         </View>
