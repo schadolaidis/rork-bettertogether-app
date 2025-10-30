@@ -22,11 +22,16 @@ export class CalendarService {
   ): DayMarkers[] {
     const dayMap = new Map<string, DayMarkers>();
 
-    tasks.forEach((task) => {
-      const taskDate = new Date(task.dueDate);
-      const dateKey = this.getDateKey(taskDate);
+    const startTime = new Date(start).setHours(0, 0, 0, 0);
+    const endTime = new Date(end).setHours(23, 59, 59, 999);
 
-      if (taskDate >= start && taskDate <= end) {
+    tasks.forEach((task) => {
+      const taskDate = new Date(task.endAt);
+      const taskDateOnly = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate());
+      const taskTime = taskDateOnly.getTime();
+      const dateKey = this.getDateKey(taskDateOnly);
+
+      if (taskTime >= startTime && taskTime <= endTime) {
         if (!dayMap.has(dateKey)) {
           dayMap.set(dateKey, {
             date: dateKey,
@@ -68,11 +73,12 @@ export class CalendarService {
     const dateKey = this.getDateKey(date);
     return tasks
       .filter((task) => {
-        const taskDateKey = this.getDateKey(new Date(task.dueDate));
+        const taskDate = new Date(task.endAt);
+        const taskDateKey = this.getDateKey(taskDate);
         return taskDateKey === dateKey;
       })
       .sort((a, b) => {
-        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+        return new Date(a.endAt).getTime() - new Date(b.endAt).getTime();
       });
   }
 
