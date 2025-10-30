@@ -2,9 +2,9 @@ import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { Task, LedgerEntry, User, DashboardStats, List, UndoAction, TaskCategory, CategoryMeta, ListMember, MemberRole } from '@/types';
+import { Task, LedgerEntry, User, DashboardStats, List, UndoAction, TaskCategory, CategoryMeta, ListMember, MemberRole, FundTarget } from '@/types';
 import { Language, getTranslations, Translations } from '@/constants/translations';
-import { MOCK_TASKS, MOCK_USERS, MOCK_LISTS, MOCK_LEDGER_ENTRIES } from '@/mocks/data';
+import { MOCK_TASKS, MOCK_USERS, MOCK_LISTS, MOCK_LEDGER_ENTRIES, MOCK_FUND_TARGETS } from '@/mocks/data';
 import { ClockService } from '@/services/ClockService';
 import { LedgerService } from '@/services/LedgerService';
 import { SchedulerService } from '@/services/SchedulerService';
@@ -26,6 +26,7 @@ const STORAGE_KEYS = {
   CALENDAR_SELECTED_DATE: '@bettertogether/calendar_selected_date',
   MEMBERSHIPS: '@bettertogether/memberships',
   LANGUAGE: '@bettertogether/language',
+  FUND_TARGETS: '@bettertogether/fund_targets',
 };
 
 export const [AppProvider, useApp] = createContextHook(() => {
@@ -33,6 +34,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [lists, setLists] = useState<List[]>([]);
+  const [fundTargets, setFundTargets] = useState<FundTarget[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string>('user-1');
   const [currentListId, setCurrentListId] = useState<string>('list-1');
   const [undoAction, setUndoAction] = useState<UndoAction | null>(null);
@@ -113,6 +115,14 @@ export const [AppProvider, useApp] = createContextHook(() => {
     },
   });
 
+  const fundTargetsQuery = useQuery({
+    queryKey: ['fund-targets'],
+    queryFn: async () => {
+      const stored = await AsyncStorage.getItem(STORAGE_KEYS.FUND_TARGETS);
+      return stored ? JSON.parse(stored) : MOCK_FUND_TARGETS;
+    },
+  });
+
   useEffect(() => {
     if (tasksQuery.data) {
       setTasks(tasksQuery.data);
@@ -168,6 +178,12 @@ export const [AppProvider, useApp] = createContextHook(() => {
     }
   }, [languageQuery.data]);
 
+  useEffect(() => {
+    if (fundTargetsQuery.data) {
+      setFundTargets(fundTargetsQuery.data);
+    }
+  }, [fundTargetsQuery.data]);
+
   const { mutate: mutateTasks } = useMutation({
     mutationFn: async (newTasks: Task[]) => {
       await AsyncStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(newTasks));
@@ -214,6 +230,13 @@ export const [AppProvider, useApp] = createContextHook(() => {
     mutationFn: async (lang: Language) => {
       await AsyncStorage.setItem(STORAGE_KEYS.LANGUAGE, lang);
       return lang;
+    },
+  });
+
+  const { mutate: mutateFundTargets } = useMutation({
+    mutationFn: async (newTargets: FundTarget[]) => {
+      await AsyncStorage.setItem(STORAGE_KEYS.FUND_TARGETS, JSON.stringify(newTargets));
+      return newTargets;
     },
   });
 
@@ -757,6 +780,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       allLedgerEntries: ledgerEntries,
       users,
       lists,
+      fundTargets,
       currentUser,
       currentUserId,
       currentList,
@@ -800,6 +824,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       ledgerEntries,
       users,
       lists,
+      fundTargets,
       currentUser,
       currentUserId,
       currentList,

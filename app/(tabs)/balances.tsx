@@ -12,7 +12,7 @@ import { TrendingUp, TrendingDown, Users, Calendar, BarChart3, ArrowUpDown, Doll
 import * as Haptics from 'expo-haptics';
 import { useApp } from '@/contexts/AppContext';
 import { StreaksFundCard } from '@/components/StreaksFundCard';
-import { MOCK_FUND_TARGETS } from '@/mocks/data';
+
 import { LedgerEntry, User, TaskCategory } from '@/types';
 import { ClockService } from '@/services/ClockService';
 import { router } from 'expo-router';
@@ -186,7 +186,7 @@ function MemberBalanceCard({ memberBalance, currencySymbol, onPress }: MemberBal
 
 export default function BalancesScreen() {
   const insets = useSafeAreaInsets();
-  const { ledgerEntries, currentUserId, currentListMembers, currentList, getUserBalance, tasks, users, currentListId } = useApp();
+  const { ledgerEntries, currentUserId, currentListMembers, currentList, getUserBalance, tasks, users, currentListId, fundTargets } = useApp();
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const currentMonth = ClockService.getCurrentMonth();
 
@@ -375,8 +375,8 @@ export default function BalancesScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <Text style={styles.headerEmoji}>💶</Text>
-          <Text style={styles.headerTitle}>Balances</Text>
+          <Text style={styles.headerEmoji}>🎯</Text>
+          <Text style={styles.headerTitle}>Fund Goals</Text>
         </View>
         <Text style={styles.headerSubtitle}>{currentList?.name || 'Group'} • {monthName}</Text>
         <View style={styles.memberCountBadge}>
@@ -435,8 +435,8 @@ export default function BalancesScreen() {
                   <Text style={styles.addFundButtonText}>Add Goal</Text>
                 </TouchableOpacity>
               </View>
-              {MOCK_FUND_TARGETS.filter((f) => f.listId === currentListId && f.isActive).length > 0 ? (
-                MOCK_FUND_TARGETS.filter((f) => f.listId === currentListId && f.isActive).map((fund) => {
+              {fundTargets.filter((f: FundTarget) => f.listId === currentListId && f.isActive).length > 0 ? (
+                fundTargets.filter((f: FundTarget) => f.listId === currentListId && f.isActive).map((fund: FundTarget) => {
                   const linkedTasks = tasks.filter((t) => t.fundTargetId === fund.id);
                   return (
                     <StreaksFundCard
@@ -449,8 +449,14 @@ export default function BalancesScreen() {
                       linkedTasksCount={linkedTasks.length}
                       currencySymbol={currencySymbol}
                       onPress={() => {
-                        console.log('[Balance] View fund:', fund.id);
-                        router.push('/(tabs)/settings/funds');
+                        if (Platform.OS !== 'web') {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        }
+                        console.log('[Balance] View fund tasks:', fund.id);
+                        router.push({
+                          pathname: '/(tabs)/tasks',
+                          params: { fundTargetId: fund.id },
+                        });
                       }}
                     />
                   );

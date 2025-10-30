@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { LayoutDashboard, Calendar, CheckSquare, DollarSign, Settings } from "lucide-react-native";
+import { LayoutDashboard, Calendar, CheckSquare, Target, Settings } from "lucide-react-native";
 import React from "react";
 import { useApp } from "@/contexts/AppContext";
 
@@ -43,8 +43,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="balances"
         options={{
-          title: t.tabs.balances,
-          tabBarIcon: ({ color, size }) => <DollarSign color={color} size={size} />,
+          title: t.tabs.fundGoals,
+          tabBarIcon: ({ color, size }) => <Target color={color} size={size} />,
         }}
       />
       <Tabs.Screen

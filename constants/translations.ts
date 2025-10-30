@@ -33,7 +33,7 @@ export interface Translations {
     dashboard: string;
     calendar: string;
     tasks: string;
-    balances: string;
+    fundGoals: string;
     settings: string;
   };
   dashboard: {
@@ -271,7 +271,7 @@ const en: Translations = {
     dashboard: 'Dashboard',
     calendar: 'Calendar',
     tasks: 'Tasks',
-    balances: 'Balances',
+    fundGoals: 'Fund Goals',
     settings: 'Settings',
   },
   dashboard: {
@@ -509,7 +509,7 @@ const de: Translations = {
     dashboard: 'Dashboard',
     calendar: 'Kalender',
     tasks: 'Aufgaben',
-    balances: 'Guthaben',
+    fundGoals: 'Sparziele',
     settings: 'Einstellungen',
   },
   dashboard: {
