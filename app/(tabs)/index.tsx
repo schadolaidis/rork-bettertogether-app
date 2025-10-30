@@ -434,8 +434,9 @@ export default function DashboardScreen() {
   }, [currentList]);
 
   const currencySymbol = currentList?.currencySymbol || '$';
-  const balanceColor = dashboardStats.totalBalance >= 0 ? '#10B981' : '#EF4444';
-  const balanceSign = dashboardStats.totalBalance >= 0 ? '+' : '';
+  const totalBalance = dashboardStats?.totalBalance ?? 0;
+  const balanceColor = totalBalance >= 0 ? '#10B981' : '#EF4444';
+  const balanceSign = totalBalance >= 0 ? '+' : '';
 
   const handleOpenCalendar = useCallback(() => {
     setShowCalendarModal(true);
@@ -547,21 +548,19 @@ export default function DashboardScreen() {
           />
           <StatCard
             title="Balance"
-            value={`${balanceSign}${currencySymbol}${Math.abs(dashboardStats.totalBalance).toFixed(2)}`}
+            value={`${balanceSign}${currencySymbol}${Math.abs(totalBalance).toFixed(2)}`}
             icon={
-              dashboardStats.totalBalance >= 0 ? (
+              totalBalance >= 0 ? (
                 <TrendingUp size={24} color={balanceColor} />
               ) : (
                 <TrendingDown size={24} color={balanceColor} />
               )
             }
             color={balanceColor}
-            backgroundColor={dashboardStats.totalBalance >= 0 ? '#D1FAE5' : '#FEE2E2'}
+            backgroundColor={totalBalance >= 0 ? '#D1FAE5' : '#FEE2E2'}
             onPress={handleBalanceTap}
           />
         </View>
-
-
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Upcoming Tasks</Text>
