@@ -23,33 +23,17 @@ import {
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useApp } from '@/contexts/AppContext';
-import { MOCK_FUND_TARGETS } from '@/mocks/data';
-
-interface FundTarget {
-  id: string;
-  listId: string;
-  name: string;
-  emoji: string;
-  description?: string;
-  targetAmountCents?: number;
-  totalCollectedCents: number;
-  isActive: boolean;
-}
 
 export default function FundsScreen() {
   const router = useRouter();
-  const { currentList, tasks } = useApp();
+  const { currentList, tasks, fundTargets, createFundTarget, updateFundTarget, deleteFundTarget } = useApp();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [editingFund, setEditingFund] = useState<FundTarget | null>(null);
+  const [editingFund, setEditingFund] = useState<any>(null);
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState('🎯');
   const [description, setDescription] = useState('');
   const [targetAmount, setTargetAmount] = useState('');
-
-  const fundTargets = MOCK_FUND_TARGETS.filter(
-    (ft) => ft.listId === currentList?.id && ft.isActive
-  );
 
   const handleCreate = () => {
     if (!name.trim()) {
@@ -57,7 +41,8 @@ export default function FundsScreen() {
       return;
     }
 
-    console.log('[Funds] Created fund target:', { name, emoji, description, targetAmount });
+    const targetAmountCents = targetAmount ? Math.round(parseFloat(targetAmount) * 100) : undefined;
+    createFundTarget(name, emoji, description || undefined, targetAmountCents);
     
     if (Platform.OS !== 'web') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -77,7 +62,13 @@ export default function FundsScreen() {
       return;
     }
 
-    console.log('[Funds] Updated fund target:', editingFund.id, { name, emoji, description, targetAmount });
+    const targetAmountCents = targetAmount ? Math.round(parseFloat(targetAmount) * 100) : undefined;
+    updateFundTarget(editingFund.id, {
+      name,
+      emoji,
+      description: description || undefined,
+      targetAmountCents,
+    });
     
     if (Platform.OS !== 'web') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -92,7 +83,7 @@ export default function FundsScreen() {
     Alert.alert('Success', `Fund goal "${name}" updated!`);
   };
 
-  const handleDelete = (fund: FundTarget) => {
+  const handleDelete = (fund: any) => {
     Alert.alert(
       'Delete Fund Goal',
       `Are you sure you want to delete "${fund.name}"? This action cannot be undone.`,
@@ -102,7 +93,7 @@ export default function FundsScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
-            console.log('[Funds] Deleted fund target:', fund.id);
+            deleteFundTarget(fund.id);
             if (Platform.OS !== 'web') {
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             }
@@ -113,7 +104,7 @@ export default function FundsScreen() {
     );
   };
 
-  const openEditModal = (fund: FundTarget) => {
+  const openEditModal = (fund: any) => {
     setEditingFund(fund);
     setName(fund.name);
     setEmoji(fund.emoji);

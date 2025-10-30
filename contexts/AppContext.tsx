@@ -772,6 +772,67 @@ export const [AppProvider, useApp] = createContextHook(() => {
 
   const currentUser = users.find((u) => u.id === currentUserId);
 
+  const createFundTarget = useCallback(
+    (name: string, emoji: string, description?: string, targetAmountCents?: number) => {
+      const newFund: FundTarget = {
+        id: `fund-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        listId: currentListId,
+        name,
+        emoji,
+        description,
+        targetAmountCents,
+        totalCollectedCents: 0,
+        isActive: true,
+        createdAt: new Date().toISOString(),
+      };
+      
+      const updatedFunds = [...fundTargets, newFund];
+      setFundTargets(updatedFunds);
+      mutateFundTargets(updatedFunds);
+      console.log('[FundTarget] Created:', newFund);
+      return newFund;
+    },
+    [fundTargets, currentListId, mutateFundTargets]
+  );
+
+  const updateFundTarget = useCallback(
+    (fundId: string, updates: Partial<Pick<FundTarget, 'name' | 'emoji' | 'description' | 'targetAmountCents'>>) => {
+      const updatedFunds = fundTargets.map((f) => {
+        if (f.id === fundId) {
+          return { ...f, ...updates };
+        }
+        return f;
+      });
+      
+      setFundTargets(updatedFunds);
+      mutateFundTargets(updatedFunds);
+      console.log('[FundTarget] Updated:', fundId, updates);
+      return true;
+    },
+    [fundTargets, mutateFundTargets]
+  );
+
+  const deleteFundTarget = useCallback(
+    (fundId: string) => {
+      const updatedFunds = fundTargets.map((f) => {
+        if (f.id === fundId) {
+          return { ...f, isActive: false };
+        }
+        return f;
+      });
+      
+      setFundTargets(updatedFunds);
+      mutateFundTargets(updatedFunds);
+      console.log('[FundTarget] Deleted:', fundId);
+      return true;
+    },
+    [fundTargets, mutateFundTargets]
+  );
+
+  const currentListFundTargets = useMemo(() => {
+    return fundTargets.filter((f) => f.listId === currentListId && f.isActive);
+  }, [fundTargets, currentListId]);
+
   return useMemo(
     () => ({
       tasks: currentListTasks,
@@ -780,7 +841,8 @@ export const [AppProvider, useApp] = createContextHook(() => {
       allLedgerEntries: ledgerEntries,
       users,
       lists,
-      fundTargets,
+      fundTargets: currentListFundTargets,
+      allFundTargets: fundTargets,
       currentUser,
       currentUserId,
       currentList,
@@ -812,6 +874,9 @@ export const [AppProvider, useApp] = createContextHook(() => {
       updateUserProfile,
       currentUserRole,
       canManageCategories,
+      createFundTarget,
+      updateFundTarget,
+      deleteFundTarget,
       language,
       t,
       changeLanguage,
@@ -824,6 +889,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       ledgerEntries,
       users,
       lists,
+      currentListFundTargets,
       fundTargets,
       currentUser,
       currentUserId,
@@ -856,6 +922,9 @@ export const [AppProvider, useApp] = createContextHook(() => {
       updateUserProfile,
       currentUserRole,
       canManageCategories,
+      createFundTarget,
+      updateFundTarget,
+      deleteFundTarget,
       language,
       t,
       changeLanguage,
