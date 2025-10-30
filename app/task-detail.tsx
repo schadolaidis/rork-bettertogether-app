@@ -963,7 +963,7 @@ function FundTargetPickerModal({ visible, fundTargets, selected, onClose, onSele
               </View>
               <View style={styles.fundTargetPickerContent}>
                 <Text style={styles.fundTargetPickerName}>No Fund Goal</Text>
-                <Text style={styles.fundTargetPickerDescription}>Don't link to a fund</Text>
+                <Text style={styles.fundTargetPickerDescription}>Do not link to a fund</Text>
               </View>
             </View>
             {selected === null && (
@@ -1253,6 +1253,83 @@ function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onS
           </TouchableOpacity>
         </View>
       </View>
+
+      {Platform.OS === 'web' && showPickerType === 'start-date' && (
+        <View style={styles.iosPickerOverlay}>
+          <TouchableOpacity 
+            style={styles.iosPickerBackdrop}
+            activeOpacity={1}
+            onPress={() => setShowPickerType(null)}
+          />
+          <View style={styles.iosPickerContainer}>
+            <View style={styles.iosPickerHeader}>
+              <TouchableOpacity onPress={() => setShowPickerType(null)}>
+                <Text style={styles.iosPickerDoneButton}>Done</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={{ padding: 20 }}>
+              <TextInput
+                style={[styles.input, { fontSize: 16 }]}
+                value={start.toISOString().split('T')[0]}
+                onChangeText={(text) => {
+                  const date = new Date(text);
+                  if (!isNaN(date.getTime())) {
+                    const newStart = new Date(date);
+                    newStart.setHours(start.getHours(), start.getMinutes(), 0, 0);
+                    setStart(newStart);
+                    
+                    const duration = end.getTime() - start.getTime();
+                    if (duration > 0) {
+                      const newEnd = new Date(newStart.getTime() + duration);
+                      setEnd(newEnd);
+                    } else {
+                      const newEnd = new Date(newStart.getTime() + 3600000);
+                      setEnd(newEnd);
+                    }
+                  }
+                }}
+                placeholder="YYYY-MM-DD"
+              />
+            </View>
+          </View>
+        </View>
+      )}
+
+      {Platform.OS === 'web' && showPickerType === 'start-time' && (
+        <View style={styles.iosPickerOverlay}>
+          <TouchableOpacity 
+            style={styles.iosPickerBackdrop}
+            activeOpacity={1}
+            onPress={() => setShowPickerType(null)}
+          />
+          <View style={styles.iosPickerContainer}>
+            <View style={styles.iosPickerHeader}>
+              <TouchableOpacity onPress={() => setShowPickerType(null)}>
+                <Text style={styles.iosPickerDoneButton}>Done</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={{ padding: 20 }}>
+              <TextInput
+                style={[styles.input, { fontSize: 16 }]}
+                value={`${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`}
+                onChangeText={(text) => {
+                  const [hours, minutes] = text.split(':').map(Number);
+                  if (!isNaN(hours) && !isNaN(minutes)) {
+                    const newStart = new Date(start);
+                    newStart.setHours(hours, minutes, 0, 0);
+                    setStart(newStart);
+                    
+                    const newEnd = new Date(newStart);
+                    newEnd.setHours(newStart.getHours() + 1, newStart.getMinutes(), 0, 0);
+                    setEnd(newEnd);
+                  }
+                }}
+                placeholder="HH:MM"
+              />
+            </View>
+          </View>
+        </View>
+      )}
 
       {Platform.OS === 'ios' && showPickerType === 'start-date' && (
         <View style={styles.iosPickerOverlay}>
@@ -1957,5 +2034,14 @@ const styles = StyleSheet.create({
   fundTargetPickerDescription: {
     fontSize: 14,
     color: '#6B7280',
+  },
+  input: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    color: '#111827',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
 });

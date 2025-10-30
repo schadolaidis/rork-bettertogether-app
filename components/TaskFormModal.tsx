@@ -872,6 +872,97 @@ export function TaskFormModal({
         </View>
       </Modal>
 
+      {Platform.OS === 'web' && showStartDatePicker && (
+        <Modal visible={true} transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Date</Text>
+                <TouchableOpacity
+                  style={styles.modalCloseButton}
+                  onPress={() => setShowStartDatePicker(false)}
+                >
+                  <X size={24} color="#6B7280" />
+                </TouchableOpacity>
+              </View>
+              <View style={{ padding: 20 }}>
+                <TextInput
+                  style={[styles.input, { fontSize: 16 }]}
+                  value={startDate.toISOString().split('T')[0]}
+                  onChangeText={(text) => {
+                    const date = new Date(text);
+                    if (!isNaN(date.getTime())) {
+                      const newStart = new Date(date);
+                      newStart.setHours(startDate.getHours(), startDate.getMinutes(), 0, 0);
+                      setStartDate(newStart);
+                      
+                      const duration = endDate.getTime() - startDate.getTime();
+                      if (duration > 0) {
+                        const newEnd = new Date(newStart.getTime() + duration);
+                        setEndDate(newEnd);
+                      } else {
+                        const newEnd = new Date(newStart.getTime() + 3600000);
+                        setEndDate(newEnd);
+                      }
+                    }
+                  }}
+                  placeholder="YYYY-MM-DD"
+                />
+                <TouchableOpacity
+                  style={styles.doneButton}
+                  onPress={() => setShowStartDatePicker(false)}
+                >
+                  <Text style={styles.doneButtonText}>Done</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {Platform.OS === 'web' && showStartTimePicker && (
+        <Modal visible={true} transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Time</Text>
+                <TouchableOpacity
+                  style={styles.modalCloseButton}
+                  onPress={() => setShowStartTimePicker(false)}
+                >
+                  <X size={24} color="#6B7280" />
+                </TouchableOpacity>
+              </View>
+              <View style={{ padding: 20 }}>
+                <TextInput
+                  style={[styles.input, { fontSize: 16 }]}
+                  value={`${String(startDate.getHours()).padStart(2, '0')}:${String(startDate.getMinutes()).padStart(2, '0')}`}
+                  onChangeText={(text) => {
+                    const [hours, minutes] = text.split(':').map(Number);
+                    if (!isNaN(hours) && !isNaN(minutes)) {
+                      const newStart = new Date(startDate);
+                      newStart.setHours(hours, minutes, 0, 0);
+                      setStartDate(newStart);
+                      
+                      const newEnd = new Date(newStart);
+                      newEnd.setHours(newStart.getHours() + 1, newStart.getMinutes(), 0, 0);
+                      setEndDate(newEnd);
+                    }
+                  }}
+                  placeholder="HH:MM"
+                />
+                <TouchableOpacity
+                  style={styles.doneButton}
+                  onPress={() => setShowStartTimePicker(false)}
+                >
+                  <Text style={styles.doneButtonText}>Done</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
+
       {Platform.OS === 'ios' && showStartDatePicker && (
         <View style={styles.iosPickerOverlay}>
           <TouchableOpacity 
