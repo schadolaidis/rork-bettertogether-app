@@ -311,18 +311,22 @@ export default function BalancesScreen() {
     });
 
     const breakdown: CategoryBreakdown[] = Object.entries(categoriesMap)
-      .filter(([_, data]) => data.total > 0)
+      .filter(([_, data]) => data && data.total > 0)
       .map(([category, data]) => {
         const categoryMeta = currentList.categories[category as TaskCategory];
+        if (!categoryMeta || !data) {
+          return null;
+        }
         return {
           category: category as TaskCategory,
-          emoji: categoryMeta?.emoji || '📋',
-          color: categoryMeta?.color || '#6B7280',
+          emoji: categoryMeta.emoji || '📋',
+          color: categoryMeta.color || '#6B7280',
           total: data.total,
           count: data.count,
           percentage: totalExpenses > 0 && data.total ? (data.total / totalExpenses) * 100 : 0,
         };
       })
+      .filter((item): item is CategoryBreakdown => item !== null)
       .sort((a, b) => b.total - a.total);
 
     return breakdown;
@@ -465,9 +469,10 @@ export default function BalancesScreen() {
                   <Text style={styles.dateHeader}>{group.date}</Text>
                   {group.entries.map((entry) => {
                     const task = tasks.find((t) => t.id === entry.taskId);
-                    const categoryEmoji = task && currentList && task.category
-                      ? currentList.categories[task.category]?.emoji || '📋'
-                      : '📋';
+                    const categoryMeta = task && currentList && task.category
+                      ? currentList.categories[task.category]
+                      : undefined;
+                    const categoryEmoji = categoryMeta?.emoji || '📋';
                     const payer = currentListMembers.find((u) => u.id === entry.userId);
                     const payerName = payer?.name || 'Unknown';
 
