@@ -290,7 +290,11 @@ export default function TaskDetailScreen() {
     );
   }
 
-  const categoryMeta = currentList.categories[task.category];
+  const categoryMeta = currentList.categories?.[task.category] || {
+    emoji: '📋',
+    color: '#6B7280',
+    label: task.category
+  };
   const assignedMembers = Array.isArray(task.assignedTo)
     ? currentListMembers.filter((m) => task.assignedTo.includes(m.id))
     : currentListMembers.filter((m) => m.id === task.assignedTo);
@@ -539,10 +543,13 @@ export default function TaskDetailScreen() {
       <PickerModal
         visible={showCategoryPicker}
         title="Select Category"
-        options={Object.keys(currentList.categories).map((key) => ({
-          label: `${currentList.categories[key as TaskCategory].emoji} ${currentList.categories[key as TaskCategory].label}`,
-          value: key,
-        }))}
+        options={Object.keys(currentList.categories).map((key) => {
+          const cat = currentList.categories[key as TaskCategory];
+          return {
+            label: `${cat?.emoji || '📋'} ${cat?.label || key}`,
+            value: key,
+          };
+        })}
         selected={task.category}
         onClose={() => setShowCategoryPicker(false)}
         onSelect={(value) => handleUpdateField('category', value)}

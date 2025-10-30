@@ -426,10 +426,10 @@ export default function DashboardScreen() {
   const categoryEmojis = useMemo(() => {
     if (!currentList) return {} as Record<TaskCategory, string>;
     return {
-      Household: currentList.categories.Household.emoji,
-      Finance: currentList.categories.Finance.emoji,
-      Work: currentList.categories.Work.emoji,
-      Leisure: currentList.categories.Leisure.emoji,
+      Household: currentList.categories.Household?.emoji || '🏠',
+      Finance: currentList.categories.Finance?.emoji || '💰',
+      Work: currentList.categories.Work?.emoji || '💼',
+      Leisure: currentList.categories.Leisure?.emoji || '🎮',
     };
   }, [currentList]);
 
@@ -567,7 +567,7 @@ export default function DashboardScreen() {
             <Text style={styles.nextDueTitle}>{dashboardStats.nextDueTask.title}</Text>
             <View style={styles.nextDueMeta}>
               <Text style={styles.nextDueCategory}>
-                {currentList?.categories[dashboardStats.nextDueTask.category]?.emoji}{' '}
+                {currentList?.categories[dashboardStats.nextDueTask.category]?.emoji || '📋'}{' '}
                 {dashboardStats.nextDueTask.category}
               </Text>
               <Text style={styles.nextDueDot}>•</Text>
