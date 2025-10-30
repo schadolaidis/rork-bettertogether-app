@@ -13,7 +13,7 @@ import { ListService, ListSettingsPayload } from '@/services/ListService';
 import { CategoryService } from '@/services/CategoryService';
 import { MemberService } from '@/services/MemberService';
 
-export type CalendarViewType = 'day' | 'week' | 'month';
+export type CalendarViewType = 'day' | 'week' | 'month' | 'list';
 
 const STORAGE_KEYS = {
   TASKS: '@bettertogether/tasks',

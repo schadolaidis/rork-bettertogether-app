@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, CheckCircle2 } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, CheckCircle2, List } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useApp } from '@/contexts/AppContext';
 import { TaskCategory } from '@/types';
@@ -237,6 +237,168 @@ export default function CalendarScreen() {
     console.log('[Calendar] Tasks by hour:', map.size, 'Total tasks:', dayViewTasks.length);
     return map;
   }, [dayViewTasks]);
+
+  const tickerDays = useMemo(() => {
+    const days = [];
+    const baseDate = new Date();
+    for (let i = -3; i <= 10; i++) {
+      const date = new Date(baseDate);
+      date.setDate(baseDate.getDate() + i);
+      days.push(date);
+    }
+    return days;
+  }, []);
+
+  const groupedTasksByDate = useMemo(() => {
+    const sorted = [...tasks].sort((a, b) => 
+      new Date(a.endAt).getTime() - new Date(b.endAt).getTime()
+    );
+    
+    const groups: Record<string, typeof tasks> = {};
+    sorted.forEach(task => {
+      const dateKey = CalendarService.getDateKey(new Date(task.endAt));
+      if (!groups[dateKey]) groups[dateKey] = [];
+      groups[dateKey].push(task);
+    });
+    
+    return groups;
+  }, [tasks]);
+
+  const renderDayTicker = () => {
+    const today = new Date();
+
+    return (
+      <ScrollView 
+        horizontal 
+        style={styles.dayTicker}
+        contentContainerStyle={styles.dayTickerContent}
+        showsHorizontalScrollIndicator={false}
+      >
+        {tickerDays.map((date, index) => {
+          const dateKey = CalendarService.getDateKey(date);
+          const marker = markerMap.get(dateKey);
+          const isToday = CalendarService.isSameDay(date, today);
+          const isSelected = CalendarService.isSameDay(date, selectedDate);
+          const dayName = ['S', 'M', 'T', 'W', 'T', 'F', 'S'][date.getDay()];
+
+          return (
+            <TouchableOpacity
+              key={index}
+              style={[
+                styles.tickerDay,
+                isToday && styles.tickerDayToday,
+                isSelected && styles.tickerDaySelected,
+              ]}
+              onPress={() => handleDayPress(date)}
+              activeOpacity={0.7}
+            >
+              <Text style={[
+                styles.tickerDayName,
+                isToday && styles.tickerDayNameToday,
+                isSelected && styles.tickerDayNameSelected,
+              ]}>
+                {dayName}
+              </Text>
+              <Text style={[
+                styles.tickerDayNumber,
+                isToday && styles.tickerDayNumberToday,
+                isSelected && styles.tickerDayNumberSelected,
+              ]}>
+                {date.getDate()}
+              </Text>
+              {marker && marker.markers.length > 0 && (
+                <View style={styles.tickerMarkerRow}>
+                  {marker.markers.slice(0, 2).map((m, i) => (
+                    <View
+                      key={i}
+                      style={[styles.tickerMarker, { backgroundColor: m.color }]}
+                    />
+                  ))}
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+    );
+  };
+
+  const renderListView = () => {
+    return (
+      <ScrollView style={styles.listView} contentContainerStyle={styles.listViewContent}>
+        {Object.entries(groupedTasksByDate).map(([dateKey, dateTasks]) => {
+          const date = new Date(dateTasks[0].endAt);
+          const isToday = CalendarService.isSameDay(date, new Date());
+          
+          return (
+            <View key={dateKey} style={styles.listGroup}>
+              <View style={styles.listGroupHeader}>
+                <Text style={[styles.listGroupDate, isToday && styles.listGroupDateToday]}>
+                  {isToday ? 'Today' : CalendarService.formatDayDate(date)}
+                </Text>
+                <Text style={styles.listGroupCount}>{dateTasks.length} {dateTasks.length === 1 ? 'task' : 'tasks'}</Text>
+              </View>
+              {dateTasks.map(task => {
+                const categoryColor = categoryColors[task.category] || '#6B7280';
+                const categoryEmoji = categoryEmojis[task.category] || '📋';
+                const statusColor = getStatusColor(task.status);
+                const time = new Date(task.endAt).toLocaleTimeString('en-US', {
+                  hour: 'numeric',
+                  minute: '2-digit',
+                });
+
+                return (
+                  <TouchableOpacity
+                    key={task.id}
+                    style={styles.listTaskCard}
+                    onPress={() => {
+                      if (Platform.OS !== 'web') {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      }
+                      router.push(`/task-detail?id=${task.id}`);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.listTaskTime}>
+                      <Text style={[styles.listTaskTimeText, { color: statusColor }]}>{time}</Text>
+                    </View>
+                    <View style={[styles.listTaskIndicator, { backgroundColor: categoryColor }]} />
+                    <View style={styles.listTaskContent}>
+                      <View style={styles.listTaskHeader}>
+                        <Text style={styles.listTaskTitle} numberOfLines={1}>
+                          {task.title}
+                        </Text>
+                        <View style={[styles.listTaskStatus, { backgroundColor: statusColor }]}>
+                          <Text style={styles.listTaskStatusText}>
+                            {task.status === 'completed' ? '✓' : task.status.charAt(0).toUpperCase()}
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={styles.listTaskFooter}>
+                        <View style={styles.listTaskCategory}>
+                          <Text style={styles.listTaskEmoji}>{categoryEmoji}</Text>
+                          <Text style={[styles.listTaskCategoryText, { color: categoryColor }]}>
+                            {task.category}
+                          </Text>
+                        </View>
+                        <Text style={styles.listTaskStake}>${task.stake}</Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          );
+        })}
+        {Object.keys(groupedTasksByDate).length === 0 && (
+          <View style={styles.listEmpty}>
+            <CheckCircle2 size={64} color="#D1D5DB" />
+            <Text style={styles.listEmptyText}>No upcoming tasks</Text>
+          </View>
+        )}
+      </ScrollView>
+    );
+  };
 
   const renderMonthView = () => {
     const today = new Date();
@@ -529,7 +691,20 @@ export default function CalendarScreen() {
             {t.calendar.month}
           </Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.viewButton, calendarView === 'list' && styles.viewButtonActive]}
+          onPress={() => {
+            if (Platform.OS !== 'web') {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            }
+            setCalendarViewType('list');
+          }}
+        >
+          <List size={16} color={calendarView === 'list' ? '#3B82F6' : '#6B7280'} />
+        </TouchableOpacity>
       </View>
+
+      {calendarView !== 'list' && renderDayTicker()}
 
       <View style={styles.navigation}>
         <TouchableOpacity style={styles.navButton} onPress={handlePrevious}>
@@ -545,6 +720,7 @@ export default function CalendarScreen() {
         {calendarView === 'month' && renderMonthView()}
         {calendarView === 'week' && renderWeekView()}
         {calendarView === 'day' && renderDayView()}
+        {calendarView === 'list' && renderListView()}
       </ScrollView>
 
       <View style={styles.hint}>
@@ -1070,6 +1246,183 @@ const styles = StyleSheet.create({
     fontWeight: '500' as const,
     color: '#1E40AF',
     flex: 1,
+  },
+  dayTicker: {
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  dayTickerContent: {
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    gap: 8,
+  },
+  tickerDay: {
+    width: 56,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+  },
+  tickerDayToday: {
+    backgroundColor: '#DBEAFE',
+  },
+  tickerDaySelected: {
+    backgroundColor: '#3B82F6',
+  },
+  tickerDayName: {
+    fontSize: 11,
+    fontWeight: '600' as const,
+    color: '#9CA3AF',
+    marginBottom: 4,
+    textTransform: 'uppercase' as const,
+  },
+  tickerDayNameToday: {
+    color: '#3B82F6',
+  },
+  tickerDayNameSelected: {
+    color: '#FFFFFF',
+  },
+  tickerDayNumber: {
+    fontSize: 20,
+    fontWeight: '700' as const,
+    color: '#111827',
+  },
+  tickerDayNumberToday: {
+    color: '#3B82F6',
+  },
+  tickerDayNumberSelected: {
+    color: '#FFFFFF',
+  },
+  tickerMarkerRow: {
+    flexDirection: 'row',
+    gap: 3,
+    marginTop: 6,
+  },
+  tickerMarker: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+  },
+  listView: {
+    flex: 1,
+  },
+  listViewContent: {
+    padding: 16,
+    paddingBottom: 80,
+  },
+  listGroup: {
+    marginBottom: 24,
+  },
+  listGroupHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
+  listGroupDate: {
+    fontSize: 18,
+    fontWeight: '700' as const,
+    color: '#111827',
+  },
+  listGroupDateToday: {
+    color: '#3B82F6',
+  },
+  listGroupCount: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: '#6B7280',
+  },
+  listTaskCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  listTaskTime: {
+    width: 68,
+    paddingHorizontal: 12,
+    paddingVertical: 16,
+  },
+  listTaskTimeText: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+  },
+  listTaskIndicator: {
+    width: 4,
+    height: '100%',
+    borderRadius: 2,
+  },
+  listTaskContent: {
+    flex: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+  },
+  listTaskHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  listTaskTitle: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: '#111827',
+    flex: 1,
+    marginRight: 8,
+  },
+  listTaskStatus: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  listTaskStatusText: {
+    fontSize: 12,
+    fontWeight: '700' as const,
+    color: '#FFFFFF',
+  },
+  listTaskFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  listTaskCategory: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  listTaskEmoji: {
+    fontSize: 14,
+  },
+  listTaskCategoryText: {
+    fontSize: 13,
+    fontWeight: '500' as const,
+  },
+  listTaskStake: {
+    fontSize: 14,
+    fontWeight: '700' as const,
+    color: '#111827',
+  },
+  listEmpty: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 100,
+  },
+  listEmptyText: {
+    fontSize: 18,
+    fontWeight: '600' as const,
+    color: '#9CA3AF',
+    marginTop: 16,
   },
 });
 
