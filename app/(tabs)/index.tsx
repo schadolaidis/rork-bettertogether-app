@@ -29,6 +29,7 @@ import { useApp } from '@/contexts/AppContext';
 import { Task, TaskCategory } from '@/types';
 import { CalendarService, DayMarkers } from '@/services/CalendarService';
 import { Calendar } from '@/components/Calendar';
+import { FundHero } from '@/components/FundHero';
 
 interface StatCardProps {
   title: string;
@@ -399,6 +400,8 @@ export default function DashboardScreen() {
     setCalendarViewType,
     setCalendarSelectedDate,
     switchList,
+    ledgerEntries,
+    currentListId,
   } = useApp();
 
   const [showCalendarModal, setShowCalendarModal] = useState(false);
@@ -510,6 +513,13 @@ export default function DashboardScreen() {
           </Text>
           <ChevronDown size={16} color="#3B82F6" />
         </TouchableOpacity>
+
+        <FundHero
+          ledgerEntries={ledgerEntries}
+          tasks={tasks}
+          currentListId={currentListId}
+          currencySymbol={currencySymbol}
+        />
 
         <CompactCalendarSummary
           selectedDate={selectedDate}

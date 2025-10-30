@@ -238,6 +238,10 @@ export default function BalancesScreen() {
     ? ((totalExpenses - totalPreviousExpenses) / totalPreviousExpenses) * 100
     : 0;
 
+  const fundGrowthThisMonth = useMemo(() => {
+    return currentMonthEntries.reduce((sum, e) => sum + e.amount, 0);
+  }, [currentMonthEntries]);
+
   const currentUserBalance = getUserBalance(currentUserId);
   const myPreviousBalance = previousMonthEntries
     .filter((e) => e.userId === currentUserId)
@@ -411,6 +415,53 @@ export default function BalancesScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {activeTab === 'overview' && (
+          <>
+            <View style={styles.fundSection}>
+              <View style={styles.fundCard}>
+                <View style={styles.fundCardHeader}>
+                  <View style={styles.fundCardIcon}>
+                    <DollarSign size={32} color="#8B5CF6" />
+                  </View>
+                  <View style={styles.fundCardBadge}>
+                    <Text style={styles.fundCardBadgeText}>💰 Group Fund</Text>
+                  </View>
+                </View>
+                <View style={styles.fundCardAmount}>
+                  <Text style={styles.fundCardCurrency}>{currencySymbol}</Text>
+                  <Text style={styles.fundCardValue}>{totalExpenses.toFixed(2)}</Text>
+                </View>
+                <View style={styles.fundCardDescription}>
+                  <Text style={styles.fundCardDescText}>
+                    Accumulated from {currentMonthEntries.length} failed tasks
+                  </Text>
+                </View>
+                <View style={styles.fundProgressBar}>
+                  <View
+                    style={[
+                      styles.fundProgressFill,
+                      {
+                        width: currentMonthEntries.length > 0 ? '100%' : '0%',
+                      },
+                    ]}
+                  />
+                </View>
+                <View style={styles.fundCardFooter}>
+                  <View style={styles.fundCardStat}>
+                    <Text style={styles.fundCardStatLabel}>This Month</Text>
+                    <Text style={styles.fundCardStatValue}>
+                      +{currencySymbol}{fundGrowthThisMonth.toFixed(2)}
+                    </Text>
+                  </View>
+                  <View style={styles.fundCardStat}>
+                    <Text style={styles.fundCardStatLabel}>Failed Tasks</Text>
+                    <Text style={styles.fundCardStatValue}>{currentMonthEntries.length}</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          </>
+        )}
         {activeTab === 'overview' && (
           <>
             <View style={styles.summaryGrid}>
@@ -1041,5 +1092,104 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700' as const,
     color: '#111827',
+  },
+  fundSection: {
+    marginBottom: 24,
+  },
+  fundCard: {
+    backgroundColor: '#1E1B4B',
+    borderRadius: 24,
+    padding: 24,
+    shadowColor: '#8B5CF6',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  fundCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  fundCardIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(139, 92, 246, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fundCardBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(251, 191, 36, 0.15)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(251, 191, 36, 0.3)',
+  },
+  fundCardBadgeText: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: '#FCD34D',
+  },
+  fundCardAmount: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginBottom: 12,
+  },
+  fundCardCurrency: {
+    fontSize: 28,
+    fontWeight: '700' as const,
+    color: '#A78BFA',
+    marginRight: 4,
+  },
+  fundCardValue: {
+    fontSize: 48,
+    fontWeight: '800' as const,
+    color: '#FFFFFF',
+    letterSpacing: -1,
+  },
+  fundCardDescription: {
+    marginBottom: 16,
+  },
+  fundCardDescText: {
+    fontSize: 14,
+    color: '#C4B5FD',
+    fontWeight: '500' as const,
+  },
+  fundProgressBar: {
+    height: 8,
+    backgroundColor: 'rgba(167, 139, 250, 0.2)',
+    borderRadius: 4,
+    marginBottom: 20,
+    overflow: 'hidden',
+  },
+  fundProgressFill: {
+    height: '100%',
+    backgroundColor: '#A78BFA',
+    borderRadius: 4,
+  },
+  fundCardFooter: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  fundCardStat: {
+    flex: 1,
+    backgroundColor: 'rgba(167, 139, 250, 0.1)',
+    borderRadius: 12,
+    padding: 12,
+  },
+  fundCardStatLabel: {
+    fontSize: 11,
+    fontWeight: '600' as const,
+    color: '#A78BFA',
+    marginBottom: 4,
+    textTransform: 'uppercase' as const,
+  },
+  fundCardStatValue: {
+    fontSize: 18,
+    fontWeight: '700' as const,
+    color: '#FFFFFF',
   },
 });
