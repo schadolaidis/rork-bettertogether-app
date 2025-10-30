@@ -485,6 +485,49 @@ export function TaskFormModal({
             />
           </View>
 
+          <View style={styles.fundTargetProminent}>
+            {fundTargets && fundTargets.length > 0 && (
+              <TouchableOpacity
+                style={[
+                  styles.fundTargetCard,
+                  selectedFundTarget && styles.fundTargetCardSelected
+                ]}
+                onPress={() => {
+                  if (Platform.OS !== 'web') {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }
+                  setShowFundTargetPicker(true);
+                }}
+              >
+                <View style={styles.fundTargetCardHeader}>
+                  <View style={styles.fundTargetIconContainer}>
+                    <Text style={styles.fundTargetCardEmoji}>
+                      {selectedFundTarget
+                        ? fundTargets.find((f) => f.id === selectedFundTarget)?.emoji || '🎯'
+                        : '🎯'}
+                    </Text>
+                  </View>
+                  <View style={styles.fundTargetCardContent}>
+                    <Text style={styles.fundTargetCardLabel}>Fund Goal</Text>
+                    <Text style={styles.fundTargetCardName}>
+                      {selectedFundTarget
+                        ? fundTargets.find((f) => f.id === selectedFundTarget)?.name || 'Select goal'
+                        : 'Select a goal'}
+                    </Text>
+                  </View>
+                  <ChevronRight size={20} color="#6B7280" />
+                </View>
+                {selectedFundTarget && (
+                  <View style={styles.fundTargetStakeInfo}>
+                    <Text style={styles.fundTargetStakeText}>
+                      💶 {currencySymbol}{stake} goes to this goal if task fails
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
+
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Details</Text>
             
@@ -604,43 +647,12 @@ export function TaskFormModal({
                   <Text style={styles.fieldIconEmoji}>💶</Text>
                 </View>
                 <View style={styles.fieldContent}>
-                  <Text style={styles.fieldLabel}>Stake</Text>
+                  <Text style={styles.fieldLabel}>Stake Amount</Text>
                   <Text style={styles.fieldValue}>{currencySymbol}{stake}</Text>
                 </View>
               </View>
               <ChevronRight size={20} color="#9CA3AF" />
             </TouchableOpacity>
-
-            {fundTargets && fundTargets.length > 0 && (
-              <TouchableOpacity
-                style={styles.fieldRow}
-                onPress={() => {
-                  if (Platform.OS !== 'web') {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }
-                  setShowFundTargetPicker(true);
-                }}
-              >
-                <View style={styles.fieldRowLeft}>
-                  <View style={styles.fieldIcon}>
-                    <Text style={styles.fieldIconEmoji}>
-                      {selectedFundTarget
-                        ? fundTargets.find((f) => f.id === selectedFundTarget)?.emoji || '🎯'
-                        : '🎯'}
-                    </Text>
-                  </View>
-                  <View style={styles.fieldContent}>
-                    <Text style={styles.fieldLabel}>Fund Target</Text>
-                    <Text style={styles.fieldValue}>
-                      {selectedFundTarget
-                        ? fundTargets.find((f) => f.id === selectedFundTarget)?.name || 'None'
-                        : 'None'}
-                    </Text>
-                  </View>
-                </View>
-                <ChevronRight size={20} color="#9CA3AF" />
-              </TouchableOpacity>
-            )}
           </View>
 
           <View style={styles.section}>
@@ -1287,6 +1299,72 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 16,
     marginBottom: 12,
+  },
+  fundTargetProminent: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 8,
+  },
+  fundTargetCard: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    overflow: 'hidden',
+  },
+  fundTargetCardSelected: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#3B82F6',
+  },
+  fundTargetCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    gap: 12,
+  },
+  fundTargetIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  fundTargetCardEmoji: {
+    fontSize: 28,
+  },
+  fundTargetCardContent: {
+    flex: 1,
+    gap: 4,
+  },
+  fundTargetCardLabel: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: '#6B7280',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  fundTargetCardName: {
+    fontSize: 18,
+    fontWeight: '700' as const,
+    color: '#111827',
+  },
+  fundTargetStakeInfo: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    paddingTop: 8,
+    backgroundColor: 'rgba(59, 130, 246, 0.05)',
+  },
+  fundTargetStakeText: {
+    fontSize: 14,
+    fontWeight: '500' as const,
+    color: '#3B82F6',
+    textAlign: 'center',
   },
   titleInput: {
     fontSize: 20,

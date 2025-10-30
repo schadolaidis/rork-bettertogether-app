@@ -429,6 +429,34 @@ export default function TaskDetailScreen() {
           )}
         </View>
 
+        {fundTargets && fundTargets.length > 0 && task.fundTargetId && (
+          <View style={styles.fundTargetHero}>
+            <TouchableOpacity
+              style={styles.fundTargetHeroCard}
+              onPress={() => {
+                if (Platform.OS !== 'web') {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+              }}
+            >
+              <View style={styles.fundTargetHeroIcon}>
+                <Text style={styles.fundTargetHeroEmoji}>
+                  {fundTargets.find((f) => f.id === task.fundTargetId)?.emoji || '🎯'}
+                </Text>
+              </View>
+              <View style={styles.fundTargetHeroContent}>
+                <Text style={styles.fundTargetHeroLabel}>Funding Goal</Text>
+                <Text style={styles.fundTargetHeroName}>
+                  {fundTargets.find((f) => f.id === task.fundTargetId)?.name || 'Unknown'}
+                </Text>
+                <Text style={styles.fundTargetHeroStake}>
+                  💶 {currentList.currencySymbol}{task.stake} will go here if task fails
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        )}
+
         <View style={styles.section}>
           <TouchableOpacity
             style={styles.titleContainer}
@@ -523,6 +551,32 @@ export default function TaskDetailScreen() {
             icon={<DollarSign size={20} color="#6B7280" />}
             onPress={() => setShowStakeEditor(true)}
           />
+
+          <TouchableOpacity
+            style={styles.editableField}
+            onPress={() => {
+              if (Platform.OS !== 'web') {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+            }}
+          >
+            <View style={styles.fieldIcon}>
+              <Text style={{ fontSize: 20 }}>
+                {task.fundTargetId
+                  ? fundTargets.find((f) => f.id === task.fundTargetId)?.emoji || '🎯'
+                  : '🎯'}
+              </Text>
+            </View>
+            <View style={styles.fieldContent}>
+              <Text style={styles.fieldLabel}>Fund Goal</Text>
+              <Text style={styles.fieldValue}>
+                {task.fundTargetId
+                  ? fundTargets.find((f) => f.id === task.fundTargetId)?.name || 'None'
+                  : 'Not assigned'}
+              </Text>
+            </View>
+            <ChevronRight size={20} color="#9CA3AF" />
+          </TouchableOpacity>
         </View>
 
         <View style={styles.section}>
@@ -550,19 +604,7 @@ export default function TaskDetailScreen() {
           />
         </View>
 
-        {task.fundTargetId && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Fund Target</Text>
-            <View style={styles.fundTargetCard}>
-              <Text style={styles.fundTargetEmoji}>
-                {fundTargets.find((f) => f.id === task.fundTargetId)?.emoji || '🎯'}
-              </Text>
-              <Text style={styles.fundTargetName}>
-                {fundTargets.find((f) => f.id === task.fundTargetId)?.name || 'Unknown'}
-              </Text>
-            </View>
-          </View>
-        )}
+
 
         {task.createdAt && (
           <View style={styles.metadataSection}>
@@ -1410,23 +1452,58 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
   },
-  fundTargetCard: {
+  fundTargetHero: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  fundTargetHeroCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#F9FAFB',
-    marginHorizontal: 20,
-    borderRadius: 12,
+    padding: 20,
+    backgroundColor: '#EFF6FF',
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#3B82F6',
+    gap: 16,
   },
-  fundTargetEmoji: {
+  fundTargetHeroIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  fundTargetHeroEmoji: {
     fontSize: 32,
   },
-  fundTargetName: {
-    fontSize: 18,
+  fundTargetHeroContent: {
+    flex: 1,
+    gap: 4,
+  },
+  fundTargetHeroLabel: {
+    fontSize: 12,
     fontWeight: '600' as const,
+    color: '#6B7280',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  fundTargetHeroName: {
+    fontSize: 20,
+    fontWeight: '700' as const,
     color: '#111827',
+  },
+  fundTargetHeroStake: {
+    fontSize: 14,
+    fontWeight: '500' as const,
+    color: '#3B82F6',
+    marginTop: 4,
   },
   metadataSection: {
     paddingHorizontal: 20,
