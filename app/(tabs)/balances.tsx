@@ -271,11 +271,12 @@ export default function BalancesScreen() {
   }, [currentMonthEntries]);
 
   const topSpender = useMemo(() => {
+    if (memberBalances.length === 0) return null;
     const balances = memberBalances.map((mb) => ({
       name: mb.user.name,
       amount: mb.totalOwed,
     }));
-    return balances.sort((a, b) => b.amount - a.amount)[0];
+    return balances.sort((a, b) => b.amount - a.amount)[0] || null;
   }, [memberBalances]);
 
   const mostReliable = useMemo(() => {
@@ -292,6 +293,8 @@ export default function BalancesScreen() {
   }, [tasks, users]);
 
   const categoryBreakdown = useMemo((): CategoryBreakdown[] => {
+    if (!currentList) return [];
+
     const categoriesMap: Record<TaskCategory, { total: number; count: number }> = {
       Household: { total: 0, count: 0 },
       Finance: { total: 0, count: 0 },
@@ -301,7 +304,7 @@ export default function BalancesScreen() {
 
     currentMonthEntries.forEach((entry) => {
       const task = tasks.find((t) => t.id === entry.taskId);
-      if (task) {
+      if (task && task.category) {
         categoriesMap[task.category].total += entry.amount;
         categoriesMap[task.category].count += 1;
       }
@@ -310,7 +313,7 @@ export default function BalancesScreen() {
     const breakdown: CategoryBreakdown[] = Object.entries(categoriesMap)
       .filter(([_, data]) => data.total > 0)
       .map(([category, data]) => {
-        const categoryMeta = currentList?.categories[category as TaskCategory];
+        const categoryMeta = currentList.categories[category as TaskCategory];
         return {
           category: category as TaskCategory,
           emoji: categoryMeta?.emoji || '📋',
@@ -462,8 +465,8 @@ export default function BalancesScreen() {
                   <Text style={styles.dateHeader}>{group.date}</Text>
                   {group.entries.map((entry) => {
                     const task = tasks.find((t) => t.id === entry.taskId);
-                    const categoryEmoji = task
-                      ? currentList?.categories[task.category]?.emoji || '📋'
+                    const categoryEmoji = task && currentList && task.category
+                      ? currentList.categories[task.category]?.emoji || '📋'
                       : '📋';
                     const payer = currentListMembers.find((u) => u.id === entry.userId);
                     const payerName = payer?.name || 'Unknown';
