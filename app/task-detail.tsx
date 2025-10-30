@@ -249,6 +249,7 @@ export default function TaskDetailScreen() {
   const [showRecurrencePicker, setShowRecurrencePicker] = useState(false);
   const [showAssignedToPicker, setShowAssignedToPicker] = useState(false);
   const [showStakeEditor, setShowStakeEditor] = useState(false);
+  const [showFundTargetPicker, setShowFundTargetPicker] = useState(false);
   const [showDateTimePicker, setShowDateTimePicker] = useState(false);
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
@@ -558,6 +559,7 @@ export default function TaskDetailScreen() {
               if (Platform.OS !== 'web') {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               }
+              setShowFundTargetPicker(true);
             }}
           >
             <View style={styles.fieldIcon}>
@@ -710,6 +712,17 @@ export default function TaskDetailScreen() {
           }
         }}
         placeholder="0.00"
+      />
+
+      <FundTargetPickerModal
+        visible={showFundTargetPicker}
+        fundTargets={fundTargets}
+        selected={task.fundTargetId || null}
+        onClose={() => setShowFundTargetPicker(false)}
+        onSelect={(fundTargetId) => {
+          handleUpdateField('fundTargetId', fundTargetId);
+          setShowFundTargetPicker(false);
+        }}
       />
 
       <DateTimePickerModal
@@ -906,6 +919,88 @@ function AssignedToPickerModal({ visible, members, selected, onClose, onSave }: 
             <Text style={styles.pickerSaveButtonText}>Save</Text>
           </TouchableOpacity>
         </View>
+      </View>
+    </View>
+  );
+}
+
+interface FundTargetPickerModalProps {
+  visible: boolean;
+  fundTargets: FundTargetOption[];
+  selected: string | null;
+  onClose: () => void;
+  onSelect: (fundTargetId: string | null) => void;
+}
+
+function FundTargetPickerModal({ visible, fundTargets, selected, onClose, onSelect }: FundTargetPickerModalProps) {
+  if (!visible) return null;
+
+  return (
+    <View style={styles.modalOverlay}>
+      <View style={styles.pickerContainer}>
+        <View style={styles.pickerHeader}>
+          <Text style={styles.pickerTitle}>Select Fund Goal</Text>
+          <TouchableOpacity onPress={onClose}>
+            <X size={24} color="#6B7280" />
+          </TouchableOpacity>
+        </View>
+        <ScrollView style={styles.pickerScroll}>
+          <TouchableOpacity
+            style={[
+              styles.fundTargetPickerOption,
+              selected === null && styles.fundTargetPickerOptionSelected,
+            ]}
+            onPress={() => {
+              if (Platform.OS !== 'web') {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+              onSelect(null);
+            }}
+          >
+            <View style={styles.fundTargetPickerLeft}>
+              <View style={styles.fundTargetPickerIconContainer}>
+                <Text style={styles.fundTargetPickerEmoji}>❌</Text>
+              </View>
+              <View style={styles.fundTargetPickerContent}>
+                <Text style={styles.fundTargetPickerName}>No Fund Goal</Text>
+                <Text style={styles.fundTargetPickerDescription}>Don't link to a fund</Text>
+              </View>
+            </View>
+            {selected === null && (
+              <Check size={20} color="#3B82F6" strokeWidth={3} />
+            )}
+          </TouchableOpacity>
+          {fundTargets.map((ft) => {
+            const isSelected = selected === ft.id;
+            return (
+              <TouchableOpacity
+                key={ft.id}
+                style={[
+                  styles.fundTargetPickerOption,
+                  isSelected && styles.fundTargetPickerOptionSelected,
+                ]}
+                onPress={() => {
+                  if (Platform.OS !== 'web') {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }
+                  onSelect(ft.id);
+                }}
+              >
+                <View style={styles.fundTargetPickerLeft}>
+                  <View style={styles.fundTargetPickerIconContainer}>
+                    <Text style={styles.fundTargetPickerEmoji}>{ft.emoji}</Text>
+                  </View>
+                  <View style={styles.fundTargetPickerContent}>
+                    <Text style={styles.fundTargetPickerName}>{ft.name}</Text>
+                  </View>
+                </View>
+                {isSelected && (
+                  <Check size={20} color="#3B82F6" strokeWidth={3} />
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
       </View>
     </View>
   );
@@ -1820,5 +1915,47 @@ const styles = StyleSheet.create({
   },
   iosPicker: {
     height: 200,
+  },
+  fundTargetPickerOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  fundTargetPickerOptionSelected: {
+    backgroundColor: '#EFF6FF',
+  },
+  fundTargetPickerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  fundTargetPickerIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fundTargetPickerEmoji: {
+    fontSize: 24,
+  },
+  fundTargetPickerContent: {
+    flex: 1,
+    gap: 2,
+  },
+  fundTargetPickerName: {
+    fontSize: 17,
+    fontWeight: '600' as const,
+    color: '#111827',
+  },
+  fundTargetPickerDescription: {
+    fontSize: 14,
+    color: '#6B7280',
   },
 });
