@@ -1281,6 +1281,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
+    maxWidth: '100%',
   },
   dayTickerContent: {
     paddingHorizontal: 12,
