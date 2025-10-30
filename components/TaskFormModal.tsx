@@ -21,6 +21,7 @@ import {
   RefreshCw,
   AlertCircle,
   ChevronRight,
+  Check,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -764,30 +765,38 @@ export function TaskFormModal({
                 <X size={24} color="#6B7280" />
               </TouchableOpacity>
             </View>
-            {(Object.keys(categories) as TaskCategory[]).map((cat) => {
-              const meta = categories[cat];
-              return (
-                <TouchableOpacity
-                  key={cat}
-                  style={[
-                    styles.categoryOption,
-                    selectedCategory === cat && styles.categoryOptionSelected,
-                  ]}
-                  onPress={() => {
-                    if (Platform.OS !== 'web') {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    }
-                    setSelectedCategory(cat);
-                    setShowCategoryPicker(false);
-                  }}
-                >
-                  <View style={[styles.categoryOptionIcon, { backgroundColor: meta.color }]}>
-                    <Text style={styles.categoryOptionEmoji}>{meta.emoji}</Text>
-                  </View>
-                  <Text style={styles.categoryOptionText}>{meta.label}</Text>
-                </TouchableOpacity>
-              );
-            })}
+            <View style={styles.categoryPickerList}>
+              {(Object.keys(categories) as TaskCategory[]).map((cat) => {
+                const meta = categories[cat];
+                const isSelected = selectedCategory === cat;
+                return (
+                  <TouchableOpacity
+                    key={cat}
+                    style={[
+                      styles.categoryPickerOption,
+                      isSelected && styles.categoryPickerOptionSelected,
+                    ]}
+                    onPress={() => {
+                      if (Platform.OS !== 'web') {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      }
+                      setSelectedCategory(cat);
+                      setShowCategoryPicker(false);
+                    }}
+                  >
+                    <View style={styles.categoryPickerLeft}>
+                      <Text style={styles.categoryPickerEmoji}>{meta.emoji}</Text>
+                      <Text style={styles.categoryPickerText}>{meta.label}</Text>
+                    </View>
+                    {isSelected && (
+                      <View style={styles.categoryPickerCheck}>
+                        <Check size={20} color="#3B82F6" strokeWidth={3} />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
         </View>
       </Modal>
@@ -1435,33 +1444,45 @@ const styles = StyleSheet.create({
   modalCloseButton: {
     padding: 4,
   },
-  categoryOption: {
+  categoryPickerList: {
+    padding: 16,
+  },
+  categoryPickerOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    backgroundColor: '#EFF6FF',
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  categoryPickerOptionSelected: {
+    backgroundColor: '#DBEAFE',
+  },
+  categoryPickerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  categoryOptionSelected: {
-    backgroundColor: '#EFF6FF',
-  },
-  categoryOptionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  categoryOptionEmoji: {
-    fontSize: 20,
-  },
-  categoryOptionText: {
     flex: 1,
-    fontSize: 16,
+  },
+  categoryPickerEmoji: {
+    fontSize: 24,
+  },
+  categoryPickerText: {
+    fontSize: 17,
     color: '#111827',
     fontWeight: '500' as const,
+  },
+  categoryPickerCheck: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#3B82F6',
   },
   memberOption: {
     flexDirection: 'row',

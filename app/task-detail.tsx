@@ -17,6 +17,7 @@ import {
   ChevronRight,
   Tag,
   DollarSign,
+  Check,
 } from 'lucide-react-native';
 import { useApp } from '@/contexts/AppContext';
 import { FundTargetOption } from '@/components/TaskFormModal';
@@ -158,6 +159,62 @@ function PickerModal({ visible, title, options, selected, onClose, onSelect }: P
             </TouchableOpacity>
           ))}
         </ScrollView>
+      </View>
+    </View>
+  );
+}
+
+interface CategoryPickerModalProps {
+  visible: boolean;
+  categories: Record<TaskCategory, { emoji: string; color: string; label: string }>;
+  selected: TaskCategory;
+  onClose: () => void;
+  onSelect: (value: TaskCategory) => void;
+}
+
+function CategoryPickerModal({ visible, categories, selected, onClose, onSelect }: CategoryPickerModalProps) {
+  if (!visible) return null;
+
+  return (
+    <View style={styles.modalOverlay}>
+      <View style={styles.pickerContainer}>
+        <View style={styles.pickerHeader}>
+          <Text style={styles.pickerTitle}>Select Category</Text>
+          <TouchableOpacity onPress={onClose}>
+            <X size={24} color="#6B7280" />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.categoryPickerList}>
+          {(Object.keys(categories) as TaskCategory[]).map((cat) => {
+            const meta = categories[cat];
+            const isSelected = selected === cat;
+            return (
+              <TouchableOpacity
+                key={cat}
+                style={[
+                  styles.categoryPickerOption,
+                  isSelected && styles.categoryPickerOptionSelected,
+                ]}
+                onPress={() => {
+                  if (Platform.OS !== 'web') {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }
+                  onSelect(cat);
+                }}
+              >
+                <View style={styles.categoryPickerLeft}>
+                  <Text style={styles.categoryPickerEmoji}>{meta.emoji}</Text>
+                  <Text style={styles.categoryPickerText}>{meta.label}</Text>
+                </View>
+                {isSelected && (
+                  <View style={styles.categoryPickerCheck}>
+                    <Check size={20} color="#3B82F6" strokeWidth={3} />
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
     </View>
   );
@@ -540,19 +597,15 @@ export default function TaskDetailScreen() {
         multiline
       />
 
-      <PickerModal
+      <CategoryPickerModal
         visible={showCategoryPicker}
-        title="Select Category"
-        options={Object.keys(currentList.categories).map((key) => {
-          const cat = currentList.categories[key as TaskCategory];
-          return {
-            label: `${cat?.emoji || '📋'} ${cat?.label || key}`,
-            value: key,
-          };
-        })}
+        categories={currentList.categories}
         selected={task.category}
         onClose={() => setShowCategoryPicker(false)}
-        onSelect={(value) => handleUpdateField('category', value)}
+        onSelect={(value) => {
+          handleUpdateField('category', value);
+          setShowCategoryPicker(false);
+        }}
       />
 
       <PickerModal
@@ -1500,6 +1553,46 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500' as const,
     color: '#111827',
+  },
+  categoryPickerList: {
+    padding: 16,
+  },
+  categoryPickerOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    backgroundColor: '#EFF6FF',
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  categoryPickerOptionSelected: {
+    backgroundColor: '#DBEAFE',
+  },
+  categoryPickerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  categoryPickerEmoji: {
+    fontSize: 24,
+  },
+  categoryPickerText: {
+    fontSize: 17,
+    color: '#111827',
+    fontWeight: '500' as const,
+  },
+  categoryPickerCheck: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#3B82F6',
   },
   pickerFooter: {
     padding: 20,
