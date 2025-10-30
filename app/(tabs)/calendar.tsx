@@ -55,10 +55,10 @@ export default function CalendarScreen() {
   const categoryEmojis = useMemo(() => {
     if (!currentList) return {} as Record<TaskCategory, string>;
     return {
-      Household: currentList.categories.Household.emoji,
-      Finance: currentList.categories.Finance.emoji,
-      Work: currentList.categories.Work.emoji,
-      Leisure: currentList.categories.Leisure.emoji,
+      Household: currentList.categories.Household?.emoji || '🏠',
+      Finance: currentList.categories.Finance?.emoji || '💰',
+      Work: currentList.categories.Work?.emoji || '💼',
+      Leisure: currentList.categories.Leisure?.emoji || '🎮',
     };
   }, [currentList]);
 
@@ -66,23 +66,23 @@ export default function CalendarScreen() {
     if (!currentList) return {} as Record<TaskCategory, { emoji: string; color: string; label: string }>;
     return {
       Household: {
-        emoji: currentList.categories.Household.emoji,
-        color: currentList.categories.Household.color,
+        emoji: currentList.categories.Household?.emoji || '🏠',
+        color: currentList.categories.Household?.color || '#10B981',
         label: 'Household',
       },
       Finance: {
-        emoji: currentList.categories.Finance.emoji,
-        color: currentList.categories.Finance.color,
+        emoji: currentList.categories.Finance?.emoji || '💰',
+        color: currentList.categories.Finance?.color || '#3B82F6',
         label: 'Finance',
       },
       Work: {
-        emoji: currentList.categories.Work.emoji,
-        color: currentList.categories.Work.color,
+        emoji: currentList.categories.Work?.emoji || '💼',
+        color: currentList.categories.Work?.color || '#8B5CF6',
         label: 'Work',
       },
       Leisure: {
-        emoji: currentList.categories.Leisure.emoji,
-        color: currentList.categories.Leisure.color,
+        emoji: currentList.categories.Leisure?.emoji || '🎮',
+        color: currentList.categories.Leisure?.color || '#F59E0B',
         label: 'Leisure',
       },
     };
@@ -99,7 +99,9 @@ export default function CalendarScreen() {
   const dayMarkers = useMemo(() => {
     const start = calendarView === 'month' ? monthDays[0] : weekDays[0];
     const end = calendarView === 'month' ? monthDays[monthDays.length - 1] : weekDays[6];
-    return CalendarService.getRange(start, end, tasks, { categoryColors });
+    const markers = CalendarService.getRange(start, end, tasks, { categoryColors });
+    console.log('[Calendar] Day markers:', markers.length, 'View:', calendarView, 'Tasks:', tasks.length);
+    return markers;
   }, [calendarView, monthDays, weekDays, tasks, categoryColors]);
 
   const markerMap = useMemo(() => {
@@ -227,10 +229,12 @@ export default function CalendarScreen() {
   const tasksByHour = useMemo(() => {
     const map = new Map<number, typeof dayViewTasks>();
     dayViewTasks.forEach(task => {
-      const hour = new Date(task.endAt).getHours();
+      const endDate = new Date(task.endAt);
+      const hour = endDate.getHours();
       const existing = map.get(hour) || [];
       map.set(hour, [...existing, task]);
     });
+    console.log('[Calendar] Tasks by hour:', map.size, 'Total tasks:', dayViewTasks.length);
     return map;
   }, [dayViewTasks]);
 
