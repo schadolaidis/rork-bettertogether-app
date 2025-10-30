@@ -30,6 +30,7 @@ import { Task, TaskCategory } from '@/types';
 import { CalendarService, DayMarkers } from '@/services/CalendarService';
 import { Calendar } from '@/components/Calendar';
 import { FundHero } from '@/components/FundHero';
+import { MOCK_FUND_TARGETS } from '@/mocks/data';
 
 interface StatCardProps {
   title: string;
@@ -416,6 +417,12 @@ export default function DashboardScreen() {
       .slice(0, 5);
   }, [tasks]);
 
+  const activeFundTargets = useMemo(() => {
+    return MOCK_FUND_TARGETS.filter(
+      (ft) => ft.listId === currentListId && ft.isActive
+    ).slice(0, 4);
+  }, [currentListId]);
+
   const categoryColors = useMemo(() => {
     if (!currentList) return {} as Record<TaskCategory, string>;
     return {
@@ -520,6 +527,79 @@ export default function DashboardScreen() {
           currentListId={currentListId}
           currencySymbol={currencySymbol}
         />
+
+        {activeFundTargets.length > 0 && (
+          <View style={styles.fundGoalsSection}>
+            <View style={styles.fundGoalsHeader}>
+              <Text style={styles.fundGoalsTitle}>Fund Goals</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  if (Platform.OS !== 'web') {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }
+                  router.push('/settings/funds');
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.fundGoalsViewAll}>View All</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.fundGoalsScroll}
+            >
+              {activeFundTargets.map((target) => {
+                const targetAmountDollars = target.targetAmountCents ? target.targetAmountCents / 100 : undefined;
+                const collectedAmountDollars = target.totalCollectedCents / 100;
+                const linkedTasksCount = tasks.filter(t => t.fundTargetId === target.id).length;
+                const progress = targetAmountDollars ? Math.min((collectedAmountDollars / targetAmountDollars) * 100, 100) : 0;
+                const isCompleted = targetAmountDollars ? collectedAmountDollars >= targetAmountDollars : false;
+                const accentColor = isCompleted ? '#10B981' : '#3B82F6';
+                const backgroundColor = isCompleted ? '#D1FAE5' : '#EFF6FF';
+
+                return (
+                  <TouchableOpacity
+                    key={target.id}
+                    style={[styles.compactFundCard, { backgroundColor }]}
+                    onPress={() => {
+                      if (Platform.OS !== 'web') {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                      }
+                      router.push('/settings/funds');
+                    }}
+                    activeOpacity={0.9}
+                  >
+                    <View style={styles.compactFundEmoji}>
+                      <Text style={styles.compactFundEmojiText}>{target.emoji}</Text>
+                    </View>
+                    <Text style={styles.compactFundName} numberOfLines={1}>
+                      {target.name}
+                    </Text>
+                    <View style={styles.compactFundAmount}>
+                      <Text style={[styles.compactFundValue, { color: accentColor }]}>
+                        {currencySymbol}{collectedAmountDollars.toFixed(0)}
+                      </Text>
+                      {targetAmountDollars && (
+                        <Text style={styles.compactFundTarget}>
+                          /{currencySymbol}{targetAmountDollars.toFixed(0)}
+                        </Text>
+                      )}
+                    </View>
+                    {targetAmountDollars && (
+                      <View style={styles.compactProgressBar}>
+                        <View style={[styles.compactProgressFill, { width: `${progress}%`, backgroundColor: accentColor }]} />
+                      </View>
+                    )}
+                    <Text style={styles.compactFundTasks}>
+                      {linkedTasksCount} {linkedTasksCount === 1 ? 'task' : 'tasks'}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
 
         <CompactCalendarSummary
           selectedDate={selectedDate}
@@ -907,6 +987,94 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#9CA3AF',
     marginTop: 12,
+  },
+  fundGoalsSection: {
+    marginBottom: 24,
+  },
+  fundGoalsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  fundGoalsTitle: {
+    fontSize: 20,
+    fontWeight: '700' as const,
+    color: '#111827',
+  },
+  fundGoalsViewAll: {
+    fontSize: 15,
+    fontWeight: '600' as const,
+    color: '#3B82F6',
+  },
+  fundGoalsScroll: {
+    paddingRight: 20,
+    gap: 12,
+  },
+  compactFundCard: {
+    width: 140,
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  compactFundEmoji: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  compactFundEmojiText: {
+    fontSize: 28,
+  },
+  compactFundName: {
+    fontSize: 15,
+    fontWeight: '700' as const,
+    color: '#111827',
+    marginBottom: 8,
+  },
+  compactFundAmount: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginBottom: 8,
+  },
+  compactFundValue: {
+    fontSize: 20,
+    fontWeight: '800' as const,
+    letterSpacing: -0.5,
+  },
+  compactFundTarget: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: '#9CA3AF',
+    marginLeft: 2,
+  },
+  compactProgressBar: {
+    height: 4,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  compactProgressFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  compactFundTasks: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    color: '#6B7280',
   },
 });
 

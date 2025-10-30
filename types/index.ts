@@ -43,6 +43,7 @@ export interface FundTarget {
   name: string;
   emoji: string;
   description?: string;
+  targetAmountCents?: number;
   totalCollectedCents: number;
   isActive: boolean;
   createdAt: string;
