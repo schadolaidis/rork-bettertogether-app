@@ -936,8 +936,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
     borderRadius: 10,
     marginHorizontal: 16,
-    marginTop: 12,
-    marginBottom: 12,
+    marginVertical: 8,
   },
   viewButton: {
     flex: 1,
@@ -967,7 +966,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingVertical: 8,
   },
   navButton: {
     padding: 8,
@@ -984,7 +983,7 @@ const styles = StyleSheet.create({
   },
   monthView: {
     paddingHorizontal: 8,
-    paddingBottom: 16,
+    paddingBottom: 8,
   },
   weekDayHeader: {
     flexDirection: 'row',
@@ -1060,7 +1059,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   weekView: {
-    paddingBottom: 16,
+    paddingBottom: 8,
     paddingHorizontal: 12,
   },
   weekStrip: {
@@ -1119,8 +1118,8 @@ const styles = StyleSheet.create({
   },
   dayViewContent: {
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 100,
+    paddingTop: 8,
+    paddingBottom: 24,
   },
   dayTaskCard: {
     flexDirection: 'row',
@@ -1192,7 +1191,7 @@ const styles = StyleSheet.create({
   dayEmpty: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 80,
+    paddingVertical: 40,
   },
   dayEmptyText: {
     fontSize: 18,
@@ -1257,12 +1256,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     backgroundColor: '#EFF6FF',
-    marginTop: 8,
     marginHorizontal: 16,
-    marginBottom: 16,
+    marginBottom: 12,
     borderRadius: 10,
   },
   hintText: {
@@ -1277,15 +1275,15 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E5E7EB',
   },
   dayTickerContent: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   tickerDay: {
-    width: 52,
-    height: 70,
-    paddingVertical: 10,
+    width: 48,
+    height: 64,
+    paddingVertical: 8,
     paddingHorizontal: 4,
-    borderRadius: 14,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#F9FAFB',
@@ -1298,10 +1296,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#3B82F6',
   },
   tickerDayName: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600' as const,
     color: '#9CA3AF',
-    marginBottom: 6,
+    marginBottom: 4,
     textTransform: 'uppercase' as const,
   },
   tickerDayNameToday: {
@@ -1311,7 +1309,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   tickerDayNumber: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700' as const,
     color: '#111827',
     marginBottom: 2,
@@ -1337,7 +1335,7 @@ const styles = StyleSheet.create({
   },
   listViewContent: {
     padding: 16,
-    paddingBottom: 80,
+    paddingBottom: 24,
   },
   listGroup: {
     marginBottom: 24,
@@ -1443,7 +1441,7 @@ const styles = StyleSheet.create({
   listEmpty: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 100,
+    paddingVertical: 40,
   },
   listEmptyText: {
     fontSize: 18,
@@ -1574,7 +1572,7 @@ const agendaStyles = StyleSheet.create({
   empty: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 80,
+    paddingVertical: 40,
   },
   emptyText: {
     fontSize: 16,
