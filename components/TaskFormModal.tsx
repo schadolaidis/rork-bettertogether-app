@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Platform,
   Switch,
+  KeyboardAvoidingView,
 } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import {
@@ -436,23 +437,32 @@ export function TaskFormModal({
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>{mode === 'edit' ? 'Edit Task' : 'New Task'}</Text>
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={() => {
-              if (Platform.OS !== 'web') {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              }
-              onClose();
-            }}
-          >
-            <X size={24} color="#6B7280" />
-          </TouchableOpacity>
-        </View>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={0}
+      >
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>{mode === 'edit' ? 'Edit Task' : 'New Task'}</Text>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => {
+                if (Platform.OS !== 'web') {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+                onClose();
+              }}
+            >
+              <X size={24} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
 
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+          <ScrollView 
+            style={styles.scrollView} 
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+          >
           {titleError ? (
             <View style={styles.errorBanner}>
               <AlertCircle size={20} color="#EF4444" />
@@ -471,7 +481,6 @@ export function TaskFormModal({
                 if (titleError) setTitleError('');
               }}
               maxLength={100}
-              autoFocus={mode === 'create'}
             />
             
             <TextInput
@@ -749,21 +758,22 @@ export function TaskFormModal({
           </View>
 
 
-        </ScrollView>
+          </ScrollView>
 
-        <View style={styles.footer}>
-          <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.submitButton, !isFormValid && styles.submitButtonDisabled]}
-            onPress={handleSubmit}
-            disabled={!isFormValid}
-          >
-            <Text style={styles.submitButtonText}>{mode === 'edit' ? 'Save Changes' : 'Create Task'}</Text>
-          </TouchableOpacity>
+          <View style={styles.footer}>
+            <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.submitButton, !isFormValid && styles.submitButtonDisabled]}
+              onPress={handleSubmit}
+              disabled={!isFormValid}
+            >
+              <Text style={styles.submitButtonText}>{mode === 'edit' ? 'Save Changes' : 'Create Task'}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
 
       <Modal visible={showCategoryPicker} transparent animationType="slide">
         <View style={styles.modalOverlay}>
