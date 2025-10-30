@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -41,6 +41,15 @@ export default function CalendarScreen() {
     year: selectedDate.getFullYear(),
     month: selectedDate.getMonth(),
   }));
+
+  useEffect(() => {
+    if (calendarView === 'month') {
+      setCurrentMonth({
+        year: selectedDate.getFullYear(),
+        month: selectedDate.getMonth(),
+      });
+    }
+  }, [selectedDate, calendarView]);
 
   const categoryColors = useMemo(() => {
     if (!currentList) return {} as Record<TaskCategory, string>;
@@ -250,25 +259,46 @@ export default function CalendarScreen() {
   }, []);
 
   const groupedTasksByDate = useMemo(() => {
+    const now = new Date();
     const sorted = [...tasks].sort((a, b) => 
       new Date(a.endAt).getTime() - new Date(b.endAt).getTime()
     );
     
     const groups: Record<string, typeof tasks> = {};
     sorted.forEach(task => {
-      const dateKey = CalendarService.getDateKey(new Date(task.endAt));
-      if (!groups[dateKey]) groups[dateKey] = [];
-      groups[dateKey].push(task);
+      const taskDate = new Date(task.endAt);
+      if (taskDate >= now || task.status === 'overdue' || task.status === 'pending') {
+        const dateKey = CalendarService.getDateKey(taskDate);
+        if (!groups[dateKey]) groups[dateKey] = [];
+        groups[dateKey].push(task);
+      }
     });
     
     return groups;
   }, [tasks]);
+
+  const tickerScrollRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    if (tickerScrollRef.current) {
+      const todayIndex = tickerDays.findIndex(date => 
+        CalendarService.isSameDay(date, selectedDate)
+      );
+      if (todayIndex >= 0) {
+        const scrollX = Math.max(0, (todayIndex - 2) * 64);
+        setTimeout(() => {
+          tickerScrollRef.current?.scrollTo({ x: scrollX, animated: true });
+        }, 100);
+      }
+    }
+  }, [selectedDate, tickerDays]);
 
   const renderDayTicker = () => {
     const today = new Date();
 
     return (
       <ScrollView 
+        ref={tickerScrollRef}
         horizontal 
         style={styles.dayTicker}
         contentContainerStyle={styles.dayTickerContent}
