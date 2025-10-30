@@ -178,6 +178,7 @@ export default function TasksScreen() {
   }, [currentList]);
 
   const memberIdParam = params.memberId as string | undefined;
+  const fundTargetIdParam = params.fundTargetId as string | undefined;
 
   const initialFilter = useMemo(() => {
     const filterParam = params.filter as string;
@@ -210,6 +211,10 @@ export default function TasksScreen() {
       });
     }
 
+    if (fundTargetIdParam) {
+      filtered = filtered.filter((t) => t.fundTargetId === fundTargetIdParam);
+    }
+
     if (filter !== 'all') {
       if (['pending', 'completed', 'failed', 'overdue'].includes(filter)) {
         filtered = filtered.filter((t) => t.status === filter);
@@ -237,7 +242,7 @@ export default function TasksScreen() {
       const bTime = new Date(b.endAt).getTime();
       return aTime - bTime;
     });
-  }, [tasks, filter, memberIdParam]);
+  }, [tasks, filter, memberIdParam, fundTargetIdParam]);
 
   const nextDueTask = useMemo(() => {
     return tasks
@@ -269,7 +274,7 @@ export default function TasksScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     setFilter('all');
-    router.setParams({ filter: undefined, memberId: undefined });
+    router.setParams({ filter: undefined, memberId: undefined, fundTargetId: undefined });
   }, [router]);
 
   const [undoExpiration, setUndoExpiration] = useState<number>(0);
@@ -406,8 +411,26 @@ export default function TasksScreen() {
         </View>
       )}
 
-      {(filter !== 'all' || memberIdParam) && (
+      {(filter !== 'all' || memberIdParam || fundTargetIdParam) && (
         <View style={styles.activeFiltersBar}>
+          {fundTargetIdParam && (
+            <View style={styles.activeFilterPill}>
+              <Text style={styles.activeFilterText}>
+                {fundTargets.find(f => f.id === fundTargetIdParam)?.emoji || '🎯'} {fundTargets.find(f => f.id === fundTargetIdParam)?.name || 'Fund'}
+              </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  if (Platform.OS !== 'web') {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }
+                  router.setParams({ fundTargetId: undefined });
+                }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <X size={16} color="#3B82F6" strokeWidth={2} />
+              </TouchableOpacity>
+            </View>
+          )}
           {memberIdParam && (
             <View style={styles.activeFilterPill}>
               <Text style={styles.activeFilterText}>

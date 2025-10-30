@@ -194,7 +194,16 @@ export default function FundsScreen() {
                 const totalAmount = fund.totalCollectedCents / 100;
 
                 return (
-                  <View key={fund.id} style={styles.fundCard}>
+                  <TouchableOpacity 
+                    key={fund.id} 
+                    style={styles.fundCard}
+                    onPress={() => {
+                      if (Platform.OS !== 'web') {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      }
+                      router.push(`/tasks?fundTargetId=${fund.id}`);
+                    }}
+                  >
                     <View style={styles.fundHeader}>
                       <View style={styles.fundEmojiContainer}>
                         <Text style={styles.fundEmoji}>{fund.emoji}</Text>
@@ -225,7 +234,8 @@ export default function FundsScreen() {
                     <View style={styles.fundActions}>
                       <TouchableOpacity
                         style={styles.fundActionButton}
-                        onPress={() => {
+                        onPress={(e) => {
+                          e.stopPropagation();
                           if (Platform.OS !== 'web') {
                             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                           }
@@ -237,7 +247,8 @@ export default function FundsScreen() {
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={styles.fundActionButton}
-                        onPress={() => {
+                        onPress={(e) => {
+                          e.stopPropagation();
                           if (Platform.OS !== 'web') {
                             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                           }
@@ -250,7 +261,7 @@ export default function FundsScreen() {
                         </Text>
                       </TouchableOpacity>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 );
               })}
             </View>
