@@ -2,9 +2,9 @@ import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { Task, LedgerEntry, User, DashboardStats, List, UndoAction, TaskCategory, CategoryMeta, ListMember, MemberRole } from '@/types';
+import { Task, LedgerEntry, User, DashboardStats, List, UndoAction, TaskCategory, CategoryMeta, ListMember, MemberRole, FundTarget } from '@/types';
 import { Language, getTranslations, Translations } from '@/constants/translations';
-import { MOCK_TASKS, MOCK_USERS, MOCK_LISTS, MOCK_LEDGER_ENTRIES } from '@/mocks/data';
+import { MOCK_TASKS, MOCK_USERS, MOCK_LISTS, MOCK_LEDGER_ENTRIES, MOCK_FUND_TARGETS } from '@/mocks/data';
 import { ClockService } from '@/services/ClockService';
 import { LedgerService } from '@/services/LedgerService';
 import { SchedulerService } from '@/services/SchedulerService';
@@ -26,6 +26,7 @@ const STORAGE_KEYS = {
   CALENDAR_SELECTED_DATE: '@bettertogether/calendar_selected_date',
   MEMBERSHIPS: '@bettertogether/memberships',
   LANGUAGE: '@bettertogether/language',
+  FUND_TARGETS: '@bettertogether/fund_targets',
 };
 
 export const [AppProvider, useApp] = createContextHook(() => {
@@ -33,6 +34,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [lists, setLists] = useState<List[]>([]);
+  const [fundTargets, setFundTargets] = useState<FundTarget[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string>('user-1');
   const [currentListId, setCurrentListId] = useState<string>('list-1');
   const [undoAction, setUndoAction] = useState<UndoAction | null>(null);
@@ -113,6 +115,14 @@ export const [AppProvider, useApp] = createContextHook(() => {
     },
   });
 
+  const fundTargetsQuery = useQuery({
+    queryKey: ['fund-targets'],
+    queryFn: async () => {
+      const stored = await AsyncStorage.getItem(STORAGE_KEYS.FUND_TARGETS);
+      return stored ? JSON.parse(stored) : MOCK_FUND_TARGETS;
+    },
+  });
+
   useEffect(() => {
     if (tasksQuery.data) {
       setTasks(tasksQuery.data);
@@ -168,6 +178,12 @@ export const [AppProvider, useApp] = createContextHook(() => {
     }
   }, [languageQuery.data]);
 
+  useEffect(() => {
+    if (fundTargetsQuery.data) {
+      setFundTargets(fundTargetsQuery.data);
+    }
+  }, [fundTargetsQuery.data]);
+
   const { mutate: mutateTasks } = useMutation({
     mutationFn: async (newTasks: Task[]) => {
       await AsyncStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(newTasks));
@@ -214,6 +230,13 @@ export const [AppProvider, useApp] = createContextHook(() => {
     mutationFn: async (lang: Language) => {
       await AsyncStorage.setItem(STORAGE_KEYS.LANGUAGE, lang);
       return lang;
+    },
+  });
+
+  const { mutate: mutateFundTargets } = useMutation({
+    mutationFn: async (newFundTargets: FundTarget[]) => {
+      await AsyncStorage.setItem(STORAGE_KEYS.FUND_TARGETS, JSON.stringify(newFundTargets));
+      return newFundTargets;
     },
   });
 
@@ -575,6 +598,61 @@ export const [AppProvider, useApp] = createContextHook(() => {
     [mutateLanguage]
   );
 
+  const addFundTarget = useCallback(
+    (name: string, emoji: string, description?: string, targetAmountCents?: number) => {
+      const newFund: FundTarget = {
+        id: `fund-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        listId: currentListId,
+        name,
+        emoji,
+        description,
+        targetAmountCents,
+        totalCollectedCents: 0,
+        isActive: true,
+        createdAt: new Date().toISOString(),
+      };
+      const updatedFunds = [...fundTargets, newFund];
+      setFundTargets(updatedFunds);
+      mutateFundTargets(updatedFunds);
+      console.log(`[FundTarget] Created: ${name}`);
+      return newFund;
+    },
+    [fundTargets, currentListId, mutateFundTargets]
+  );
+
+  const updateFundTarget = useCallback(
+    (fundId: string, updates: Partial<Omit<FundTarget, 'id' | 'listId' | 'createdAt' | 'totalCollectedCents'>>) => {
+      const updatedFunds = fundTargets.map((f) => {
+        if (f.id === fundId) {
+          return { ...f, ...updates };
+        }
+        return f;
+      });
+      setFundTargets(updatedFunds);
+      mutateFundTargets(updatedFunds);
+      console.log(`[FundTarget] Updated: ${fundId}`);
+    },
+    [fundTargets, mutateFundTargets]
+  );
+
+  const deleteFundTarget = useCallback(
+    (fundId: string) => {
+      const fund = fundTargets.find((f) => f.id === fundId);
+      if (!fund) return;
+      
+      const updatedFunds = fundTargets.map((f) => {
+        if (f.id === fundId) {
+          return { ...f, isActive: false };
+        }
+        return f;
+      });
+      setFundTargets(updatedFunds);
+      mutateFundTargets(updatedFunds);
+      console.log(`[FundTarget] Deleted: ${fundId}`);
+    },
+    [fundTargets, mutateFundTargets]
+  );
+
   const updateListSettings = useCallback(
     (listId: string, payload: ListSettingsPayload) => {
       const list = lists.find((l) => l.id === listId);
@@ -749,6 +827,10 @@ export const [AppProvider, useApp] = createContextHook(() => {
 
   const currentUser = users.find((u) => u.id === currentUserId);
 
+  const currentListFundTargets = useMemo(() => {
+    return fundTargets.filter((f) => f.listId === currentListId && f.isActive);
+  }, [fundTargets, currentListId]);
+
   return useMemo(
     () => ({
       tasks: currentListTasks,
@@ -791,6 +873,11 @@ export const [AppProvider, useApp] = createContextHook(() => {
       language,
       t,
       changeLanguage,
+      fundTargets: currentListFundTargets,
+      allFundTargets: fundTargets,
+      addFundTarget,
+      updateFundTarget,
+      deleteFundTarget,
       isLoading: tasksQuery.isLoading || ledgerQuery.isLoading,
     }),
     [
@@ -834,6 +921,11 @@ export const [AppProvider, useApp] = createContextHook(() => {
       language,
       t,
       changeLanguage,
+      currentListFundTargets,
+      fundTargets,
+      addFundTarget,
+      updateFundTarget,
+      deleteFundTarget,
       tasksQuery.isLoading,
       ledgerQuery.isLoading,
     ]
