@@ -566,7 +566,7 @@ export default function DashboardScreen() {
                       if (Platform.OS !== 'web') {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                       }
-                      router.push('/settings/funds');
+                      router.push(`/tasks?fundTargetId=${target.id}`);
                     }}
                     activeOpacity={0.9}
                   >
