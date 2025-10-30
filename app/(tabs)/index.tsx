@@ -561,20 +561,7 @@ export default function DashboardScreen() {
           />
         </View>
 
-        {dashboardStats.nextDueTask && (
-          <View style={styles.nextDueCard}>
-            <Text style={styles.nextDueLabel}>Next Due</Text>
-            <Text style={styles.nextDueTitle}>{dashboardStats.nextDueTask.title}</Text>
-            <View style={styles.nextDueMeta}>
-              <Text style={styles.nextDueCategory}>
-                {currentList?.categories[dashboardStats.nextDueTask.category]?.emoji || '📋'}{' '}
-                {dashboardStats.nextDueTask.category}
-              </Text>
-              <Text style={styles.nextDueDot}>•</Text>
-              <Text style={styles.nextDueStake}>${dashboardStats.nextDueTask.stake}</Text>
-            </View>
-          </View>
-        )}
+
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Upcoming Tasks</Text>
@@ -842,51 +829,7 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
     marginTop: 2,
   },
-  nextDueCard: {
-    padding: 20,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    marginBottom: 32,
-    borderLeftWidth: 4,
-    borderLeftColor: '#F59E0B',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  nextDueLabel: {
-    fontSize: 12,
-    fontWeight: '600' as const,
-    color: '#F59E0B',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 8,
-  },
-  nextDueTitle: {
-    fontSize: 20,
-    fontWeight: '700' as const,
-    color: '#111827',
-    marginBottom: 8,
-  },
-  nextDueMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  nextDueCategory: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  nextDueDot: {
-    fontSize: 14,
-    color: '#D1D5DB',
-  },
-  nextDueStake: {
-    fontSize: 14,
-    fontWeight: '600' as const,
-    color: '#111827',
-  },
+
   calendarSection: {
     marginBottom: 32,
   },
