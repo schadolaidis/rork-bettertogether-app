@@ -10,19 +10,20 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { CheckCircle2, XCircle, Filter, Undo2, Clock, Plus, Zap, X } from 'lucide-react-native';
+import { CheckCircle2, XCircle, Filter, Undo2, Clock, Plus, Zap, X, User as UserIcon, Target, DollarSign } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useApp } from '@/contexts/AppContext';
-import { Task, TaskCategory, TaskStatus } from '@/types';
+import { Task, TaskCategory, TaskStatus, User } from '@/types';
 import { TaskFormModal, TaskFormData, FundTargetOption } from '@/components/TaskFormModal';
 import { QuickAddModal, QuickTaskData } from '@/components/QuickAddModal';
 import { MOCK_FUND_TARGETS } from '@/mocks/data';
 
 interface TaskCardProps {
   task: Task;
-  userName: string | string[];
+  assignedUsers: User[];
   categoryColor: string;
   categoryEmoji: string;
+  fundTarget?: { id: string; name: string; emoji: string };
   onComplete: () => void;
   onFail: () => void;
   onPress: () => void;
@@ -30,9 +31,10 @@ interface TaskCardProps {
 
 function TaskCard({
   task,
-  userName,
+  assignedUsers,
   categoryColor,
   categoryEmoji,
+  fundTarget,
   onComplete,
   onFail,
   onPress,
@@ -83,11 +85,14 @@ function TaskCard({
   }, [task.status]);
 
   return (
-    <View style={[styles.taskCard, { backgroundColor, opacity: isDisabled ? 0.6 : 1 }]}>
-      <Pressable onPress={onPress} style={styles.taskCardPressable}>
-          <View style={[styles.categoryIndicator, { backgroundColor: categoryColor }]} />
-          <View style={styles.taskCardContent}>
-            <View style={styles.taskHeader}>
+    <Pressable onPress={onPress} style={styles.taskCardWrapper}>
+      <View style={[styles.taskCard, { backgroundColor, opacity: isDisabled ? 0.6 : 1 }]}>
+        <View style={[styles.categoryIndicator, { backgroundColor: categoryColor }]} />
+        
+        <View style={styles.taskCardContent}>
+          <View style={styles.taskHeader}>
+            <View style={styles.taskTitleRow}>
+              <Text style={styles.categoryEmoji}>{categoryEmoji}</Text>
               <Text
                 style={[
                   styles.taskTitle,
@@ -97,64 +102,105 @@ function TaskCard({
               >
                 {task.title}
               </Text>
-              <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
-                <Text style={styles.statusText}>
-                  {task.status.charAt(0).toUpperCase() + task.status.slice(1)}
-                </Text>
-              </View>
             </View>
-            <View style={styles.taskMeta}>
-              <Text style={styles.categoryEmoji}>{categoryEmoji}</Text>
-              <Text style={styles.categoryText}>{task.category}</Text>
-              <Text style={styles.metaSeparator}>{"•"}</Text>
-              <Text style={styles.metaText}>
-                {Array.isArray(userName) ? `${userName.length} members` : userName}
+            <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
+              <Text style={styles.statusText}>
+                {task.status.charAt(0).toUpperCase() + task.status.slice(1)}
               </Text>
             </View>
-            <View style={styles.taskFooter}>
-              <View style={styles.dueContainer}>
-                <Clock size={14} color={statusColor} />
-                <Text style={[styles.dueText, { color: statusColor }]}>{dateText}</Text>
-                {task.gracePeriod > 0 && task.status !== 'completed' && (
-                  <Text style={styles.graceText}>+{task.gracePeriod}m</Text>
-                )}
-              </View>
-              <View style={styles.stakeContainer}>
-                <Text style={styles.stakeLabel}>Stake:</Text>
-                <Text style={styles.stakeValue}>${task.stake}</Text>
-              </View>
+          </View>
+
+          <View style={styles.taskDetails}>
+            <View style={styles.detailRow}>
+              <Clock size={16} color={statusColor} />
+              <Text style={[styles.detailText, { color: statusColor }]}>{dateText}</Text>
+              {task.gracePeriod > 0 && task.status !== 'completed' && (
+                <Text style={styles.graceText}>+{task.gracePeriod}m</Text>
+              )}
+            </View>
+            
+            <View style={styles.detailRow}>
+              <DollarSign size={16} color="#6B7280" />
+              <Text style={styles.detailText}>${task.stake}</Text>
             </View>
           </View>
-        </Pressable>
-        {isActionable && (
-          <View style={styles.quickActions}>
-            <TouchableOpacity
-              style={styles.quickActionButton}
-              onPress={(e) => {
-                e.stopPropagation();
-                if (Platform.OS !== 'web') {
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                }
-                onComplete();
-              }}
-            >
-              <CheckCircle2 size={20} color="#10B981" strokeWidth={2.5} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.quickActionButton}
-              onPress={(e) => {
-                e.stopPropagation();
-                if (Platform.OS !== 'web') {
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-                }
-                onFail();
-              }}
-            >
-              <XCircle size={20} color="#EF4444" strokeWidth={2.5} />
-            </TouchableOpacity>
+
+          <View style={styles.taskMeta}>
+            {assignedUsers.length > 0 && (
+              <View style={styles.metaItem}>
+                <UserIcon size={14} color="#6B7280" />
+                <View style={styles.avatarGroup}>
+                  {assignedUsers.slice(0, 3).map((user, idx) => (
+                    <View
+                      key={user.id}
+                      style={[
+                        styles.avatar,
+                        { backgroundColor: user.color, marginLeft: idx > 0 ? -8 : 0 },
+                      ]}
+                    >
+                      <Text style={styles.avatarText}>
+                        {user.name.charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
+                  ))}
+                  {assignedUsers.length > 3 && (
+                    <View style={[styles.avatar, styles.avatarMore, { marginLeft: -8 }]}>
+                      <Text style={styles.avatarText}>+{assignedUsers.length - 3}</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.metaText} numberOfLines={1}>
+                  {assignedUsers.length === 1
+                    ? assignedUsers[0].name
+                    : `${assignedUsers.length} members`}
+                </Text>
+              </View>
+            )}
+
+            {fundTarget && (
+              <View style={styles.metaItem}>
+                <Target size={14} color="#8B5CF6" />
+                <View style={styles.fundBadge}>
+                  <Text style={styles.fundEmoji}>{fundTarget.emoji}</Text>
+                  <Text style={styles.fundText} numberOfLines={1}>{fundTarget.name}</Text>
+                </View>
+              </View>
+            )}
           </View>
-        )}
+
+          {isActionable && (
+            <View style={styles.quickActions}>
+              <TouchableOpacity
+                style={[styles.quickActionButton, styles.completeButton]}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  if (Platform.OS !== 'web') {
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                  }
+                  onComplete();
+                }}
+              >
+                <CheckCircle2 size={18} color="#10B981" strokeWidth={2.5} />
+                <Text style={styles.actionButtonText}>Complete</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.quickActionButton, styles.failButton]}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  if (Platform.OS !== 'web') {
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                  }
+                  onFail();
+                }}
+              >
+                <XCircle size={18} color="#EF4444" strokeWidth={2.5} />
+                <Text style={styles.actionButtonText}>Fail</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
       </View>
+    </Pressable>
   );
 }
 
@@ -535,13 +581,18 @@ export default function TasksScreen() {
           <View style={styles.taskList}>
             {filteredTasks.map((task) => {
               const categoryMeta = currentList?.categories?.[task.category];
+              const assignedUserIds = Array.isArray(task.assignedTo) ? task.assignedTo : [task.assignedTo];
+              const assignedUsers = currentListMembers.filter((u) => assignedUserIds.includes(u.id));
+              const fundTarget = task.fundTargetId ? fundTargets.find((f) => f.id === task.fundTargetId) : undefined;
+              
               return (
                 <TaskCard
                   key={task.id}
                   task={task}
-                  userName={Array.isArray(task.assignedTo) ? task.assignedTo : task.assignedTo}
+                  assignedUsers={assignedUsers}
                   categoryColor={categoryMeta?.color || '#6B7280'}
                   categoryEmoji={categoryMeta?.emoji || '📋'}
+                  fundTarget={fundTarget}
                   onComplete={() => completeTask(task.id)}
                   onFail={() => failTask(task.id)}
                   onPress={() => {
@@ -801,130 +852,176 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   taskList: {
-    gap: 12,
+    gap: 16,
+  },
+  taskCardWrapper: {
+    width: '100%',
   },
   taskCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 12,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
     elevation: 2,
     flexDirection: 'row',
   },
-  taskCardPressable: {
-    flex: 1,
-    flexDirection: 'row',
-    minHeight: 120,
-  },
   categoryIndicator: {
-    width: 6,
+    width: 4,
   },
   taskCardContent: {
     flex: 1,
     padding: 16,
-    justifyContent: 'space-between',
+    gap: 12,
   },
   taskHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    gap: 12,
+  },
+  taskTitleRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
   taskTitle: {
     flex: 1,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600' as const,
     color: '#111827',
-    lineHeight: 24,
+    lineHeight: 22,
   },
   taskTitleCompleted: {
     textDecorationLine: 'line-through',
     color: '#6B7280',
   },
   statusBadge: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
+    alignSelf: 'flex-start',
   },
   statusText: {
-    fontSize: 12,
-    fontWeight: '600' as const,
+    fontSize: 11,
+    fontWeight: '700' as const,
     color: '#FFFFFF',
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
+  },
+  categoryEmoji: {
+    fontSize: 18,
+  },
+  taskDetails: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  detailText: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: '#111827',
   },
   taskMeta: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap' as const,
+    gap: 12,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
   },
-  categoryEmoji: {
-    fontSize: 16,
+  avatarGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  categoryText: {
-    fontSize: 14,
-    fontWeight: '500' as const,
-    color: '#3B82F6',
+  avatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  avatarMore: {
+    backgroundColor: '#9CA3AF',
+  },
+  avatarText: {
+    fontSize: 10,
+    fontWeight: '700' as const,
+    color: '#FFFFFF',
   },
   metaText: {
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: '500' as const,
     color: '#6B7280',
+    maxWidth: 100,
   },
-  metaSeparator: {
-    fontSize: 14,
-    color: '#D1D5DB',
-  },
-  taskFooter: {
+  fundBadge: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 2,
+    gap: 4,
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  fundEmoji: {
+    fontSize: 12,
+  },
+  fundText: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    color: '#8B5CF6',
+    maxWidth: 80,
   },
   quickActions: {
-    flexDirection: 'column',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 12,
+    flexDirection: 'row',
     gap: 8,
-    borderLeftWidth: 1,
-    borderLeftColor: '#F3F4F6',
+    marginTop: 4,
   },
   quickActionButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
     backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
-  dueContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+  completeButton: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#10B981',
   },
-  dueText: {
-    fontSize: 14,
+  failButton: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#EF4444',
+  },
+  actionButtonText: {
+    fontSize: 13,
     fontWeight: '600' as const,
-  },
-  graceText: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    fontWeight: '500' as const,
-  },
-  stakeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  stakeLabel: {
-    fontSize: 14,
     color: '#6B7280',
   },
-  stakeValue: {
-    fontSize: 18,
-    fontWeight: '700' as const,
-    color: '#111827',
+  graceText: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    fontWeight: '500' as const,
+    marginLeft: 2,
   },
   emptyState: {
     alignItems: 'center',
