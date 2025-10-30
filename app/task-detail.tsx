@@ -1263,29 +1263,33 @@ function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onS
           />
           <View style={styles.iosPickerContainer}>
             <View style={styles.iosPickerHeader}>
-              <TouchableOpacity onPress={() => setShowPickerType(null)}>
+              <TouchableOpacity onPress={() => {
+                const newStart = new Date(tempStartDate);
+                newStart.setHours(start.getHours(), start.getMinutes(), 0, 0);
+                setStart(newStart);
+                
+                const duration = end.getTime() - start.getTime();
+                if (duration > 0) {
+                  const newEnd = new Date(newStart.getTime() + duration);
+                  setEnd(newEnd);
+                } else {
+                  const newEnd = new Date(newStart.getTime() + 3600000);
+                  setEnd(newEnd);
+                }
+                setShowPickerType(null);
+              }}>
                 <Text style={styles.iosPickerDoneButton}>Done</Text>
               </TouchableOpacity>
             </View>
             <View style={{ padding: 20 }}>
+              <Text style={styles.dateTimeLabel}>Select Date</Text>
               <TextInput
-                style={[styles.input, { fontSize: 16 }]}
-                value={start.toISOString().split('T')[0]}
+                style={[styles.input, { fontSize: 16, marginTop: 12 }]}
+                value={tempStartDate.toISOString().split('T')[0]}
                 onChangeText={(text) => {
                   const date = new Date(text);
                   if (!isNaN(date.getTime())) {
-                    const newStart = new Date(date);
-                    newStart.setHours(start.getHours(), start.getMinutes(), 0, 0);
-                    setStart(newStart);
-                    
-                    const duration = end.getTime() - start.getTime();
-                    if (duration > 0) {
-                      const newEnd = new Date(newStart.getTime() + duration);
-                      setEnd(newEnd);
-                    } else {
-                      const newEnd = new Date(newStart.getTime() + 3600000);
-                      setEnd(newEnd);
-                    }
+                    setTempStartDate(date);
                   }
                 }}
                 placeholder="YYYY-MM-DD"
@@ -1304,24 +1308,30 @@ function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onS
           />
           <View style={styles.iosPickerContainer}>
             <View style={styles.iosPickerHeader}>
-              <TouchableOpacity onPress={() => setShowPickerType(null)}>
+              <TouchableOpacity onPress={() => {
+                const newStart = new Date(start);
+                newStart.setHours(tempStartDate.getHours(), tempStartDate.getMinutes(), 0, 0);
+                setStart(newStart);
+                
+                const newEnd = new Date(newStart);
+                newEnd.setHours(newStart.getHours() + 1, newStart.getMinutes(), 0, 0);
+                setEnd(newEnd);
+                setShowPickerType(null);
+              }}>
                 <Text style={styles.iosPickerDoneButton}>Done</Text>
               </TouchableOpacity>
             </View>
             <View style={{ padding: 20 }}>
+              <Text style={styles.dateTimeLabel}>Select Time</Text>
               <TextInput
-                style={[styles.input, { fontSize: 16 }]}
-                value={`${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`}
+                style={[styles.input, { fontSize: 16, marginTop: 12 }]}
+                value={`${String(tempStartDate.getHours()).padStart(2, '0')}:${String(tempStartDate.getMinutes()).padStart(2, '0')}`}
                 onChangeText={(text) => {
                   const [hours, minutes] = text.split(':').map(Number);
                   if (!isNaN(hours) && !isNaN(minutes)) {
-                    const newStart = new Date(start);
-                    newStart.setHours(hours, minutes, 0, 0);
-                    setStart(newStart);
-                    
-                    const newEnd = new Date(newStart);
-                    newEnd.setHours(newStart.getHours() + 1, newStart.getMinutes(), 0, 0);
-                    setEnd(newEnd);
+                    const newTemp = new Date(tempStartDate);
+                    newTemp.setHours(hours, minutes, 0, 0);
+                    setTempStartDate(newTemp);
                   }
                 }}
                 placeholder="HH:MM"
