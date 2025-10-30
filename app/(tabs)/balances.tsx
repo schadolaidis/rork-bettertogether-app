@@ -8,9 +8,11 @@ import {
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { TrendingUp, TrendingDown, Users, Calendar, BarChart3, ArrowUpDown, DollarSign, Activity } from 'lucide-react-native';
+import { TrendingUp, TrendingDown, Users, Calendar, BarChart3, ArrowUpDown, DollarSign, Activity, Plus } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useApp } from '@/contexts/AppContext';
+import { StreaksFundCard } from '@/components/StreaksFundCard';
+import { MOCK_FUND_TARGETS } from '@/mocks/data';
 import { LedgerEntry, User, TaskCategory } from '@/types';
 import { ClockService } from '@/services/ClockService';
 import { router } from 'expo-router';
@@ -184,7 +186,7 @@ function MemberBalanceCard({ memberBalance, currencySymbol, onPress }: MemberBal
 
 export default function BalancesScreen() {
   const insets = useSafeAreaInsets();
-  const { ledgerEntries, currentUserId, currentListMembers, currentList, getUserBalance, tasks, users } = useApp();
+  const { ledgerEntries, currentUserId, currentListMembers, currentList, getUserBalance, tasks, users, currentListId } = useApp();
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const currentMonth = ClockService.getCurrentMonth();
 
@@ -418,47 +420,76 @@ export default function BalancesScreen() {
         {activeTab === 'overview' && (
           <>
             <View style={styles.fundSection}>
-              <View style={styles.fundCard}>
-                <View style={styles.fundCardHeader}>
-                  <View style={styles.fundCardIcon}>
-                    <DollarSign size={32} color="#8B5CF6" />
-                  </View>
-                  <View style={styles.fundCardBadge}>
-                    <Text style={styles.fundCardBadgeText}>💰 Group Fund</Text>
-                  </View>
-                </View>
-                <View style={styles.fundCardAmount}>
-                  <Text style={styles.fundCardCurrency}>{currencySymbol}</Text>
-                  <Text style={styles.fundCardValue}>{totalExpenses.toFixed(2)}</Text>
-                </View>
-                <View style={styles.fundCardDescription}>
-                  <Text style={styles.fundCardDescText}>
-                    Accumulated from {currentMonthEntries.length} failed tasks
-                  </Text>
-                </View>
-                <View style={styles.fundProgressBar}>
-                  <View
-                    style={[
-                      styles.fundProgressFill,
-                      {
-                        width: currentMonthEntries.length > 0 ? '100%' : '0%',
-                      },
-                    ]}
-                  />
-                </View>
-                <View style={styles.fundCardFooter}>
-                  <View style={styles.fundCardStat}>
-                    <Text style={styles.fundCardStatLabel}>This Month</Text>
-                    <Text style={styles.fundCardStatValue}>
-                      +{currencySymbol}{fundGrowthThisMonth.toFixed(2)}
-                    </Text>
-                  </View>
-                  <View style={styles.fundCardStat}>
-                    <Text style={styles.fundCardStatLabel}>Failed Tasks</Text>
-                    <Text style={styles.fundCardStatValue}>{currentMonthEntries.length}</Text>
-                  </View>
-                </View>
+              <View style={styles.fundSectionHeader}>
+                <Text style={styles.fundSectionTitle}>💰 Fund Goals</Text>
+                <TouchableOpacity
+                  style={styles.addFundButton}
+                  onPress={() => {
+                    if (Platform.OS !== 'web') {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }
+                    router.push('/(tabs)/settings/funds');
+                  }}
+                >
+                  <Plus size={20} color="#3B82F6" />
+                  <Text style={styles.addFundButtonText}>Add Goal</Text>
+                </TouchableOpacity>
               </View>
+              {MOCK_FUND_TARGETS.filter((f) => f.listId === currentListId && f.isActive).length > 0 ? (
+                MOCK_FUND_TARGETS.filter((f) => f.listId === currentListId && f.isActive).map((fund) => {
+                  const linkedTasks = tasks.filter((t) => t.fundTargetId === fund.id);
+                  return (
+                    <StreaksFundCard
+                      key={fund.id}
+                      emoji={fund.emoji}
+                      name={fund.name}
+                      description={fund.description}
+                      collectedAmount={fund.totalCollectedCents / 100}
+                      targetAmount={undefined}
+                      linkedTasksCount={linkedTasks.length}
+                      currencySymbol={currencySymbol}
+                      onPress={() => {
+                        console.log('[Balance] View fund:', fund.id);
+                        router.push('/(tabs)/settings/funds');
+                      }}
+                    />
+                  );
+                })
+              ) : (
+                <View style={styles.emptyFundsState}>
+                  <View style={styles.fundCard}>
+                    <View style={styles.fundCardHeader}>
+                      <View style={styles.fundCardIcon}>
+                        <DollarSign size={32} color="#8B5CF6" />
+                      </View>
+                      <View style={styles.fundCardBadge}>
+                        <Text style={styles.fundCardBadgeText}>💰 Group Fund</Text>
+                      </View>
+                    </View>
+                    <View style={styles.fundCardAmount}>
+                      <Text style={styles.fundCardCurrency}>{currencySymbol}</Text>
+                      <Text style={styles.fundCardValue}>{totalExpenses.toFixed(2)}</Text>
+                    </View>
+                    <View style={styles.fundCardDescription}>
+                      <Text style={styles.fundCardDescText}>
+                        Create fund goals to track money from failed tasks
+                      </Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.createFundButton}
+                    onPress={() => {
+                      if (Platform.OS !== 'web') {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      }
+                      router.push('/(tabs)/settings/funds');
+                    }}
+                  >
+                    <Plus size={20} color="#FFFFFF" />
+                    <Text style={styles.createFundButtonText}>Create Fund Goal</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
           </>
         )}
@@ -1095,6 +1126,54 @@ const styles = StyleSheet.create({
   },
   fundSection: {
     marginBottom: 24,
+  },
+  fundSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  fundSectionTitle: {
+    fontSize: 20,
+    fontWeight: '700' as const,
+    color: '#111827',
+  },
+  addFundButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: '#EFF6FF',
+    borderRadius: 12,
+  },
+  addFundButtonText: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: '#3B82F6',
+  },
+  emptyFundsState: {
+    alignItems: 'center',
+  },
+  createFundButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    backgroundColor: '#3B82F6',
+    borderRadius: 12,
+    marginTop: 16,
+    shadowColor: '#3B82F6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  createFundButtonText: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: '#FFFFFF',
   },
   fundCard: {
     backgroundColor: '#1E1B4B',
