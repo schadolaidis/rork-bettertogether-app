@@ -19,6 +19,7 @@ import {
   Edit2,
   X,
   DollarSign,
+  CheckCircle2,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useApp } from '@/contexts/AppContext';
@@ -30,6 +31,7 @@ interface FundTarget {
   name: string;
   emoji: string;
   description?: string;
+  targetAmountCents?: number;
   totalCollectedCents: number;
   isActive: boolean;
 }
@@ -43,6 +45,7 @@ export default function FundsScreen() {
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState('🎯');
   const [description, setDescription] = useState('');
+  const [targetAmount, setTargetAmount] = useState('');
 
   const fundTargets = MOCK_FUND_TARGETS.filter(
     (ft) => ft.listId === currentList?.id && ft.isActive
@@ -54,7 +57,7 @@ export default function FundsScreen() {
       return;
     }
 
-    console.log('[Funds] Created fund target:', { name, emoji, description });
+    console.log('[Funds] Created fund target:', { name, emoji, description, targetAmount });
     
     if (Platform.OS !== 'web') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -63,6 +66,7 @@ export default function FundsScreen() {
     setName('');
     setEmoji('🎯');
     setDescription('');
+    setTargetAmount('');
     setShowCreateModal(false);
     Alert.alert('Success', `Fund goal "${name}" created!`);
   };
@@ -73,7 +77,7 @@ export default function FundsScreen() {
       return;
     }
 
-    console.log('[Funds] Updated fund target:', editingFund.id, { name, emoji, description });
+    console.log('[Funds] Updated fund target:', editingFund.id, { name, emoji, description, targetAmount });
     
     if (Platform.OS !== 'web') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -83,6 +87,7 @@ export default function FundsScreen() {
     setName('');
     setEmoji('🎯');
     setDescription('');
+    setTargetAmount('');
     setShowEditModal(false);
     Alert.alert('Success', `Fund goal "${name}" updated!`);
   };
@@ -113,6 +118,7 @@ export default function FundsScreen() {
     setName(fund.name);
     setEmoji(fund.emoji);
     setDescription(fund.description || '');
+    setTargetAmount(fund.targetAmountCents ? (fund.targetAmountCents / 100).toString() : '');
     setShowEditModal(true);
   };
 
@@ -192,11 +198,17 @@ export default function FundsScreen() {
               {fundTargets.map((fund) => {
                 const linkedTasks = getTasksLinkedToFund(fund.id);
                 const totalAmount = fund.totalCollectedCents / 100;
+                const targetAmountValue = fund.targetAmountCents ? fund.targetAmountCents / 100 : undefined;
+                const progress = targetAmountValue ? Math.min((totalAmount / targetAmountValue) * 100, 100) : 0;
+                const isCompleted = targetAmountValue && totalAmount >= targetAmountValue;
 
                 return (
                   <TouchableOpacity 
                     key={fund.id} 
-                    style={styles.fundCard}
+                    style={[
+                      styles.fundCard,
+                      isCompleted && styles.fundCardCompleted
+                    ]}
                     onPress={() => {
                       if (Platform.OS !== 'web') {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -205,29 +217,63 @@ export default function FundsScreen() {
                     }}
                   >
                     <View style={styles.fundHeader}>
-                      <View style={styles.fundEmojiContainer}>
+                      <View style={[
+                        styles.fundEmojiContainer,
+                        isCompleted && styles.fundEmojiContainerCompleted
+                      ]}>
                         <Text style={styles.fundEmoji}>{fund.emoji}</Text>
                       </View>
                       <View style={styles.fundInfo}>
-                        <Text style={styles.fundName}>{fund.name}</Text>
+                        <View style={styles.fundTitleRow}>
+                          <Text style={styles.fundName}>{fund.name}</Text>
+                          {isCompleted && (
+                            <View style={styles.completeBadge}>
+                              <CheckCircle2 size={20} color="#10B981" />
+                            </View>
+                          )}
+                        </View>
                         {fund.description && (
                           <Text style={styles.fundDescription}>{fund.description}</Text>
                         )}
                       </View>
                     </View>
 
-                    <View style={styles.fundStats}>
-                      <View style={styles.fundStat}>
-                        <DollarSign size={16} color="#10B981" />
-                        <Text style={styles.fundStatLabel}>Collected</Text>
-                        <Text style={styles.fundStatValue}>
-                          {currentList?.currencySymbol || '$'}{totalAmount.toFixed(2)}
+                    <View style={styles.fundAmountSection}>
+                      <Text style={[styles.fundAmount, isCompleted && styles.fundAmountCompleted]}>
+                        {currentList?.currencySymbol || '$'}{totalAmount.toFixed(2)}
+                      </Text>
+                      {targetAmountValue && (
+                        <Text style={styles.fundTargetAmount}>
+                          {' '}/ {currentList?.currencySymbol || '$'}{targetAmountValue.toFixed(2)}
+                        </Text>
+                      )}
+                    </View>
+
+                    {targetAmountValue && (
+                      <View style={styles.progressSection}>
+                        <View style={styles.progressBar}>
+                          <View 
+                            style={[
+                              styles.progressFill, 
+                              { 
+                                width: `${progress}%`,
+                                backgroundColor: isCompleted ? '#10B981' : '#3B82F6'
+                              }
+                            ]} 
+                          />
+                        </View>
+                        <Text style={[styles.progressText, isCompleted && styles.progressTextCompleted]}>
+                          {progress.toFixed(0)}% {isCompleted ? '🎉 Reached!' : ''}
                         </Text>
                       </View>
+                    )}
+
+                    <View style={styles.fundStats}>
                       <View style={styles.fundStat}>
-                        <Target size={16} color="#3B82F6" />
-                        <Text style={styles.fundStatLabel}>Linked Tasks</Text>
-                        <Text style={styles.fundStatValue}>{linkedTasks.length}</Text>
+                        <Target size={14} color="#6B7280" />
+                        <Text style={styles.fundStatText}>
+                          {linkedTasks.length} {linkedTasks.length === 1 ? 'task' : 'tasks'}
+                        </Text>
                       </View>
                     </View>
 
@@ -280,6 +326,7 @@ export default function FundsScreen() {
                 setName('');
                 setEmoji('🎯');
                 setDescription('');
+                setTargetAmount('');
               }}
             >
               <X size={24} color="#6B7280" />
@@ -336,6 +383,28 @@ export default function FundsScreen() {
                 maxLength={200}
               />
             </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Target Amount (optional)</Text>
+              <View style={styles.amountInputContainer}>
+                <Text style={styles.currencyPrefix}>{currentList?.currencySymbol || '$'}</Text>
+                <TextInput
+                  style={styles.amountInput}
+                  placeholder="0.00"
+                  placeholderTextColor="#9CA3AF"
+                  value={targetAmount}
+                  onChangeText={(text) => {
+                    const cleaned = text.replace(/[^0-9.]/g, '');
+                    const parts = cleaned.split('.');
+                    if (parts.length > 2) return;
+                    if (parts[1] && parts[1].length > 2) return;
+                    setTargetAmount(cleaned);
+                  }}
+                  keyboardType="decimal-pad"
+                />
+              </View>
+              <Text style={styles.helperText}>Set a price goal to track progress</Text>
+            </View>
           </ScrollView>
 
           <View style={styles.modalFooter}>
@@ -346,6 +415,7 @@ export default function FundsScreen() {
                 setName('');
                 setEmoji('🎯');
                 setDescription('');
+                setTargetAmount('');
               }}
             >
               <Text style={styles.modalCancelButtonText}>Cancel</Text>
@@ -373,6 +443,7 @@ export default function FundsScreen() {
                 setName('');
                 setEmoji('🎯');
                 setDescription('');
+                setTargetAmount('');
               }}
             >
               <X size={24} color="#6B7280" />
@@ -429,6 +500,28 @@ export default function FundsScreen() {
                 maxLength={200}
               />
             </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Target Amount (optional)</Text>
+              <View style={styles.amountInputContainer}>
+                <Text style={styles.currencyPrefix}>{currentList?.currencySymbol || '$'}</Text>
+                <TextInput
+                  style={styles.amountInput}
+                  placeholder="0.00"
+                  placeholderTextColor="#9CA3AF"
+                  value={targetAmount}
+                  onChangeText={(text) => {
+                    const cleaned = text.replace(/[^0-9.]/g, '');
+                    const parts = cleaned.split('.');
+                    if (parts.length > 2) return;
+                    if (parts[1] && parts[1].length > 2) return;
+                    setTargetAmount(cleaned);
+                  }}
+                  keyboardType="decimal-pad"
+                />
+              </View>
+              <Text style={styles.helperText}>Set a price goal to track progress</Text>
+            </View>
           </ScrollView>
 
           <View style={styles.modalFooter}>
@@ -440,6 +533,7 @@ export default function FundsScreen() {
                 setName('');
                 setEmoji('🎯');
                 setDescription('');
+                setTargetAmount('');
               }}
             >
               <Text style={styles.modalCancelButtonText}>Cancel</Text>
@@ -541,13 +635,18 @@ const styles = StyleSheet.create({
   },
   fundCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  fundCardCompleted: {
+    backgroundColor: '#D1FAE5',
+    borderWidth: 2,
+    borderColor: '#10B981',
   },
   fundHeader: {
     flexDirection: 'row',
@@ -556,60 +655,109 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   fundEmojiContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
   },
+  fundEmojiContainerCompleted: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#10B981',
+  },
   fundEmoji: {
-    fontSize: 32,
+    fontSize: 36,
   },
   fundInfo: {
     flex: 1,
   },
-  fundName: {
-    fontSize: 18,
-    fontWeight: '700' as const,
-    color: '#111827',
+  fundTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     marginBottom: 4,
+  },
+  fundName: {
+    fontSize: 20,
+    fontWeight: '800' as const,
+    color: '#111827',
+    flex: 1,
+  },
+  completeBadge: {
+    padding: 2,
   },
   fundDescription: {
     fontSize: 14,
     color: '#6B7280',
     lineHeight: 20,
   },
+  fundAmountSection: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginBottom: 12,
+  },
+  fundAmount: {
+    fontSize: 32,
+    fontWeight: '800' as const,
+    color: '#3B82F6',
+    letterSpacing: -1,
+  },
+  fundAmountCompleted: {
+    color: '#10B981',
+  },
+  fundTargetAmount: {
+    fontSize: 18,
+    fontWeight: '600' as const,
+    color: '#9CA3AF',
+    marginLeft: 4,
+  },
+  progressSection: {
+    marginBottom: 16,
+  },
+  progressBar: {
+    height: 8,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  progressText: {
+    fontSize: 13,
+    fontWeight: '700' as const,
+    color: '#3B82F6',
+    textAlign: 'center',
+  },
+  progressTextCompleted: {
+    color: '#10B981',
+  },
   fundStats: {
     flexDirection: 'row',
     gap: 16,
-    marginBottom: 16,
-    paddingTop: 16,
+    paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderBottomWidth: 1,
+    borderColor: '#E5E7EB',
+    marginBottom: 12,
   },
   fundStat: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
-  fundStatLabel: {
+  fundStatText: {
     fontSize: 13,
+    fontWeight: '600' as const,
     color: '#6B7280',
-    flex: 1,
-  },
-  fundStatValue: {
-    fontSize: 16,
-    fontWeight: '700' as const,
-    color: '#111827',
   },
   fundActions: {
     flexDirection: 'row',
     gap: 12,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
   },
   fundActionButton: {
     flex: 1,
@@ -617,8 +765,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingVertical: 10,
-    borderRadius: 8,
+    paddingVertical: 12,
+    borderRadius: 12,
     backgroundColor: '#F9FAFB',
   },
   fundActionText: {
@@ -677,6 +825,33 @@ const styles = StyleSheet.create({
   textArea: {
     minHeight: 100,
     textAlignVertical: 'top',
+  },
+  amountInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    paddingLeft: 16,
+  },
+  currencyPrefix: {
+    fontSize: 18,
+    fontWeight: '700' as const,
+    color: '#6B7280',
+    marginRight: 4,
+  },
+  amountInput: {
+    flex: 1,
+    padding: 16,
+    paddingLeft: 0,
+    fontSize: 16,
+    color: '#111827',
+  },
+  helperText: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginTop: 6,
   },
   emojiScroll: {
     marginHorizontal: -20,
