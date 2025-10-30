@@ -315,9 +315,9 @@ export default function BalancesScreen() {
           category: category as TaskCategory,
           emoji: categoryMeta?.emoji || '📋',
           color: categoryMeta?.color || '#6B7280',
-          total: data?.total || 0,
-          count: data?.count || 0,
-          percentage: totalExpenses > 0 && data?.total ? (data.total / totalExpenses) * 100 : 0,
+          total: data.total,
+          count: data.count,
+          percentage: totalExpenses > 0 && data.total ? (data.total / totalExpenses) * 100 : 0,
         };
       })
       .sort((a, b) => b.total - a.total);
