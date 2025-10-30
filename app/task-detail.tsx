@@ -251,6 +251,8 @@ export default function TaskDetailScreen() {
   const [showStakeEditor, setShowStakeEditor] = useState(false);
   const [showFundTargetPicker, setShowFundTargetPicker] = useState(false);
   const [showDateTimePicker, setShowDateTimePicker] = useState(false);
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [editingDateTime, setEditingDateTime] = useState<{ startDate: Date; endDate: Date; allDay: boolean }>(() => {
     const now = new Date();
     const later = new Date(now.getTime() + 3600000);
@@ -748,7 +750,99 @@ export default function TaskDetailScreen() {
         }}
       />
 
+      {Platform.OS === 'ios' && showStartDatePicker && (
+        <View style={styles.iosPickerOverlay}>
+          <TouchableOpacity 
+            style={styles.iosPickerBackdrop}
+            activeOpacity={1}
+            onPress={() => setShowStartDatePicker(false)}
+          />
+          <View style={styles.iosPickerContainer}>
+            <View style={styles.iosPickerHeader}>
+              <TouchableOpacity onPress={() => setShowStartDatePicker(false)}>
+                <Text style={styles.iosPickerDoneButton}>Done</Text>
+              </TouchableOpacity>
+            </View>
+            <DateTimePicker
+              value={editingDateTime.startDate}
+              mode="date"
+              display="spinner"
+              onChange={(_event: DateTimePickerEvent, date?: Date) => {
+                if (date) {
+                  const newStart = new Date(date);
+                  newStart.setHours(editingDateTime.startDate.getHours(), editingDateTime.startDate.getMinutes(), 0, 0);
+                  setEditingDateTime(prev => ({ ...prev, startDate: newStart }));
+                }
+              }}
+              style={styles.iosPicker}
+            />
+          </View>
+        </View>
+      )}
 
+      {Platform.OS === 'android' && showStartDatePicker && (
+        <DateTimePicker
+          value={editingDateTime.startDate}
+          mode="date"
+          display="default"
+          onChange={(_event: DateTimePickerEvent, date?: Date) => {
+            setShowStartDatePicker(false);
+            if (date) {
+              const newStart = new Date(date);
+              newStart.setHours(editingDateTime.startDate.getHours(), editingDateTime.startDate.getMinutes(), 0, 0);
+              setEditingDateTime(prev => ({ ...prev, startDate: newStart }));
+            }
+          }}
+        />
+      )}
+
+      {Platform.OS === 'ios' && showStartTimePicker && (
+        <View style={styles.iosPickerOverlay}>
+          <TouchableOpacity 
+            style={styles.iosPickerBackdrop}
+            activeOpacity={1}
+            onPress={() => setShowStartTimePicker(false)}
+          />
+          <View style={styles.iosPickerContainer}>
+            <View style={styles.iosPickerHeader}>
+              <TouchableOpacity onPress={() => setShowStartTimePicker(false)}>
+                <Text style={styles.iosPickerDoneButton}>Done</Text>
+              </TouchableOpacity>
+            </View>
+            <DateTimePicker
+              value={editingDateTime.startDate}
+              mode="time"
+              display="spinner"
+              onChange={(_event: DateTimePickerEvent, date?: Date) => {
+                if (date) {
+                  const newStart = new Date(editingDateTime.startDate);
+                  newStart.setHours(date.getHours(), date.getMinutes(), 0, 0);
+                  setEditingDateTime(prev => ({ ...prev, startDate: newStart }));
+                }
+              }}
+              is24Hour={true}
+              style={styles.iosPicker}
+            />
+          </View>
+        </View>
+      )}
+
+      {Platform.OS === 'android' && showStartTimePicker && (
+        <DateTimePicker
+          value={editingDateTime.startDate}
+          mode="time"
+          display="default"
+          onChange={(_event: DateTimePickerEvent, date?: Date) => {
+            setShowStartTimePicker(false);
+            if (date) {
+              const newStart = new Date(editingDateTime.startDate);
+              newStart.setHours(date.getHours(), date.getMinutes(), 0, 0);
+              setEditingDateTime(prev => ({ ...prev, startDate: newStart }));
+            }
+          }}
+          is24Hour={true}
+        />
+      )}
     </View>
   );
 }
@@ -931,11 +1025,11 @@ function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onS
     return isNaN(d.getTime()) ? new Date(new Date().getTime() + 3600000) : d;
   });
   const [isAllDay, setIsAllDay] = useState(allDay);
-  const [showPickerType, setShowPickerType] = useState<'date' | 'time' | null>(null);
-  const [pickerTempDate, setPickerTempDate] = useState<Date>(() => {
+  const [tempStartDate, setTempStartDate] = useState(() => {
     const d = new Date(startDate);
     return isNaN(d.getTime()) ? new Date() : d;
   });
+  const [showPickerType, setShowPickerType] = useState<'start-date' | 'start-time' | null>(null);
 
   useEffect(() => {
     if (visible) {
@@ -953,7 +1047,7 @@ function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onS
       
       if (!isNaN(validStart.getTime())) {
         setStart(validStart);
-        setPickerTempDate(validStart);
+        setTempStartDate(validStart);
         
         if (!isNaN(validEnd.getTime())) {
           setEnd(validEnd);
@@ -964,7 +1058,7 @@ function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onS
       } else {
         const now = new Date();
         setStart(now);
-        setPickerTempDate(now);
+        setTempStartDate(now);
         
         if (!isNaN(validEnd.getTime())) {
           setEnd(validEnd);
@@ -996,44 +1090,44 @@ function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onS
     return EUDateFormatter.formatTime(date);
   };
 
-  const handleDateChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
+  const handleStartDateChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
     if (Platform.OS === 'android') {
       setShowPickerType(null);
-    }
-    
-    if (selectedDate && !isNaN(selectedDate.getTime())) {
-      if (Platform.OS === 'ios') {
-        setPickerTempDate(selectedDate);
-      } else {
+      if (selectedDate && !isNaN(selectedDate.getTime())) {
         const newStart = new Date(selectedDate);
+        
         if (!isNaN(start.getTime())) {
           newStart.setHours(start.getHours(), start.getMinutes(), 0, 0);
         } else {
           newStart.setHours(12, 0, 0, 0);
         }
+        
         setStart(newStart);
         
-        const duration = !isNaN(end.getTime()) && !isNaN(start.getTime()) ? end.getTime() - start.getTime() : 3600000;
-        const newEnd = new Date(newStart.getTime() + Math.max(duration, 3600000));
-        setEnd(newEnd);
-        
-        if (Platform.OS !== 'web') {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        if (!isNaN(end.getTime()) && !isNaN(start.getTime())) {
+          const duration = end.getTime() - start.getTime();
+          if (duration > 0) {
+            const newEnd = new Date(newStart.getTime() + duration);
+            setEnd(newEnd);
+          } else {
+            const newEnd = new Date(newStart.getTime() + 3600000);
+            setEnd(newEnd);
+          }
+        } else {
+          const newEnd = new Date(newStart.getTime() + 3600000);
+          setEnd(newEnd);
         }
+        
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
     }
   };
 
-  const handleTimeChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
+  const handleStartTimeChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
     if (Platform.OS === 'android') {
       setShowPickerType(null);
-    }
-    
-    if (selectedDate && !isNaN(selectedDate.getTime())) {
-      if (Platform.OS === 'ios') {
-        setPickerTempDate(selectedDate);
-      } else {
-        const newStart = new Date(start);
+      if (selectedDate && !isNaN(selectedDate.getTime())) {
+        const newStart = !isNaN(start.getTime()) ? new Date(start) : new Date();
         newStart.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
         setStart(newStart);
         
@@ -1041,41 +1135,17 @@ function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onS
         newEnd.setHours(newStart.getHours() + 1, newStart.getMinutes(), 0, 0);
         setEnd(newEnd);
         
-        if (Platform.OS !== 'web') {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        }
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
     }
   };
 
-  const applyIOSDatePicker = () => {
-    const newStart = new Date(pickerTempDate);
-    newStart.setHours(start.getHours(), start.getMinutes(), 0, 0);
-    setStart(newStart);
-    
-    const duration = !isNaN(end.getTime()) && !isNaN(start.getTime()) ? end.getTime() - start.getTime() : 3600000;
-    const newEnd = new Date(newStart.getTime() + Math.max(duration, 3600000));
-    setEnd(newEnd);
-    
-    setShowPickerType(null);
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
+  const setShowDatePickerIOS = (type: 'start-date' | 'start-time') => {
+    setShowPickerType(type);
   };
 
-  const applyIOSTimePicker = () => {
-    const newStart = new Date(start);
-    newStart.setHours(pickerTempDate.getHours(), pickerTempDate.getMinutes(), 0, 0);
-    setStart(newStart);
-    
-    const newEnd = new Date(newStart);
-    newEnd.setHours(newStart.getHours() + 1, newStart.getMinutes(), 0, 0);
-    setEnd(newEnd);
-    
-    setShowPickerType(null);
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
+  const setShowDatePickerAndroid = (type: 'start-date' | 'start-time') => {
+    setShowPickerType(type);
   };
 
   const isValidDateRange = end > start;
@@ -1127,8 +1197,12 @@ function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onS
                 if (Platform.OS !== 'web') {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 }
-                setPickerTempDate(start);
-                setShowPickerType('date');
+                setTempStartDate(start);
+                if (Platform.OS === 'ios') {
+                  setShowDatePickerIOS('start-date');
+                } else {
+                  setShowDatePickerAndroid('start-date');
+                }
               }}
             >
               <Calendar size={18} color="#6B7280" />
@@ -1142,8 +1216,12 @@ function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onS
                   if (Platform.OS !== 'web') {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   }
-                  setPickerTempDate(start);
-                  setShowPickerType('time');
+                  setTempStartDate(start);
+                  if (Platform.OS === 'ios') {
+                    setShowDatePickerIOS('start-time');
+                  } else {
+                    setShowDatePickerAndroid('start-time');
+                  }
                 }}
               >
                 <Clock size={18} color="#6B7280" />
@@ -1176,7 +1254,7 @@ function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onS
         </View>
       </View>
 
-      {Platform.OS === 'web' && showPickerType === 'date' && (
+      {Platform.OS === 'web' && showPickerType === 'start-date' && (
         <View style={styles.iosPickerOverlay}>
           <TouchableOpacity 
             style={styles.iosPickerBackdrop}
@@ -1217,7 +1295,7 @@ function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onS
         </View>
       )}
 
-      {Platform.OS === 'web' && showPickerType === 'time' && (
+      {Platform.OS === 'web' && showPickerType === 'start-time' && (
         <View style={styles.iosPickerOverlay}>
           <TouchableOpacity 
             style={styles.iosPickerBackdrop}
@@ -1253,57 +1331,119 @@ function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onS
         </View>
       )}
 
-      {Platform.OS === 'ios' && showPickerType === 'date' && (
+      {Platform.OS === 'ios' && showPickerType === 'start-date' && (
         <View style={styles.iosPickerOverlay}>
           <TouchableOpacity 
             style={styles.iosPickerBackdrop}
             activeOpacity={1}
-            onPress={applyIOSDatePicker}
+            onPress={() => {
+              const newStart = new Date(tempStartDate);
+              newStart.setHours(start.getHours(), start.getMinutes(), 0, 0);
+              setStart(newStart);
+              
+              const duration = end.getTime() - start.getTime();
+              if (duration > 0) {
+                const newEnd = new Date(newStart.getTime() + duration);
+                setEnd(newEnd);
+              }
+              setShowPickerType(null);
+              if (Platform.OS !== 'web') {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+            }}
           />
           <View style={styles.iosPickerContainer}>
             <View style={styles.iosPickerHeader}>
-              <TouchableOpacity onPress={applyIOSDatePicker}>
+              <TouchableOpacity onPress={() => {
+                const newStart = new Date(tempStartDate);
+                newStart.setHours(start.getHours(), start.getMinutes(), 0, 0);
+                setStart(newStart);
+                
+                const duration = end.getTime() - start.getTime();
+                if (duration > 0) {
+                  const newEnd = new Date(newStart.getTime() + duration);
+                  setEnd(newEnd);
+                }
+                setShowPickerType(null);
+                if (Platform.OS !== 'web') {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+              }}>
                 <Text style={styles.iosPickerDoneButton}>Done</Text>
               </TouchableOpacity>
             </View>
             <DateTimePicker
-              value={pickerTempDate}
+              value={tempStartDate}
               mode="date"
               display="spinner"
-              onChange={handleDateChange}
+              onChange={(_event: DateTimePickerEvent, date?: Date) => {
+                if (date) {
+                  setTempStartDate(date);
+                }
+              }}
               style={styles.iosPicker}
             />
           </View>
         </View>
       )}
 
-      {Platform.OS === 'android' && showPickerType === 'date' && (
+      {Platform.OS === 'android' && showPickerType === 'start-date' && (
         <DateTimePicker
           value={start}
           mode="date"
           display="default"
-          onChange={handleDateChange}
+          onChange={handleStartDateChange}
         />
       )}
 
-      {Platform.OS === 'ios' && showPickerType === 'time' && (
+      {Platform.OS === 'ios' && showPickerType === 'start-time' && (
         <View style={styles.iosPickerOverlay}>
           <TouchableOpacity 
             style={styles.iosPickerBackdrop}
             activeOpacity={1}
-            onPress={applyIOSTimePicker}
+            onPress={() => {
+              const newStart = new Date(start);
+              newStart.setHours(tempStartDate.getHours(), tempStartDate.getMinutes(), 0, 0);
+              setStart(newStart);
+              
+              const newEnd = new Date(newStart);
+              newEnd.setHours(newStart.getHours() + 1, newStart.getMinutes(), 0, 0);
+              setEnd(newEnd);
+              
+              setShowPickerType(null);
+              if (Platform.OS !== 'web') {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+            }}
           />
           <View style={styles.iosPickerContainer}>
             <View style={styles.iosPickerHeader}>
-              <TouchableOpacity onPress={applyIOSTimePicker}>
+              <TouchableOpacity onPress={() => {
+                const newStart = new Date(start);
+                newStart.setHours(tempStartDate.getHours(), tempStartDate.getMinutes(), 0, 0);
+                setStart(newStart);
+                
+                const newEnd = new Date(newStart);
+                newEnd.setHours(newStart.getHours() + 1, newStart.getMinutes(), 0, 0);
+                setEnd(newEnd);
+                
+                setShowPickerType(null);
+                if (Platform.OS !== 'web') {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+              }}>
                 <Text style={styles.iosPickerDoneButton}>Done</Text>
               </TouchableOpacity>
             </View>
             <DateTimePicker
-              value={pickerTempDate}
+              value={tempStartDate}
               mode="time"
               display="spinner"
-              onChange={handleTimeChange}
+              onChange={(_event: DateTimePickerEvent, date?: Date) => {
+                if (date) {
+                  setTempStartDate(date);
+                }
+              }}
               is24Hour={true}
               style={styles.iosPicker}
             />
@@ -1311,12 +1451,12 @@ function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onS
         </View>
       )}
 
-      {Platform.OS === 'android' && showPickerType === 'time' && (
+      {Platform.OS === 'android' && showPickerType === 'start-time' && (
         <DateTimePicker
           value={start}
           mode="time"
           display="default"
-          onChange={handleTimeChange}
+          onChange={handleStartTimeChange}
           is24Hour={true}
         />
       )}
