@@ -303,7 +303,7 @@ export function Calendar({
                 >
                   {date.getDate()}
                 </Text>
-                {marker && (
+                {marker && marker.markers.length > 0 && (
                   <View style={styles.markerContainer}>
                     {marker.markers.slice(0, 3).map((m, i) => (
                       <View
@@ -371,7 +371,7 @@ export function Calendar({
                 >
                   {date.getDate()}
                 </Text>
-                {marker && (
+                {marker && marker.markers.length > 0 && (
                   <View style={styles.weekMarkerContainer}>
                     {marker.markers.slice(0, 4).map((m, i) => (
                       <View
