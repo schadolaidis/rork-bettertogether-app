@@ -304,32 +304,31 @@ export default function BalancesScreen() {
 
     currentMonthEntries.forEach((entry) => {
       const task = tasks.find((t) => t.id === entry.taskId);
-      if (task && task.category) {
+      if (task && task.category && categoriesMap[task.category]) {
         categoriesMap[task.category].total += entry.amount;
         categoriesMap[task.category].count += 1;
       }
     });
 
-    const breakdown: CategoryBreakdown[] = Object.entries(categoriesMap)
-      .filter(([_, data]) => data && data.total > 0)
-      .map(([category, data]) => {
-        const categoryMeta = currentList.categories[category as TaskCategory];
-        if (!categoryMeta || !data) {
-          return null;
-        }
-        return {
-          category: category as TaskCategory,
-          emoji: categoryMeta.emoji || '📋',
-          color: categoryMeta.color || '#6B7280',
-          total: data.total,
-          count: data.count,
-          percentage: totalExpenses > 0 && data.total ? (data.total / totalExpenses) * 100 : 0,
-        };
-      })
-      .filter((item): item is CategoryBreakdown => item !== null)
-      .sort((a, b) => b.total - a.total);
+    const breakdown: CategoryBreakdown[] = [];
+    
+    Object.entries(categoriesMap).forEach(([category, data]) => {
+      if (!data || data.total <= 0) return;
+      
+      const categoryMeta = currentList.categories[category as TaskCategory];
+      if (!categoryMeta) return;
+      
+      breakdown.push({
+        category: category as TaskCategory,
+        emoji: categoryMeta.emoji || '📋',
+        color: categoryMeta.color || '#6B7280',
+        total: data.total,
+        count: data.count,
+        percentage: totalExpenses > 0 && data.total ? (data.total / totalExpenses) * 100 : 0,
+      });
+    });
 
-    return breakdown;
+    return breakdown.sort((a, b) => b.total - a.total);
   }, [currentMonthEntries, tasks, currentList, totalExpenses]);
 
   const handleTabPress = (tab: TabType) => {
