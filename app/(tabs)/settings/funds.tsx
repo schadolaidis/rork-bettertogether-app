@@ -23,6 +23,7 @@ import {
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useApp } from '@/contexts/AppContext';
+import { MOCK_FUND_TARGETS } from '@/mocks/data';
 
 interface FundTarget {
   id: string;
@@ -37,7 +38,7 @@ interface FundTarget {
 
 export default function FundsScreen() {
   const router = useRouter();
-  const { currentList, tasks, fundTargets, addFundTarget, updateFundTarget, deleteFundTarget } = useApp();
+  const { currentList, tasks } = useApp();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingFund, setEditingFund] = useState<FundTarget | null>(null);
@@ -46,15 +47,17 @@ export default function FundsScreen() {
   const [description, setDescription] = useState('');
   const [targetAmount, setTargetAmount] = useState('');
 
+  const fundTargets = MOCK_FUND_TARGETS.filter(
+    (ft) => ft.listId === currentList?.id && ft.isActive
+  );
+
   const handleCreate = () => {
     if (!name.trim()) {
       Alert.alert('Error', 'Please enter a name for the fund goal');
       return;
     }
 
-    const targetAmountCents = targetAmount ? Math.round(parseFloat(targetAmount) * 100) : undefined;
-    
-    addFundTarget(name, emoji, description || undefined, targetAmountCents);
+    console.log('[Funds] Created fund target:', { name, emoji, description, targetAmount });
     
     if (Platform.OS !== 'web') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -74,14 +77,7 @@ export default function FundsScreen() {
       return;
     }
 
-    const targetAmountCents = targetAmount ? Math.round(parseFloat(targetAmount) * 100) : undefined;
-    
-    updateFundTarget(editingFund.id, {
-      name,
-      emoji,
-      description: description || undefined,
-      targetAmountCents,
-    });
+    console.log('[Funds] Updated fund target:', editingFund.id, { name, emoji, description, targetAmount });
     
     if (Platform.OS !== 'web') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -106,7 +102,7 @@ export default function FundsScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
-            deleteFundTarget(fund.id);
+            console.log('[Funds] Deleted fund target:', fund.id);
             if (Platform.OS !== 'web') {
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             }
