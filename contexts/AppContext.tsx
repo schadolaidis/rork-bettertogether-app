@@ -12,8 +12,6 @@ import { InviteService } from '@/services/InviteService';
 import { ListService, ListSettingsPayload } from '@/services/ListService';
 import { CategoryService } from '@/services/CategoryService';
 import { MemberService } from '@/services/MemberService';
-import { useNotifications } from './NotificationContext';
-import { NotificationService } from '@/services/NotificationService';
 
 export type CalendarViewType = 'day' | 'week' | 'month';
 
@@ -42,7 +40,6 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [language, setLanguage] = useState<Language>('en');
   const [t, setT] = useState<Translations>(getTranslations('en'));
-  const { addNotification, initializePreferences } = useNotifications();
 
   const tasksQuery = useQuery({
     queryKey: ['tasks'],
@@ -171,12 +168,6 @@ export const [AppProvider, useApp] = createContextHook(() => {
     }
   }, [languageQuery.data]);
 
-  useEffect(() => {
-    if (currentUserId) {
-      initializePreferences(currentUserId);
-    }
-  }, [currentUserId, initializePreferences]);
-
   const { mutate: mutateTasks } = useMutation({
     mutationFn: async (newTasks: Task[]) => {
       await AsyncStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(newTasks));
@@ -247,14 +238,6 @@ export const [AppProvider, useApp] = createContextHook(() => {
         setLedgerEntries((prev) => [...prev, ledgerEntry]);
         mutateLedger([...ledgerEntries, ledgerEntry]);
 
-        const assignedUserIds = Array.isArray(task.assignedTo) ? task.assignedTo : [task.assignedTo];
-        assignedUserIds.forEach((userId) => {
-          if (userId === currentUserId) {
-            const notification = NotificationService.createTaskFailedNotification(task, userId, t);
-            addNotification(notification);
-          }
-        });
-
         return {
           ...task,
           status: 'failed' as const,
@@ -319,25 +302,8 @@ export const [AppProvider, useApp] = createContextHook(() => {
       mutateLedger(updatedEntries);
     }
 
-    const currentUser = users.find((u) => u.id === currentUserId);
-    if (currentUser) {
-      const assignedUserIds = Array.isArray(task.assignedTo) ? task.assignedTo : [task.assignedTo];
-      assignedUserIds.forEach((userId) => {
-        if (userId !== currentUserId) {
-          const notification = NotificationService.createTaskCompletedNotification(
-            task,
-            userId,
-            currentUserId,
-            currentUser,
-            t
-          );
-          addNotification(notification);
-        }
-      });
-    }
-
     console.log(`[Task] Completed: ${task.title}`);
-  }, [tasks, ledgerEntries, users, currentUserId, t, mutateTasks, mutateLedger, addNotification]);
+  }, [tasks, ledgerEntries, mutateTasks, mutateLedger]);
 
   const failTask = useCallback((taskId: string) => {
     const task = tasks.find((t) => t.id === taskId);

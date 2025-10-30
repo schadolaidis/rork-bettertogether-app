@@ -55,7 +55,7 @@ function SettingItem({
       }}
       activeOpacity={0.7}
     >
-      <View style={styles.settingIconContainer}><>{icon}</></View>
+      <View style={styles.settingIconContainer}>{icon}</View>
       <View style={styles.settingContent}>
         <Text style={styles.settingTitle}>{title}</Text>
         {subtitle && <Text style={styles.settingSubtitle}>{subtitle}</Text>}
@@ -257,7 +257,9 @@ export default function SettingsScreen() {
               icon={<Bell size={20} color="#F59E0B" />}
               title={t.settings.notifications}
               subtitle={t.settings.manageNotifications}
-              onPress={() => router.push('./notifications' as any)}
+              onPress={() => {
+                Alert.alert(t.alerts.comingSoon, t.alerts.featureComingSoon);
+              }}
             />
           </View>
         </View>
