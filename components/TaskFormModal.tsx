@@ -11,11 +11,10 @@ import {
   Switch,
   KeyboardAvoidingView,
 } from 'react-native';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+
 import {
   X,
   Calendar,
-  Clock,
   Users,
   Flag,
   Bell,
@@ -28,6 +27,7 @@ import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TaskCategory, User, TaskPriority, ReminderType, RecurrenceType, Task } from '@/types';
 import { EUDateFormatter } from '@/utils/EULocale';
+import { NativeDatePicker } from '@/components/NativeDatePicker';
 
 export interface TaskFormData {
   title: string;
@@ -179,8 +179,7 @@ export function TaskFormModal({
   const [showFundTargetPicker, setShowFundTargetPicker] = useState(false);
   const [showStakePicker, setShowStakePicker] = useState(false);
   const [titleError, setTitleError] = useState('');
-  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
-  const [showStartTimePicker, setShowStartTimePicker] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const loadDraft = useCallback(async () => {
     if (mode === 'edit') return;
@@ -323,52 +322,21 @@ export function TaskFormModal({
     });
   }, []);
 
-  const handleStartDateChange = useCallback((_event: DateTimePickerEvent, selectedDate?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowStartDatePicker(false);
-    }
+  const handleDateSave = useCallback((newDate: Date, newAllDay: boolean) => {
+    console.log('[DatePicker] Saving date:', newDate.toISOString(), 'AllDay:', newAllDay);
     
-    if (selectedDate && !isNaN(selectedDate.getTime())) {
-      console.log('[DatePicker] Date selected:', selectedDate.toISOString());
-      const newStart = new Date(selectedDate);
-      newStart.setHours(startDate.getHours(), startDate.getMinutes(), 0, 0);
-      
-      const duration = endDate.getTime() - startDate.getTime();
-      const newEnd = new Date(newStart.getTime() + (duration > 0 ? duration : 3600000));
-      
-      setStartDate(newStart);
-      setEndDate(newEnd);
-      
-      console.log('[DatePicker] Applied - Start:', newStart.toISOString(), 'End:', newEnd.toISOString());
-      
-      if (Platform.OS !== 'web') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      }
+    const duration = endDate.getTime() - startDate.getTime();
+    const newEnd = new Date(newDate.getTime() + (duration > 0 ? duration : 3600000));
+    
+    setStartDate(newDate);
+    setEndDate(newEnd);
+    setAllDay(newAllDay);
+    setShowDatePicker(false);
+    
+    if (Platform.OS !== 'web') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
   }, [startDate, endDate]);
-
-  const handleStartTimeChange = useCallback((_event: DateTimePickerEvent, selectedDate?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowStartTimePicker(false);
-    }
-    
-    if (selectedDate && !isNaN(selectedDate.getTime())) {
-      console.log('[TimePicker] Time selected:', selectedDate.toISOString());
-      const newStart = new Date(startDate);
-      newStart.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
-      
-      const newEnd = new Date(newStart.getTime() + 3600000);
-      
-      setStartDate(newStart);
-      setEndDate(newEnd);
-      
-      console.log('[TimePicker] Applied - Start:', newStart.toISOString(), 'End:', newEnd.toISOString());
-      
-      if (Platform.OS !== 'web') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      }
-    }
-  }, [startDate]);
 
 
 
@@ -529,63 +497,30 @@ export function TaskFormModal({
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Details</Text>
             
-            <View style={styles.dateTimeSection}>
-              <View style={styles.allDayRow}>
-                <View style={styles.allDayContent}>
-                  <Text style={styles.allDayLabel}>All Day</Text>
-                  <Text style={styles.allDayHint}>No specific time</Text>
+            <TouchableOpacity
+              style={styles.dateTimeCard}
+              onPress={() => {
+                if (Platform.OS !== 'web') {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+                setShowDatePicker(true);
+              }}
+            >
+              <View style={styles.dateTimeCardLeft}>
+                <View style={styles.dateTimeIcon}>
+                  <Calendar size={20} color="#3B82F6" />
                 </View>
-                <Switch
-                  value={allDay}
-                  onValueChange={(value) => {
-                    setAllDay(value);
-                    if (value) {
-                      const newStart = new Date(startDate);
-                      newStart.setHours(0, 0, 0, 0);
-                      const newEnd = new Date(startDate);
-                      newEnd.setHours(23, 59, 59, 999);
-                      setStartDate(newStart);
-                      setEndDate(newEnd);
-                    }
-                    if (Platform.OS !== 'web') {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    }
-                  }}
-                  trackColor={{ false: '#D1D5DB', true: '#93C5FD' }}
-                  thumbColor={allDay ? '#3B82F6' : '#F3F4F6'}
-                />
+                <View style={styles.dateTimeContent}>
+                  <Text style={styles.dateTimeLabel}>Due Date & Time</Text>
+                  <Text style={styles.dateTimeValueText}>
+                    {formatDate(startDate)}
+                    {!allDay && ` · ${formatTime(startDate)}`}
+                  </Text>
+                  {allDay && <Text style={styles.allDayBadge}>All Day</Text>}
+                </View>
               </View>
-
-              <View style={styles.dateTimeRow}>
-                <TouchableOpacity
-                  style={styles.dateTimeButton}
-                  onPress={() => {
-                    if (Platform.OS !== 'web') {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    }
-                    setShowStartDatePicker(true);
-                  }}
-                >
-                  <Calendar size={18} color="#6B7280" />
-                  <Text style={styles.dateTimeValue}>{formatDate(startDate)}</Text>
-                </TouchableOpacity>
-
-                {!allDay && (
-                  <TouchableOpacity
-                    style={styles.dateTimeButton}
-                    onPress={() => {
-                      if (Platform.OS !== 'web') {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      }
-                      setShowStartTimePicker(true);
-                    }}
-                  >
-                    <Clock size={18} color="#6B7280" />
-                    <Text style={styles.dateTimeValue}>{formatTime(startDate)}</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
+              <ChevronRight size={20} color="#9CA3AF" />
+            </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.fieldRow}
@@ -859,186 +794,15 @@ export function TaskFormModal({
         </View>
       </Modal>
 
-      {Platform.OS === 'web' && showStartDatePicker && (
-        <Modal visible={true} transparent animationType="fade">
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Select Date</Text>
-                <TouchableOpacity
-                  style={styles.modalCloseButton}
-                  onPress={() => setShowStartDatePicker(false)}
-                >
-                  <X size={24} color="#6B7280" />
-                </TouchableOpacity>
-              </View>
-              <View style={{ padding: 20 }}>
-                <TextInput
-                  style={[styles.input, { fontSize: 16 }]}
-                  value={startDate.toISOString().split('T')[0]}
-                  onChangeText={(text) => {
-                    const date = new Date(text);
-                    if (!isNaN(date.getTime())) {
-                      const newStart = new Date(date);
-                      newStart.setHours(startDate.getHours(), startDate.getMinutes(), 0, 0);
-                      setStartDate(newStart);
-                      
-                      const duration = endDate.getTime() - startDate.getTime();
-                      if (duration > 0) {
-                        const newEnd = new Date(newStart.getTime() + duration);
-                        setEndDate(newEnd);
-                      } else {
-                        const newEnd = new Date(newStart.getTime() + 3600000);
-                        setEndDate(newEnd);
-                      }
-                    }
-                  }}
-                  placeholder="YYYY-MM-DD"
-                />
-                <TouchableOpacity
-                  style={styles.doneButton}
-                  onPress={() => setShowStartDatePicker(false)}
-                >
-                  <Text style={styles.doneButtonText}>Done</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-      )}
-
-      {Platform.OS === 'web' && showStartTimePicker && (
-        <Modal visible={true} transparent animationType="fade">
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Select Time</Text>
-                <TouchableOpacity
-                  style={styles.modalCloseButton}
-                  onPress={() => setShowStartTimePicker(false)}
-                >
-                  <X size={24} color="#6B7280" />
-                </TouchableOpacity>
-              </View>
-              <View style={{ padding: 20 }}>
-                <TextInput
-                  style={[styles.input, { fontSize: 16 }]}
-                  value={`${String(startDate.getHours()).padStart(2, '0')}:${String(startDate.getMinutes()).padStart(2, '0')}`}
-                  onChangeText={(text) => {
-                    const [hours, minutes] = text.split(':').map(Number);
-                    if (!isNaN(hours) && !isNaN(minutes)) {
-                      const newStart = new Date(startDate);
-                      newStart.setHours(hours, minutes, 0, 0);
-                      setStartDate(newStart);
-                      
-                      const newEnd = new Date(newStart);
-                      newEnd.setHours(newStart.getHours() + 1, newStart.getMinutes(), 0, 0);
-                      setEndDate(newEnd);
-                    }
-                  }}
-                  placeholder="HH:MM"
-                />
-                <TouchableOpacity
-                  style={styles.doneButton}
-                  onPress={() => setShowStartTimePicker(false)}
-                >
-                  <Text style={styles.doneButtonText}>Done</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-      )}
-
-      {Platform.OS === 'ios' && showStartDatePicker && (
-        <View style={styles.iosPickerOverlay}>
-          <TouchableOpacity 
-            style={styles.iosPickerBackdrop}
-            activeOpacity={1}
-            onPress={() => {
-              if (Platform.OS !== 'web') {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              }
-              setShowStartDatePicker(false);
-            }}
-          />
-          <View style={styles.iosPickerContainer}>
-            <View style={styles.iosPickerHeader}>
-              <TouchableOpacity onPress={() => {
-                if (Platform.OS !== 'web') {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }
-                setShowStartDatePicker(false);
-              }}>
-                <Text style={styles.iosPickerDoneButton}>Done</Text>
-              </TouchableOpacity>
-            </View>
-            <DateTimePicker
-              value={startDate}
-              mode="date"
-              display="spinner"
-              onChange={handleStartDateChange}
-              minimumDate={mode === 'create' ? new Date() : undefined}
-              style={styles.iosPicker}
-            />
-          </View>
-        </View>
-      )}
-
-      {Platform.OS === 'android' && showStartDatePicker && (
-        <DateTimePicker
-          value={startDate}
-          mode="date"
-          display="default"
-          onChange={handleStartDateChange}
-          minimumDate={mode === 'create' ? new Date() : undefined}
-        />
-      )}
-
-      {Platform.OS === 'ios' && showStartTimePicker && (
-        <View style={styles.iosPickerOverlay}>
-          <TouchableOpacity 
-            style={styles.iosPickerBackdrop}
-            activeOpacity={1}
-            onPress={() => {
-              if (Platform.OS !== 'web') {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              }
-              setShowStartTimePicker(false);
-            }}
-          />
-          <View style={styles.iosPickerContainer}>
-            <View style={styles.iosPickerHeader}>
-              <TouchableOpacity onPress={() => {
-                if (Platform.OS !== 'web') {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }
-                setShowStartTimePicker(false);
-              }}>
-                <Text style={styles.iosPickerDoneButton}>Done</Text>
-              </TouchableOpacity>
-            </View>
-            <DateTimePicker
-              value={startDate}
-              mode="time"
-              display="spinner"
-              onChange={handleStartTimeChange}
-              is24Hour={true}
-              style={styles.iosPicker}
-            />
-          </View>
-        </View>
-      )}
-
-      {Platform.OS === 'android' && showStartTimePicker && (
-        <DateTimePicker
-          value={startDate}
-          mode="time"
-          display="default"
-          onChange={handleStartTimeChange}
-          is24Hour={true}
-        />
-      )}
+      <NativeDatePicker
+        visible={showDatePicker}
+        date={startDate}
+        allDay={allDay}
+        minDate={mode === 'create' ? new Date() : undefined}
+        onClose={() => setShowDatePicker(false)}
+        onSave={handleDateSave}
+        title="Set Due Date & Time"
+      />
 
       <Modal visible={showPriorityPicker} transparent animationType="slide">
         <View style={styles.modalOverlay}>
@@ -1711,88 +1475,49 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
-  dateTimeSection: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
-    gap: 16,
-  },
-  allDayRow: {
+  dateTimeCard: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  dateTimeCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
+  },
+  dateTimeIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#EFF6FF',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  allDayContent: {
+  dateTimeContent: {
+    flex: 1,
     gap: 2,
   },
-  allDayLabel: {
+  dateTimeLabel: {
+    fontSize: 13,
+    fontWeight: '500' as const,
+    color: '#9CA3AF',
+  },
+  dateTimeValueText: {
     fontSize: 16,
     fontWeight: '500' as const,
     color: '#111827',
   },
-  allDayHint: {
-    fontSize: 13,
-    color: '#9CA3AF',
-  },
-  dateTimeRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  dateTimeButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 12,
-  },
-  dateTimeValue: {
-    fontSize: 15,
-    fontWeight: '500' as const,
-    color: '#111827',
-  },
-  iosPickerOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'flex-end',
-  },
-  iosPickerBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  iosPickerContainer: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  iosPickerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  iosPickerDoneButton: {
-    fontSize: 17,
+  allDayBadge: {
+    fontSize: 12,
     fontWeight: '600' as const,
     color: '#3B82F6',
-  },
-  iosPicker: {
-    height: 200,
+    marginTop: 2,
   },
   quickReminderChips: {
     flexDirection: 'row',
