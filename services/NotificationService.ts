@@ -262,13 +262,14 @@ export class NotificationService {
     }
 
     try {
-      await Notifications.cancelAllScheduledNotificationsAsync();
+      await this.cancelDailySummary();
 
       await Notifications.scheduleNotificationAsync({
         content: {
           title: '📊 Daily Task Summary',
           body: 'Check your tasks and balance for today',
           sound: false,
+          data: { type: 'daily_summary' },
         },
         trigger: {
           hour: 9,
@@ -281,6 +282,27 @@ export class NotificationService {
       console.log('[Notifications] Scheduled daily summary at 9:00 AM');
     } catch (error) {
       console.error('[Notifications] Error scheduling daily summary:', error);
+    }
+  }
+
+  static async cancelDailySummary(): Promise<void> {
+    if (!this.initialized || Platform.OS === 'web') {
+      return;
+    }
+
+    try {
+      const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+      const dailySummaryNotifications = scheduled.filter(
+        (notification) => notification.content.data?.type === 'daily_summary'
+      );
+
+      for (const notification of dailySummaryNotifications) {
+        await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+      }
+
+      console.log('[Notifications] Cancelled daily summary');
+    } catch (error) {
+      console.error('[Notifications] Error cancelling daily summary:', error);
     }
   }
 

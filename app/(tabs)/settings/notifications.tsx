@@ -9,7 +9,6 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import { Stack } from 'expo-router';
 import * as Notifications from 'expo-notifications';
 import { Bell, CheckCircle, AlertCircle, Target } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
@@ -24,7 +23,21 @@ export default function NotificationsScreen() {
 
   useEffect(() => {
     checkPermissionStatus();
+    initializeIfPermissionGranted();
   }, []);
+
+  const initializeIfPermissionGranted = async () => {
+    if (Platform.OS === 'web') return;
+    
+    try {
+      const { status } = await Notifications.getPermissionsAsync();
+      if (status === 'granted') {
+        await NotificationService.initialize();
+      }
+    } catch (error) {
+      console.error('[Notifications] Error initializing:', error);
+    }
+  };
 
   const checkPermissionStatus = async () => {
     if (Platform.OS === 'web') {
@@ -56,9 +69,7 @@ export default function NotificationsScreen() {
 
       if (status === 'granted') {
         await NotificationService.initialize();
-        if (Platform.OS === 'ios' || Platform.OS === 'android') {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        }
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         Alert.alert('Success', 'Notifications enabled successfully!');
       } else {
         Alert.alert(
@@ -76,8 +87,8 @@ export default function NotificationsScreen() {
     const newValue = !dailySummaryEnabled;
     setDailySummaryEnabled(newValue);
 
-    if (Platform.OS === 'ios' || Platform.OS === 'android') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== 'web') {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
 
     if (newValue) {
@@ -87,17 +98,17 @@ export default function NotificationsScreen() {
         'You will receive a daily summary at 9:00 AM'
       );
     } else {
-      await NotificationService.clearAllNotifications();
+      await NotificationService.cancelDailySummary();
       Alert.alert('Daily Summary Disabled', 'Daily summary notifications turned off');
     }
   };
 
-  const toggleSetting = (
+  const toggleSetting = async (
     currentValue: boolean,
     setter: (value: boolean) => void
   ) => {
-    if (Platform.OS === 'ios' || Platform.OS === 'android') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== 'web') {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     setter(!currentValue);
   };
@@ -193,14 +204,6 @@ export default function NotificationsScreen() {
   const isDisabled = permissionStatus !== 'granted' || Platform.OS === 'web';
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          title: 'Notifications',
-          presentation: 'card',
-        }}
-      />
       <View style={styles.container}>
       <ScrollView
         style={styles.scrollView}
@@ -270,7 +273,6 @@ export default function NotificationsScreen() {
         )}
       </ScrollView>
       </View>
-    </>
   );
 }
 
