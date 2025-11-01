@@ -60,7 +60,6 @@ export default function TaskDetailScreen() {
   const [showFundTargetPicker, setShowFundTargetPicker] = useState(false);
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
-  const [tempStartDate, setTempStartDate] = useState(new Date());
   const [showReminderPicker, setShowReminderPicker] = useState(false);
   const [showRecurrencePicker, setShowRecurrencePicker] = useState(false);
   
@@ -114,7 +113,6 @@ export default function TaskDetailScreen() {
       startAt: newStart.toISOString(),
       endAt: newEnd.toISOString()
     });
-    setTempStartDate(newStart);
     
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -126,17 +124,11 @@ export default function TaskDetailScreen() {
       setShowStartTimePicker(false);
     }
     
-    if (selectedDate && !isNaN(selectedDate.getTime())) {
-      console.log('[TaskDetail] Time selected:', selectedDate.toISOString());
-      setTempStartDate(selectedDate);
-    }
-  }, []);
-
-  const confirmTimePicker = useCallback(() => {
-    if (!task) return;
-    console.log('[TaskDetail] Confirming time:', tempStartDate.toISOString());
+    if (!task || !selectedDate || isNaN(selectedDate.getTime())) return;
+    
+    console.log('[TaskDetail] Time selected:', selectedDate.toISOString());
     const newStart = new Date(task.startAt);
-    newStart.setHours(tempStartDate.getHours(), tempStartDate.getMinutes(), 0, 0);
+    newStart.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
     
     const newEnd = new Date(newStart.getTime() + 3600000);
     
@@ -144,14 +136,15 @@ export default function TaskDetailScreen() {
       startAt: newStart.toISOString(),
       endAt: newEnd.toISOString()
     });
-    setShowStartTimePicker(false);
     
     console.log('[TaskDetail] Applied - Start:', newStart.toISOString(), 'End:', newEnd.toISOString());
     
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-  }, [task, tempStartDate, updateTask]);
+  }, [task, updateTask]);
+
+
 
   const formatDate = (date: Date) => {
     if (!date || isNaN(date.getTime())) return 'Invalid Date';
@@ -359,8 +352,6 @@ export default function TaskDetailScreen() {
                     if (Platform.OS !== 'web') {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     }
-                    const validStart = new Date(task.startAt);
-                    setTempStartDate(isNaN(validStart.getTime()) ? new Date() : validStart);
                     setShowStartDatePicker(true);
                   }}
                 >
@@ -375,8 +366,6 @@ export default function TaskDetailScreen() {
                       if (Platform.OS !== 'web') {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       }
-                      const validStart = new Date(task.startAt);
-                      setTempStartDate(isNaN(validStart.getTime()) ? new Date() : validStart);
                       setShowStartTimePicker(true);
                     }}
                   >
@@ -657,7 +646,7 @@ export default function TaskDetailScreen() {
               </TouchableOpacity>
             </View>
             <DateTimePicker
-              value={tempStartDate}
+              value={new Date(task.startAt)}
               mode="date"
               display="spinner"
               onChange={handleStartDateChange}
@@ -669,7 +658,7 @@ export default function TaskDetailScreen() {
 
       {Platform.OS === 'android' && showStartDatePicker && (
         <DateTimePicker
-          value={tempStartDate}
+          value={new Date(task.startAt)}
           mode="date"
           display="default"
           onChange={handleStartDateChange}
@@ -690,12 +679,17 @@ export default function TaskDetailScreen() {
           />
           <View style={styles.iosPickerContainer}>
             <View style={styles.iosPickerHeader}>
-              <TouchableOpacity onPress={confirmTimePicker}>
+              <TouchableOpacity onPress={() => {
+                if (Platform.OS !== 'web') {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+                setShowStartTimePicker(false);
+              }}>
                 <Text style={styles.iosPickerDoneButton}>Done</Text>
               </TouchableOpacity>
             </View>
             <DateTimePicker
-              value={tempStartDate}
+              value={new Date(task.startAt)}
               mode="time"
               display="spinner"
               onChange={handleStartTimeChange}
@@ -708,7 +702,7 @@ export default function TaskDetailScreen() {
 
       {Platform.OS === 'android' && showStartTimePicker && (
         <DateTimePicker
-          value={tempStartDate}
+          value={new Date(task.startAt)}
           mode="time"
           display="default"
           onChange={handleStartTimeChange}
@@ -725,12 +719,13 @@ export default function TaskDetailScreen() {
             <View style={{ padding: 20 }}>
               <TextInput
                 style={[styles.modalInput, { fontSize: 16 }]}
-                value={tempStartDate.toISOString().split('T')[0]}
+                value={new Date(task.startAt).toISOString().split('T')[0]}
                 onChangeText={(text) => {
                   const date = new Date(text);
                   if (!isNaN(date.getTime())) {
+                    const currentStart = new Date(task.startAt);
                     const newStart = new Date(date);
-                    newStart.setHours(tempStartDate.getHours(), tempStartDate.getMinutes(), 0, 0);
+                    newStart.setHours(currentStart.getHours(), currentStart.getMinutes(), 0, 0);
                     handleStartDateChange({} as DateTimePickerEvent, newStart);
                   }
                 }}
@@ -756,11 +751,11 @@ export default function TaskDetailScreen() {
             <View style={{ padding: 20 }}>
               <TextInput
                 style={[styles.modalInput, { fontSize: 16 }]}
-                value={`${String(tempStartDate.getHours()).padStart(2, '0')}:${String(tempStartDate.getMinutes()).padStart(2, '0')}`}
+                value={`${String(new Date(task.startAt).getHours()).padStart(2, '0')}:${String(new Date(task.startAt).getMinutes()).padStart(2, '0')}`}
                 onChangeText={(text) => {
                   const [hours, minutes] = text.split(':').map(Number);
                   if (!isNaN(hours) && !isNaN(minutes)) {
-                    const newStart = new Date(tempStartDate);
+                    const newStart = new Date(task.startAt);
                     newStart.setHours(hours, minutes, 0, 0);
                     handleStartTimeChange({} as DateTimePickerEvent, newStart);
                   }

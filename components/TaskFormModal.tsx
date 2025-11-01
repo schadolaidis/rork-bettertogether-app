@@ -142,7 +142,6 @@ export function TaskFormModal({
       
       if (!isNaN(validStartDate.getTime())) {
         setStartDate(validStartDate);
-        setTempStartDate(validStartDate);
       } else {
         console.warn('[TaskForm] Invalid startAt date:', existingTask.startAt);
       }
@@ -182,7 +181,6 @@ export function TaskFormModal({
   const [titleError, setTitleError] = useState('');
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
-  const [tempStartDate, setTempStartDate] = useState(new Date());
 
   const loadDraft = useCallback(async () => {
     if (mode === 'edit') return;
@@ -325,7 +323,7 @@ export function TaskFormModal({
     });
   }, []);
 
-  const handleStartDateChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
+  const handleStartDateChange = useCallback((_event: DateTimePickerEvent, selectedDate?: Date) => {
     if (Platform.OS === 'android') {
       setShowStartDatePicker(false);
     }
@@ -340,7 +338,6 @@ export function TaskFormModal({
       
       setStartDate(newStart);
       setEndDate(newEnd);
-      setTempStartDate(newStart);
       
       console.log('[DatePicker] Applied - Start:', newStart.toISOString(), 'End:', newEnd.toISOString());
       
@@ -348,36 +345,32 @@ export function TaskFormModal({
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
     }
-  };
+  }, [startDate, endDate]);
 
-  const handleStartTimeChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
+  const handleStartTimeChange = useCallback((_event: DateTimePickerEvent, selectedDate?: Date) => {
     if (Platform.OS === 'android') {
       setShowStartTimePicker(false);
     }
     
     if (selectedDate && !isNaN(selectedDate.getTime())) {
       console.log('[TimePicker] Time selected:', selectedDate.toISOString());
-      setTempStartDate(selectedDate);
+      const newStart = new Date(startDate);
+      newStart.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
+      
+      const newEnd = new Date(newStart.getTime() + 3600000);
+      
+      setStartDate(newStart);
+      setEndDate(newEnd);
+      
+      console.log('[TimePicker] Applied - Start:', newStart.toISOString(), 'End:', newEnd.toISOString());
+      
+      if (Platform.OS !== 'web') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
     }
-  };
+  }, [startDate]);
 
-  const confirmTimePicker = useCallback(() => {
-    console.log('[TimePicker] Confirming time:', tempStartDate.toISOString());
-    const newStart = new Date(startDate);
-    newStart.setHours(tempStartDate.getHours(), tempStartDate.getMinutes(), 0, 0);
-    
-    const newEnd = new Date(newStart.getTime() + 3600000);
-    
-    setStartDate(newStart);
-    setEndDate(newEnd);
-    setShowStartTimePicker(false);
-    
-    console.log('[TimePicker] Applied - Start:', newStart.toISOString(), 'End:', newEnd.toISOString());
-    
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-  }, [startDate, tempStartDate]);
+
 
   const formatDate = (date: Date) => {
     if (!date || isNaN(date.getTime())) {
@@ -570,7 +563,6 @@ export function TaskFormModal({
                     if (Platform.OS !== 'web') {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     }
-                    setTempStartDate(startDate);
                     setShowStartDatePicker(true);
                   }}
                 >
@@ -585,7 +577,6 @@ export function TaskFormModal({
                       if (Platform.OS !== 'web') {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       }
-                      setTempStartDate(startDate);
                       setShowStartTimePicker(true);
                     }}
                   >
@@ -983,7 +974,7 @@ export function TaskFormModal({
               </TouchableOpacity>
             </View>
             <DateTimePicker
-              value={tempStartDate}
+              value={startDate}
               mode="date"
               display="spinner"
               onChange={handleStartDateChange}
@@ -1018,12 +1009,17 @@ export function TaskFormModal({
           />
           <View style={styles.iosPickerContainer}>
             <View style={styles.iosPickerHeader}>
-              <TouchableOpacity onPress={confirmTimePicker}>
+              <TouchableOpacity onPress={() => {
+                if (Platform.OS !== 'web') {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+                setShowStartTimePicker(false);
+              }}>
                 <Text style={styles.iosPickerDoneButton}>Done</Text>
               </TouchableOpacity>
             </View>
             <DateTimePicker
-              value={tempStartDate}
+              value={startDate}
               mode="time"
               display="spinner"
               onChange={handleStartTimeChange}
