@@ -1,61 +1,57 @@
-import { withLayoutContext } from "expo-router";
+import { Tabs } from "expo-router";
+import { LayoutDashboard, Calendar, CheckSquare, Target, Settings } from "lucide-react-native";
 import React from "react";
 import { useApp } from "@/contexts/AppContext";
-import { createNativeBottomTabNavigator } from "@bottom-tabs/react-navigation";
-import { Platform } from "react-native";
-
-const { Navigator } = createNativeBottomTabNavigator();
-
-const Tabs = withLayoutContext(Navigator);
 
 export default function TabLayout() {
   const { t } = useApp();
   
   return (
-    <Tabs>
+    <Tabs
+      screenOptions={{
+        tabBarActiveTintColor: "#3B82F6",
+        tabBarInactiveTintColor: "#9CA3AF",
+        headerShown: false,
+        tabBarStyle: {
+          backgroundColor: "#FFFFFF",
+          borderTopColor: "#E5E7EB",
+          borderTopWidth: 1,
+        },
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
           title: t.tabs.dashboard,
-          tabBarIcon: Platform.OS === "ios" 
-            ? { sfSymbol: "house.fill" }
-            : { uri: "https://img.icons8.com/fluency-systems-filled/48/3B82F6/home.png" },
+          tabBarIcon: ({ color, size }) => <LayoutDashboard color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="calendar"
         options={{
           title: t.tabs.calendar,
-          tabBarIcon: Platform.OS === "ios" 
-            ? { sfSymbol: "calendar" }
-            : { uri: "https://img.icons8.com/fluency-systems-filled/48/3B82F6/calendar.png" },
+          tabBarIcon: ({ color, size }) => <Calendar color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="tasks"
         options={{
           title: t.tabs.tasks,
-          tabBarIcon: Platform.OS === "ios" 
-            ? { sfSymbol: "checkmark.square.fill" }
-            : { uri: "https://img.icons8.com/fluency-systems-filled/48/3B82F6/checked-checkbox.png" },
+          tabBarIcon: ({ color, size }) => <CheckSquare color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="balances"
         options={{
           title: t.tabs.fundGoals,
-          tabBarIcon: Platform.OS === "ios" 
-            ? { sfSymbol: "target" }
-            : { uri: "https://img.icons8.com/fluency-systems-filled/48/3B82F6/target.png" },
+          tabBarIcon: ({ color, size }) => <Target color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: t.tabs.settings,
-          tabBarIcon: Platform.OS === "ios" 
-            ? { sfSymbol: "gearshape.fill" }
-            : { uri: "https://img.icons8.com/fluency-systems-filled/48/3B82F6/settings.png" },
+          tabBarIcon: ({ color, size }) => <Settings color={color} size={size} />,
         }}
       />
     </Tabs>
