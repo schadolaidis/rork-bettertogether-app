@@ -1,5 +1,14 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Platform, ScrollView, TextInput, Switch } from 'react-native';
+import { 
+  StyleSheet, 
+  Text, 
+  View, 
+  TouchableOpacity, 
+  Platform, 
+  ScrollView, 
+  TextInput, 
+  Switch,
+} from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,211 +23,16 @@ import {
   RefreshCw, 
   Trash2, 
   CheckCircle2,
-  ChevronRight,
-  Tag,
   DollarSign,
   Check,
+  Sparkles,
+  ArrowRight,
 } from 'lucide-react-native';
 import { useApp } from '@/contexts/AppContext';
 import { FundTargetOption } from '@/components/TaskFormModal';
 import { MOCK_FUND_TARGETS } from '@/mocks/data';
 import { TaskCategory, TaskPriority, ReminderType, RecurrenceType } from '@/types';
 import { EUDateFormatter } from '@/utils/EULocale';
-
-interface EditableFieldProps {
-  label: string;
-  value: string;
-  icon: React.ReactNode;
-  onPress: () => void;
-  multiline?: boolean;
-}
-
-function EditableField({ label, value, icon, onPress, multiline }: EditableFieldProps) {
-  return (
-    <TouchableOpacity
-      style={styles.editableField}
-      onPress={() => {
-        if (Platform.OS !== 'web') {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        }
-        onPress();
-      }}
-    >
-      <View style={styles.fieldIcon}>
-        <Text>{icon}</Text>
-      </View>
-      <View style={styles.fieldContent}>
-        <Text style={styles.fieldLabel}>{label}</Text>
-        <Text style={[styles.fieldValue, multiline && styles.fieldValueMultiline]} numberOfLines={multiline ? 3 : 1}>
-          {value}
-        </Text>
-      </View>
-      <ChevronRight size={20} color="#9CA3AF" />
-    </TouchableOpacity>
-  );
-}
-
-interface InlineTextEditorProps {
-  visible: boolean;
-  title: string;
-  value: string;
-  onClose: () => void;
-  onSave: (value: string) => void;
-  multiline?: boolean;
-  placeholder?: string;
-}
-
-function InlineTextEditor({ visible, title, value, onClose, onSave, multiline, placeholder }: InlineTextEditorProps) {
-  const [text, setText] = useState(value);
-
-  if (!visible) return null;
-
-  return (
-    <View style={styles.modalOverlay}>
-      <View style={styles.inlineEditorContainer}>
-        <View style={styles.inlineEditorHeader}>
-          <Text style={styles.inlineEditorTitle}>{title}</Text>
-          <TouchableOpacity onPress={onClose}>
-            <X size={24} color="#6B7280" />
-          </TouchableOpacity>
-        </View>
-        <TextInput
-          style={[styles.inlineEditorInput, multiline && styles.inlineEditorInputMultiline]}
-          value={text}
-          onChangeText={setText}
-          placeholder={placeholder}
-          placeholderTextColor="#9CA3AF"
-          multiline={multiline}
-          autoFocus
-        />
-        <TouchableOpacity
-          style={styles.inlineEditorButton}
-          onPress={() => {
-            if (Platform.OS !== 'web') {
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            }
-            onSave(text);
-            onClose();
-          }}
-        >
-          <Text style={styles.inlineEditorButtonText}>Save</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-}
-
-interface PickerModalProps {
-  visible: boolean;
-  title: string;
-  options: { label: string; value: string; color?: string }[];
-  selected: string;
-  onClose: () => void;
-  onSelect: (value: string) => void;
-}
-
-function PickerModal({ visible, title, options, selected, onClose, onSelect }: PickerModalProps) {
-  if (!visible) return null;
-
-  return (
-    <View style={styles.modalOverlay}>
-      <View style={styles.pickerContainer}>
-        <View style={styles.pickerHeader}>
-          <Text style={styles.pickerTitle}>{title}</Text>
-          <TouchableOpacity onPress={onClose}>
-            <X size={24} color="#6B7280" />
-          </TouchableOpacity>
-        </View>
-        <ScrollView style={styles.pickerScroll}>
-          {options.map((option) => (
-            <TouchableOpacity
-              key={option.value}
-              style={[
-                styles.pickerOption,
-                selected === option.value && styles.pickerOptionSelected,
-              ]}
-              onPress={() => {
-                if (Platform.OS !== 'web') {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }
-                onSelect(option.value);
-                onClose();
-              }}
-            >
-              <Text
-                style={[
-                  styles.pickerOptionText,
-                  option.color && { color: option.color },
-                ]}
-              >
-                {option.label}
-              </Text>
-              {selected === option.value && (
-                <CheckCircle2 size={20} color="#3B82F6" />
-              )}
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-    </View>
-  );
-}
-
-interface CategoryPickerModalProps {
-  visible: boolean;
-  categories: Record<TaskCategory, { emoji: string; color: string; label: string }>;
-  selected: TaskCategory;
-  onClose: () => void;
-  onSelect: (value: TaskCategory) => void;
-}
-
-function CategoryPickerModal({ visible, categories, selected, onClose, onSelect }: CategoryPickerModalProps) {
-  if (!visible) return null;
-
-  return (
-    <View style={styles.modalOverlay}>
-      <View style={styles.pickerContainer}>
-        <View style={styles.pickerHeader}>
-          <Text style={styles.pickerTitle}>Select Category</Text>
-          <TouchableOpacity onPress={onClose}>
-            <X size={24} color="#6B7280" />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.categoryPickerList}>
-          {(Object.keys(categories) as TaskCategory[]).map((cat) => {
-            const meta = categories[cat];
-            const isSelected = selected === cat;
-            return (
-              <TouchableOpacity
-                key={cat}
-                style={[
-                  styles.categoryPickerOption,
-                  isSelected && styles.categoryPickerOptionSelected,
-                ]}
-                onPress={() => {
-                  if (Platform.OS !== 'web') {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }
-                  onSelect(cat);
-                }}
-              >
-                <View style={styles.categoryPickerLeft}>
-                  <Text style={styles.categoryPickerEmoji}>{meta.emoji}</Text>
-                  <Text style={styles.categoryPickerText}>{meta.label}</Text>
-                </View>
-                {isSelected && (
-                  <View style={styles.categoryPickerCheck}>
-                    <Check size={20} color="#3B82F6" strokeWidth={3} />
-                  </View>
-                )}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-    </View>
-  );
-}
 
 export default function TaskDetailScreen() {
   const router = useRouter();
@@ -241,58 +55,35 @@ export default function TaskDetailScreen() {
       }));
   }, [currentList]);
 
-  const [showTitleEditor, setShowTitleEditor] = useState(false);
-  const [showDescriptionEditor, setShowDescriptionEditor] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showPriorityPicker, setShowPriorityPicker] = useState(false);
-  const [showReminderPicker, setShowReminderPicker] = useState(false);
-  const [showRecurrencePicker, setShowRecurrencePicker] = useState(false);
   const [showAssignedToPicker, setShowAssignedToPicker] = useState(false);
-  const [showStakeEditor, setShowStakeEditor] = useState(false);
+  const [showStakeInput, setShowStakeInput] = useState(false);
   const [showFundTargetPicker, setShowFundTargetPicker] = useState(false);
   const [showDateTimePicker, setShowDateTimePicker] = useState(false);
-  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
-  const [showStartTimePicker, setShowStartTimePicker] = useState(false);
+  const [showReminderPicker, setShowReminderPicker] = useState(false);
+  const [showRecurrencePicker, setShowRecurrencePicker] = useState(false);
+  
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(task?.title || '');
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [editedDescription, setEditedDescription] = useState(task?.description || '');
+
   const [editingDateTime, setEditingDateTime] = useState<{ startDate: Date; endDate: Date; allDay: boolean }>(() => {
-    const now = new Date();
-    const later = new Date(now.getTime() + 3600000);
-    
     if (!task) {
-      return {
-        startDate: now,
-        endDate: later,
-        allDay: false,
-      };
+      const now = new Date();
+      const later = new Date(now.getTime() + 3600000);
+      return { startDate: now, endDate: later, allDay: false };
     }
     
     const startDate = new Date(task.startAt);
     const endDate = new Date(task.endAt);
     
-    const validStart = !isNaN(startDate.getTime()) ? startDate : now;
-    const validEnd = !isNaN(endDate.getTime()) ? endDate : later;
+    const validStart = !isNaN(startDate.getTime()) ? startDate : new Date();
+    const validEnd = !isNaN(endDate.getTime()) ? endDate : new Date();
     
-    return {
-      startDate: validStart,
-      endDate: validEnd,
-      allDay: task.allDay || false,
-    };
+    return { startDate: validStart, endDate: validEnd, allDay: task.allDay || false };
   });
-
-  const formatDate = useCallback((date: Date) => {
-    if (!date || isNaN(date.getTime())) {
-      console.warn('[TaskDetail] Invalid date in formatDate:', date);
-      return 'Invalid Date';
-    }
-    return EUDateFormatter.formatDate(date, 'long');
-  }, []);
-
-  const formatTime = useCallback((date: Date) => {
-    if (!date || isNaN(date.getTime())) {
-      console.warn('[TaskDetail] Invalid date in formatTime:', date);
-      return 'Invalid Time';
-    }
-    return EUDateFormatter.formatTime(date);
-  }, []);
 
   const handleUpdateField = useCallback((field: string, value: any) => {
     if (!task) return;
@@ -303,6 +94,18 @@ export default function TaskDetailScreen() {
     }
   }, [task, updateTask]);
 
+  const handleSaveTitle = useCallback(() => {
+    if (editedTitle.trim()) {
+      handleUpdateField('title', editedTitle.trim());
+      setIsEditingTitle(false);
+    }
+  }, [editedTitle, handleUpdateField]);
+
+  const handleSaveDescription = useCallback(() => {
+    handleUpdateField('description', editedDescription.trim());
+    setIsEditingDescription(false);
+  }, [editedDescription, handleUpdateField]);
+
   const handleCompleteTask = useCallback(() => {
     if (!task) return;
     if (Platform.OS !== 'web') {
@@ -311,20 +114,6 @@ export default function TaskDetailScreen() {
     completeTask(task.id);
     router.back();
   }, [task, completeTask, router]);
-
-  const statusColor = useMemo(() => {
-    if (!task) return '#6B7280';
-    switch (task.status) {
-      case 'completed':
-        return '#10B981';
-      case 'overdue':
-        return '#F59E0B';
-      case 'failed':
-        return '#EF4444';
-      default:
-        return '#6B7280';
-    }
-  }, [task]);
 
   if (!task || !currentList) {
     return (
@@ -353,6 +142,7 @@ export default function TaskDetailScreen() {
     color: '#6B7280',
     label: task.category
   };
+
   const assignedMembers = Array.isArray(task.assignedTo)
     ? currentListMembers.filter((m) => task.assignedTo.includes(m.id))
     : currentListMembers.filter((m) => m.id === task.assignedTo);
@@ -378,14 +168,16 @@ export default function TaskDetailScreen() {
   };
 
   const startDate = new Date(task.startAt);
-  const endDate = new Date(task.endAt);
-  
-  if (isNaN(startDate.getTime())) {
-    console.error('[TaskDetail] Invalid startAt:', task.startAt);
-  }
-  if (isNaN(endDate.getTime())) {
-    console.error('[TaskDetail] Invalid endAt:', task.endAt);
-  }
+
+  const formatDate = (date: Date) => {
+    if (!date || isNaN(date.getTime())) return 'Invalid Date';
+    return EUDateFormatter.formatDate(date, 'long');
+  };
+
+  const formatTime = (date: Date) => {
+    if (!date || isNaN(date.getTime())) return 'Invalid Time';
+    return EUDateFormatter.formatTime(date);
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -401,9 +193,8 @@ export default function TaskDetailScreen() {
             router.back();
           }}
         >
-          <X size={24} color="#111827" />
+          <X size={22} color="#6B7280" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Task Details</Text>
         <TouchableOpacity
           style={styles.headerButton}
           onPress={() => {}}
@@ -412,151 +203,14 @@ export default function TaskDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        style={styles.scrollView} 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {fundTargets && fundTargets.length > 0 && task.fundTargetId && (
-          <View style={styles.fundTargetHero}>
-            <TouchableOpacity
-              style={styles.fundTargetHeroCard}
-              onPress={() => {
-                if (Platform.OS !== 'web') {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }
-                router.push(`/(tabs)/settings/funds`);
-              }}
-            >
-              <View style={styles.fundTargetHeroIcon}>
-                <Text style={styles.fundTargetHeroEmoji}>
-                  {fundTargets.find((f) => f.id === task.fundTargetId)?.emoji || '🎯'}
-                </Text>
-              </View>
-              <View style={styles.fundTargetHeroContent}>
-                <Text style={styles.fundTargetHeroLabel}>Focus Goal</Text>
-                <Text style={styles.fundTargetHeroName}>
-                  {fundTargets.find((f) => f.id === task.fundTargetId)?.name || 'Unknown'}
-                </Text>
-                <Text style={styles.fundTargetHeroStake}>
-                  💶 {currentList.currencySymbol}{task.stake} stakes on this
-                </Text>
-              </View>
-              <ChevronRight size={20} color="#8B5CF6" />
-            </TouchableOpacity>
-          </View>
-        )}
-
-        <View style={styles.statusSection}>
-          <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
-            <Text style={styles.statusText}>
-              {task.status.charAt(0).toUpperCase() + task.status.slice(1)}
-            </Text>
-          </View>
-          {task.status !== 'completed' && task.status !== 'failed' && (
-            <TouchableOpacity
-              style={styles.completeButton}
-              onPress={handleCompleteTask}
-            >
-              <CheckCircle2 size={20} color="#10B981" />
-              <Text style={styles.completeButtonText}>Mark Complete</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        <View style={styles.section}>
           <TouchableOpacity
-            style={styles.titleContainer}
-            onPress={() => {
-              if (Platform.OS !== 'web') {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              }
-              setShowTitleEditor(true);
-            }}
-          >
-            <Text style={styles.taskTitle}>{task.title}</Text>
-          </TouchableOpacity>
-          {task.description && (
-            <TouchableOpacity
-              style={styles.descriptionContainer}
-              onPress={() => {
-                if (Platform.OS !== 'web') {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }
-                setShowDescriptionEditor(true);
-              }}
-            >
-              <Text style={styles.taskDescription}>{task.description}</Text>
-            </TouchableOpacity>
-          )}
-          {!task.description && (
-            <TouchableOpacity
-              style={styles.addDescriptionButton}
-              onPress={() => {
-                if (Platform.OS !== 'web') {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }
-                setShowDescriptionEditor(true);
-              }}
-            >
-              <Text style={styles.addDescriptionText}>+ Add description</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Details</Text>
-          
-          <EditableField
-            label="Category"
-            value={`${categoryMeta.emoji} ${categoryMeta.label}`}
-            icon={<Tag size={20} color={categoryMeta.color} />}
-            onPress={() => setShowCategoryPicker(true)}
-          />
-
-          <TouchableOpacity
-            style={styles.dateTimeField}
-            onPress={() => {
-              if (Platform.OS !== 'web') {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              }
-              setEditingDateTime({
-                startDate: new Date(task.startAt),
-                endDate: new Date(task.endAt),
-                allDay: task.allDay || false,
-              });
-              setShowDateTimePicker(true);
-            }}
-          >
-            <View style={styles.fieldRowLeft}>
-              <View style={styles.fieldIcon}>
-                <Calendar size={20} color="#6B7280" />
-              </View>
-              <View style={styles.fieldContent}>
-                <Text style={styles.fieldLabel}>Date & Time</Text>
-                <Text style={styles.dateTimePreview}>
-                  {task.allDay ? 'All Day' : formatTime(startDate)}
-                </Text>
-                <Text style={styles.dateValue}>
-                  {formatDate(startDate)}
-                </Text>
-              </View>
-            </View>
-            <ChevronRight size={20} color="#9CA3AF" />
-          </TouchableOpacity>
-
-          <EditableField
-            label="Assigned To"
-            value={assignedMembers.map((m) => m.name).join(', ') || 'Unassigned'}
-            icon={<Users size={20} color="#6B7280" />}
-            onPress={() => setShowAssignedToPicker(true)}
-          />
-
-          <EditableField
-            label="Stake"
-            value={`${currentList.currencySymbol}${task.stake}`}
-            icon={<DollarSign size={20} color="#6B7280" />}
-            onPress={() => setShowStakeEditor(true)}
-          />
-
-          <TouchableOpacity
-            style={styles.editableField}
+            style={styles.focusGoalCard}
             onPress={() => {
               if (Platform.OS !== 'web') {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -564,84 +218,167 @@ export default function TaskDetailScreen() {
               setShowFundTargetPicker(true);
             }}
           >
-            <View style={styles.fieldIcon}>
-              <Text style={{ fontSize: 20 }}>
-                {task.fundTargetId
-                  ? fundTargets.find((f) => f.id === task.fundTargetId)?.emoji || '🎯'
-                  : '🎯'}
-              </Text>
+            <View style={styles.focusGoalHeader}>
+              <Sparkles size={14} color="#8B5CF6" />
+              <Text style={styles.focusGoalLabel}>FOCUS GOAL</Text>
             </View>
-            <View style={styles.fieldContent}>
-              <Text style={styles.fieldLabel}>Fund Goal</Text>
-              <Text style={styles.fieldValue}>
-                {task.fundTargetId
-                  ? fundTargets.find((f) => f.id === task.fundTargetId)?.name || 'None'
-                  : 'Not assigned'}
+            <View style={styles.focusGoalContent}>
+              <Text style={styles.focusGoalEmoji}>
+                {fundTargets.find((f) => f.id === task.fundTargetId)?.emoji || '🎯'}
               </Text>
+              <View style={styles.focusGoalTextContainer}>
+                <Text style={styles.focusGoalName}>
+                  {fundTargets.find((f) => f.id === task.fundTargetId)?.name || 'Unknown'}
+                </Text>
+                <Text style={styles.focusGoalStake}>
+                  {currentList.currencySymbol}{task.stake} at stake
+                </Text>
+              </View>
             </View>
-            <ChevronRight size={20} color="#9CA3AF" />
           </TouchableOpacity>
+        )}
+
+        <View style={styles.mainSection}>
+          {isEditingTitle ? (
+            <TextInput
+              style={styles.titleInput}
+              value={editedTitle}
+              onChangeText={setEditedTitle}
+              onBlur={handleSaveTitle}
+              autoFocus
+              multiline
+              placeholder="Task title..."
+              placeholderTextColor="#9CA3AF"
+            />
+          ) : (
+            <TouchableOpacity
+              onPress={() => {
+                setEditedTitle(task.title);
+                setIsEditingTitle(true);
+              }}
+            >
+              <Text style={styles.title}>{task.title}</Text>
+            </TouchableOpacity>
+          )}
+
+          {isEditingDescription ? (
+            <TextInput
+              style={styles.descriptionInput}
+              value={editedDescription}
+              onChangeText={setEditedDescription}
+              onBlur={handleSaveDescription}
+              autoFocus
+              multiline
+              placeholder="Add description..."
+              placeholderTextColor="#9CA3AF"
+            />
+          ) : (
+            <TouchableOpacity
+              onPress={() => {
+                setEditedDescription(task.description || '');
+                setIsEditingDescription(true);
+              }}
+            >
+              {task.description ? (
+                <Text style={styles.description}>{task.description}</Text>
+              ) : (
+                <Text style={styles.descriptionPlaceholder}>Add description...</Text>
+              )}
+            </TouchableOpacity>
+          )}
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Settings</Text>
-          
-          <EditableField
+        <View style={styles.propertiesGrid}>
+          <PropertyCard
+            icon={<Calendar size={18} color="#6B7280" />}
+            label="Date"
+            value={task.allDay ? formatDate(startDate) : `${formatDate(startDate)} • ${formatTime(startDate)}`}
+            onPress={() => {
+              setEditingDateTime({
+                startDate: new Date(task.startAt),
+                endDate: new Date(task.endAt),
+                allDay: task.allDay || false,
+              });
+              setShowDateTimePicker(true);
+            }}
+          />
+
+          <PropertyCard
+            icon={<Flag size={18} color={priorityConfig[task.priority || 'medium'].color} />}
             label="Priority"
             value={priorityConfig[task.priority || 'medium'].label}
-            icon={<Flag size={20} color={priorityConfig[task.priority || 'medium'].color} />}
+            valueColor={priorityConfig[task.priority || 'medium'].color}
             onPress={() => setShowPriorityPicker(true)}
           />
 
-          <EditableField
+          <PropertyCard
+            icon={<Text style={styles.propertyEmoji}>{categoryMeta.emoji}</Text>}
+            label="Category"
+            value={categoryMeta.label}
+            onPress={() => setShowCategoryPicker(true)}
+          />
+
+          <PropertyCard
+            icon={<Users size={18} color="#6B7280" />}
+            label="Assigned"
+            value={assignedMembers.map((m) => m.name).join(', ') || 'Unassigned'}
+            onPress={() => setShowAssignedToPicker(true)}
+          />
+
+          <PropertyCard
+            icon={<DollarSign size={18} color="#6B7280" />}
+            label="Stake"
+            value={`${currentList.currencySymbol}${task.stake}`}
+            onPress={() => setShowStakeInput(true)}
+          />
+
+          <PropertyCard
+            icon={<Bell size={18} color="#6B7280" />}
             label="Reminder"
             value={reminderConfig[task.reminder || 'none'].label}
-            icon={<Bell size={20} color="#6B7280" />}
             onPress={() => setShowReminderPicker(true)}
           />
 
-          <EditableField
-            label="Recurrence"
+          <PropertyCard
+            icon={<RefreshCw size={18} color="#6B7280" />}
+            label="Repeat"
             value={recurrenceConfig[task.recurrence || 'none'].label}
-            icon={<RefreshCw size={20} color="#6B7280" />}
             onPress={() => setShowRecurrencePicker(true)}
           />
+
+          {!task.fundTargetId && fundTargets.length > 0 && (
+            <PropertyCard
+              icon={<Sparkles size={18} color="#8B5CF6" />}
+              label="Link to Goal"
+              value="None"
+              onPress={() => setShowFundTargetPicker(true)}
+            />
+          )}
         </View>
 
-
+        {task.status !== 'completed' && task.status !== 'failed' && (
+          <TouchableOpacity
+            style={styles.completeButton}
+            onPress={handleCompleteTask}
+          >
+            <CheckCircle2 size={20} color="#FFFFFF" />
+            <Text style={styles.completeButtonText}>Mark as Complete</Text>
+          </TouchableOpacity>
+        )}
 
         {task.createdAt && (
           <View style={styles.metadataSection}>
             <Text style={styles.metadataText}>
-              Created: {EUDateFormatter.formatDate(new Date(task.createdAt), 'long')}
+              Created {EUDateFormatter.formatDate(new Date(task.createdAt), 'long')}
             </Text>
             {task.completedAt && (
               <Text style={styles.metadataText}>
-                Completed: {EUDateFormatter.formatDate(new Date(task.completedAt), 'long')}
+                Completed {EUDateFormatter.formatDate(new Date(task.completedAt), 'long')}
               </Text>
             )}
           </View>
         )}
       </ScrollView>
-
-      <InlineTextEditor
-        visible={showTitleEditor}
-        title="Edit Title"
-        value={task.title}
-        onClose={() => setShowTitleEditor(false)}
-        onSave={(value) => handleUpdateField('title', value)}
-        placeholder="Task title"
-      />
-
-      <InlineTextEditor
-        visible={showDescriptionEditor}
-        title="Edit Description"
-        value={task.description || ''}
-        onClose={() => setShowDescriptionEditor(false)}
-        onSave={(value) => handleUpdateField('description', value)}
-        placeholder="Add description..."
-        multiline
-      />
 
       <CategoryPickerModal
         visible={showCategoryPicker}
@@ -654,9 +391,9 @@ export default function TaskDetailScreen() {
         }}
       />
 
-      <PickerModal
+      <SimplePicker
         visible={showPriorityPicker}
-        title="Select Priority"
+        title="Priority"
         options={Object.keys(priorityConfig).map((key) => ({
           label: priorityConfig[key as TaskPriority].label,
           value: key,
@@ -667,9 +404,9 @@ export default function TaskDetailScreen() {
         onSelect={(value) => handleUpdateField('priority', value)}
       />
 
-      <PickerModal
+      <SimplePicker
         visible={showReminderPicker}
-        title="Select Reminder"
+        title="Reminder"
         options={Object.keys(reminderConfig).map((key) => ({
           label: reminderConfig[key as ReminderType].label,
           value: key,
@@ -679,9 +416,9 @@ export default function TaskDetailScreen() {
         onSelect={(value) => handleUpdateField('reminder', value)}
       />
 
-      <PickerModal
+      <SimplePicker
         visible={showRecurrencePicker}
-        title="Select Recurrence"
+        title="Repeat"
         options={Object.keys(recurrenceConfig).map((key) => ({
           label: recurrenceConfig[key as RecurrenceType].label,
           value: key,
@@ -702,18 +439,19 @@ export default function TaskDetailScreen() {
         }}
       />
 
-      <InlineTextEditor
-        visible={showStakeEditor}
-        title="Edit Stake"
+      <TextInputModal
+        visible={showStakeInput}
+        title="Stake Amount"
         value={task.stake.toString()}
-        onClose={() => setShowStakeEditor(false)}
+        placeholder="0.00"
+        keyboardType="decimal-pad"
+        onClose={() => setShowStakeInput(false)}
         onSave={(value) => {
           const numValue = parseFloat(value);
           if (!isNaN(numValue) && numValue >= 0) {
             handleUpdateField('stake', numValue);
           }
         }}
-        placeholder="0.00"
       />
 
       <FundTargetPickerModal
@@ -735,11 +473,6 @@ export default function TaskDetailScreen() {
         onClose={() => setShowDateTimePicker(false)}
         onSave={(start, end, allDay) => {
           if (!task) return;
-          console.log('[TaskDetail] Updating date/time:', {
-            startAt: start.toISOString(),
-            endAt: end.toISOString(),
-            allDay
-          });
           updateTask(task.id, {
             startAt: start.toISOString(),
             endAt: end.toISOString(),
@@ -751,100 +484,138 @@ export default function TaskDetailScreen() {
           setShowDateTimePicker(false);
         }}
       />
+    </View>
+  );
+}
 
-      {Platform.OS === 'ios' && showStartDatePicker && (
-        <View style={styles.iosPickerOverlay}>
-          <TouchableOpacity 
-            style={styles.iosPickerBackdrop}
-            activeOpacity={1}
-            onPress={() => setShowStartDatePicker(false)}
-          />
-          <View style={styles.iosPickerContainer}>
-            <View style={styles.iosPickerHeader}>
-              <TouchableOpacity onPress={() => setShowStartDatePicker(false)}>
-                <Text style={styles.iosPickerDoneButton}>Done</Text>
+interface PropertyCardProps {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  valueColor?: string;
+  onPress: () => void;
+}
+
+function PropertyCard({ icon, label, value, valueColor, onPress }: PropertyCardProps) {
+  return (
+    <TouchableOpacity
+      style={styles.propertyCard}
+      onPress={() => {
+        if (Platform.OS !== 'web') {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        }
+        onPress();
+      }}
+    >
+      <View style={styles.propertyIconContainer}>
+        <Text>{icon}</Text>
+      </View>
+      <View style={styles.propertyContent}>
+        <Text style={styles.propertyLabel}>{label}</Text>
+        <Text style={[styles.propertyValue, valueColor && { color: valueColor }]} numberOfLines={1}>
+          {value}
+        </Text>
+      </View>
+      <ArrowRight size={16} color="#D1D5DB" />
+    </TouchableOpacity>
+  );
+}
+
+interface CategoryPickerModalProps {
+  visible: boolean;
+  categories: Record<TaskCategory, { emoji: string; color: string; label: string }>;
+  selected: TaskCategory;
+  onClose: () => void;
+  onSelect: (value: TaskCategory) => void;
+}
+
+function CategoryPickerModal({ visible, categories, selected, onClose, onSelect }: CategoryPickerModalProps) {
+  if (!visible) return null;
+
+  return (
+    <View style={styles.modalOverlay}>
+      <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={onClose} />
+      <View style={styles.modalContent}>
+        <View style={styles.modalHandle} />
+        <Text style={styles.modalTitle}>Category</Text>
+        <View style={styles.pickerList}>
+          {(Object.keys(categories) as TaskCategory[]).map((cat) => {
+            const meta = categories[cat];
+            const isSelected = selected === cat;
+            return (
+              <TouchableOpacity
+                key={cat}
+                style={[styles.pickerItem, isSelected && styles.pickerItemSelected]}
+                onPress={() => {
+                  if (Platform.OS !== 'web') {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }
+                  onSelect(cat);
+                }}
+              >
+                <Text style={styles.pickerEmoji}>{meta.emoji}</Text>
+                <Text style={styles.pickerLabel}>{meta.label}</Text>
+                {isSelected && (
+                  <Check size={20} color="#3B82F6" strokeWidth={2.5} />
+                )}
               </TouchableOpacity>
-            </View>
-            <DateTimePicker
-              value={editingDateTime.startDate}
-              mode="date"
-              display="spinner"
-              onChange={(_event: DateTimePickerEvent, date?: Date) => {
-                if (date) {
-                  const newStart = new Date(date);
-                  newStart.setHours(editingDateTime.startDate.getHours(), editingDateTime.startDate.getMinutes(), 0, 0);
-                  setEditingDateTime(prev => ({ ...prev, startDate: newStart }));
-                }
-              }}
-              style={styles.iosPicker}
-            />
-          </View>
+            );
+          })}
         </View>
-      )}
+      </View>
+    </View>
+  );
+}
 
-      {Platform.OS === 'android' && showStartDatePicker && (
-        <DateTimePicker
-          value={editingDateTime.startDate}
-          mode="date"
-          display="default"
-          onChange={(_event: DateTimePickerEvent, date?: Date) => {
-            setShowStartDatePicker(false);
-            if (date) {
-              const newStart = new Date(date);
-              newStart.setHours(editingDateTime.startDate.getHours(), editingDateTime.startDate.getMinutes(), 0, 0);
-              setEditingDateTime(prev => ({ ...prev, startDate: newStart }));
-            }
-          }}
-        />
-      )}
+interface SimplePickerProps {
+  visible: boolean;
+  title: string;
+  options: { label: string; value: string; color?: string }[];
+  selected: string;
+  onClose: () => void;
+  onSelect: (value: string) => void;
+}
 
-      {Platform.OS === 'ios' && showStartTimePicker && (
-        <View style={styles.iosPickerOverlay}>
-          <TouchableOpacity 
-            style={styles.iosPickerBackdrop}
-            activeOpacity={1}
-            onPress={() => setShowStartTimePicker(false)}
-          />
-          <View style={styles.iosPickerContainer}>
-            <View style={styles.iosPickerHeader}>
-              <TouchableOpacity onPress={() => setShowStartTimePicker(false)}>
-                <Text style={styles.iosPickerDoneButton}>Done</Text>
+function SimplePicker({ visible, title, options, selected, onClose, onSelect }: SimplePickerProps) {
+  if (!visible) return null;
+
+  return (
+    <View style={styles.modalOverlay}>
+      <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={onClose} />
+      <View style={styles.modalContent}>
+        <View style={styles.modalHandle} />
+        <Text style={styles.modalTitle}>{title}</Text>
+        <View style={styles.pickerList}>
+          {options.map((option) => {
+            const isSelected = selected === option.value;
+            return (
+              <TouchableOpacity
+                key={option.value}
+                style={[styles.pickerItem, isSelected && styles.pickerItemSelected]}
+                onPress={() => {
+                  if (Platform.OS !== 'web') {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }
+                  onSelect(option.value);
+                  onClose();
+                }}
+              >
+                <Text
+                  style={[
+                    styles.pickerLabel,
+                    option.color && { color: option.color },
+                  ]}
+                >
+                  {option.label}
+                </Text>
+                {isSelected && (
+                  <Check size={20} color="#3B82F6" strokeWidth={2.5} />
+                )}
               </TouchableOpacity>
-            </View>
-            <DateTimePicker
-              value={editingDateTime.startDate}
-              mode="time"
-              display="spinner"
-              onChange={(_event: DateTimePickerEvent, date?: Date) => {
-                if (date) {
-                  const newStart = new Date(editingDateTime.startDate);
-                  newStart.setHours(date.getHours(), date.getMinutes(), 0, 0);
-                  setEditingDateTime(prev => ({ ...prev, startDate: newStart }));
-                }
-              }}
-              is24Hour={true}
-              style={styles.iosPicker}
-            />
-          </View>
+            );
+          })}
         </View>
-      )}
-
-      {Platform.OS === 'android' && showStartTimePicker && (
-        <DateTimePicker
-          value={editingDateTime.startDate}
-          mode="time"
-          display="default"
-          onChange={(_event: DateTimePickerEvent, date?: Date) => {
-            setShowStartTimePicker(false);
-            if (date) {
-              const newStart = new Date(editingDateTime.startDate);
-              newStart.setHours(date.getHours(), date.getMinutes(), 0, 0);
-              setEditingDateTime(prev => ({ ...prev, startDate: newStart }));
-            }
-          }}
-          is24Hour={true}
-        />
-      )}
+      </View>
     </View>
   );
 }
@@ -878,20 +649,17 @@ function AssignedToPickerModal({ visible, members, selected, onClose, onSave }: 
 
   return (
     <View style={styles.modalOverlay}>
-      <View style={styles.pickerContainer}>
-        <View style={styles.pickerHeader}>
-          <Text style={styles.pickerTitle}>Assign To</Text>
-          <TouchableOpacity onPress={onClose}>
-            <X size={24} color="#6B7280" />
-          </TouchableOpacity>
-        </View>
-        <ScrollView style={styles.pickerScroll}>
+      <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={onClose} />
+      <View style={styles.modalContent}>
+        <View style={styles.modalHandle} />
+        <Text style={styles.modalTitle}>Assigned To</Text>
+        <View style={styles.pickerList}>
           {members.map((member) => {
             const isSelected = selectedIds.includes(member.id);
             return (
               <TouchableOpacity
                 key={member.id}
-                style={[styles.pickerOption, isSelected && styles.pickerOptionSelected]}
+                style={[styles.pickerItem, isSelected && styles.pickerItemSelected]}
                 onPress={() => {
                   if (Platform.OS !== 'web') {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -899,28 +667,85 @@ function AssignedToPickerModal({ visible, members, selected, onClose, onSave }: 
                   toggleMember(member.id);
                 }}
               >
-                <View style={styles.memberRow}>
-                  <View style={[styles.memberBadge, { backgroundColor: member.color }]} />
-                  <Text style={styles.pickerOptionText}>{member.name}</Text>
+                <View style={[styles.memberAvatar, { backgroundColor: member.color }]}>
+                  <Text style={styles.memberAvatarText}>
+                    {member.name.charAt(0).toUpperCase()}
+                  </Text>
                 </View>
-                {isSelected && <CheckCircle2 size={20} color="#3B82F6" />}
+                <Text style={styles.pickerLabel}>{member.name}</Text>
+                {isSelected && (
+                  <Check size={20} color="#3B82F6" strokeWidth={2.5} />
+                )}
               </TouchableOpacity>
             );
           })}
-        </ScrollView>
-        <View style={styles.pickerFooter}>
-          <TouchableOpacity
-            style={styles.pickerSaveButton}
-            onPress={() => {
-              if (Platform.OS !== 'web') {
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              }
-              onSave(selectedIds);
-            }}
-          >
-            <Text style={styles.pickerSaveButtonText}>Save</Text>
-          </TouchableOpacity>
         </View>
+        <TouchableOpacity
+          style={styles.modalSaveButton}
+          onPress={() => {
+            if (Platform.OS !== 'web') {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            }
+            onSave(selectedIds);
+          }}
+        >
+          <Text style={styles.modalSaveButtonText}>Done</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+interface TextInputModalProps {
+  visible: boolean;
+  title: string;
+  value: string;
+  placeholder: string;
+  keyboardType?: 'default' | 'decimal-pad' | 'number-pad';
+  onClose: () => void;
+  onSave: (value: string) => void;
+}
+
+function TextInputModal({ visible, title, value, placeholder, keyboardType = 'default', onClose, onSave }: TextInputModalProps) {
+  const [text, setText] = useState(value);
+
+  useEffect(() => {
+    if (visible) {
+      setText(value);
+    }
+  }, [visible, value]);
+
+  if (!visible) return null;
+
+  return (
+    <View style={styles.modalOverlay}>
+      <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={onClose} />
+      <View style={styles.modalContent}>
+        <View style={styles.modalHandle} />
+        <Text style={styles.modalTitle}>{title}</Text>
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.modalInput}
+            value={text}
+            onChangeText={setText}
+            placeholder={placeholder}
+            placeholderTextColor="#9CA3AF"
+            keyboardType={keyboardType}
+            autoFocus
+          />
+        </View>
+        <TouchableOpacity
+          style={styles.modalSaveButton}
+          onPress={() => {
+            if (Platform.OS !== 'web') {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            }
+            onSave(text);
+            onClose();
+          }}
+        >
+          <Text style={styles.modalSaveButtonText}>Done</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -939,19 +764,13 @@ function FundTargetPickerModal({ visible, fundTargets, selected, onClose, onSele
 
   return (
     <View style={styles.modalOverlay}>
-      <View style={styles.pickerContainer}>
-        <View style={styles.pickerHeader}>
-          <Text style={styles.pickerTitle}>Select Fund Goal</Text>
-          <TouchableOpacity onPress={onClose}>
-            <X size={24} color="#6B7280" />
-          </TouchableOpacity>
-        </View>
-        <ScrollView style={styles.pickerScroll}>
+      <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={onClose} />
+      <View style={styles.modalContent}>
+        <View style={styles.modalHandle} />
+        <Text style={styles.modalTitle}>Link to Focus Goal</Text>
+        <View style={styles.pickerList}>
           <TouchableOpacity
-            style={[
-              styles.fundTargetPickerOption,
-              selected === null && styles.fundTargetPickerOptionSelected,
-            ]}
+            style={[styles.pickerItem, selected === null && styles.pickerItemSelected]}
             onPress={() => {
               if (Platform.OS !== 'web') {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -959,17 +778,10 @@ function FundTargetPickerModal({ visible, fundTargets, selected, onClose, onSele
               onSelect(null);
             }}
           >
-            <View style={styles.fundTargetPickerLeft}>
-              <View style={styles.fundTargetPickerIconContainer}>
-                <Text style={styles.fundTargetPickerEmoji}>❌</Text>
-              </View>
-              <View style={styles.fundTargetPickerContent}>
-                <Text style={styles.fundTargetPickerName}>No Fund Goal</Text>
-                <Text style={styles.fundTargetPickerDescription}>Do not link to a fund</Text>
-              </View>
-            </View>
+            <Text style={styles.pickerEmoji}>—</Text>
+            <Text style={styles.pickerLabel}>None</Text>
             {selected === null && (
-              <Check size={20} color="#3B82F6" strokeWidth={3} />
+              <Check size={20} color="#3B82F6" strokeWidth={2.5} />
             )}
           </TouchableOpacity>
           {fundTargets.map((ft) => {
@@ -977,10 +789,7 @@ function FundTargetPickerModal({ visible, fundTargets, selected, onClose, onSele
             return (
               <TouchableOpacity
                 key={ft.id}
-                style={[
-                  styles.fundTargetPickerOption,
-                  isSelected && styles.fundTargetPickerOptionSelected,
-                ]}
+                style={[styles.pickerItem, isSelected && styles.pickerItemSelected]}
                 onPress={() => {
                   if (Platform.OS !== 'web') {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -988,21 +797,15 @@ function FundTargetPickerModal({ visible, fundTargets, selected, onClose, onSele
                   onSelect(ft.id);
                 }}
               >
-                <View style={styles.fundTargetPickerLeft}>
-                  <View style={styles.fundTargetPickerIconContainer}>
-                    <Text style={styles.fundTargetPickerEmoji}>{ft.emoji}</Text>
-                  </View>
-                  <View style={styles.fundTargetPickerContent}>
-                    <Text style={styles.fundTargetPickerName}>{ft.name}</Text>
-                  </View>
-                </View>
+                <Text style={styles.pickerEmoji}>{ft.emoji}</Text>
+                <Text style={styles.pickerLabel}>{ft.name}</Text>
                 {isSelected && (
-                  <Check size={20} color="#3B82F6" strokeWidth={3} />
+                  <Check size={20} color="#3B82F6" strokeWidth={2.5} />
                 )}
               </TouchableOpacity>
             );
           })}
-        </ScrollView>
+        </View>
       </View>
     </View>
   );
@@ -1022,155 +825,64 @@ function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onS
     const d = new Date(startDate);
     return isNaN(d.getTime()) ? new Date() : d;
   });
-  const [end, setEnd] = useState(() => {
-    const d = new Date(endDate);
-    return isNaN(d.getTime()) ? new Date(new Date().getTime() + 3600000) : d;
-  });
   const [isAllDay, setIsAllDay] = useState(allDay);
-  const [tempStartDate, setTempStartDate] = useState(() => {
-    const d = new Date(startDate);
-    return isNaN(d.getTime()) ? new Date() : d;
-  });
-  const [showPickerType, setShowPickerType] = useState<'start-date' | 'start-time' | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
   useEffect(() => {
     if (visible) {
       const validStart = new Date(startDate);
-      const validEnd = new Date(endDate);
-      
-      console.log('[DateTimePickerModal] Opening with dates:', {
-        startDate,
-        endDate,
-        validStart: isNaN(validStart.getTime()) ? 'Invalid' : validStart.toISOString(),
-        validEnd: isNaN(validEnd.getTime()) ? 'Invalid' : validEnd.toISOString(),
-        isStartValid: !isNaN(validStart.getTime()),
-        isEndValid: !isNaN(validEnd.getTime())
-      });
-      
       if (!isNaN(validStart.getTime())) {
         setStart(validStart);
-        setTempStartDate(validStart);
-        
-        if (!isNaN(validEnd.getTime())) {
-          setEnd(validEnd);
-        } else {
-          const later = new Date(validStart.getTime() + 3600000);
-          setEnd(later);
-        }
-      } else {
-        const now = new Date();
-        setStart(now);
-        setTempStartDate(now);
-        
-        if (!isNaN(validEnd.getTime())) {
-          setEnd(validEnd);
-        } else {
-          const later = new Date(now.getTime() + 3600000);
-          setEnd(later);
-        }
       }
-      
       setIsAllDay(allDay);
     }
-  }, [visible, startDate, endDate, allDay]);
+  }, [visible, startDate, allDay]);
 
   if (!visible) return null;
 
-  const formatDate = (date: Date) => {
-    if (!date || isNaN(date.getTime())) {
-      console.warn('[DateTimePickerModal] Invalid date passed to formatDate:', date);
-      return 'Invalid Date';
+  const handleDateChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
     }
+    if (selectedDate && !isNaN(selectedDate.getTime())) {
+      const newStart = new Date(selectedDate);
+      newStart.setHours(start.getHours(), start.getMinutes(), 0, 0);
+      setStart(newStart);
+    }
+  };
+
+  const handleTimeChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowTimePicker(false);
+    }
+    if (selectedDate && !isNaN(selectedDate.getTime())) {
+      const newStart = new Date(start);
+      newStart.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
+      setStart(newStart);
+    }
+  };
+
+  const formatDate = (date: Date) => {
+    if (!date || isNaN(date.getTime())) return 'Invalid Date';
     return EUDateFormatter.formatDate(date, 'long');
   };
 
   const formatTime = (date: Date) => {
-    if (!date || isNaN(date.getTime())) {
-      console.warn('[DateTimePickerModal] Invalid date passed to formatTime:', date);
-      return 'Invalid Time';
-    }
+    if (!date || isNaN(date.getTime())) return 'Invalid Time';
     return EUDateFormatter.formatTime(date);
   };
 
-  const handleStartDateChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowPickerType(null);
-      if (selectedDate && !isNaN(selectedDate.getTime())) {
-        const newStart = new Date(selectedDate);
-        
-        if (!isNaN(start.getTime())) {
-          newStart.setHours(start.getHours(), start.getMinutes(), 0, 0);
-        } else {
-          newStart.setHours(12, 0, 0, 0);
-        }
-        
-        setStart(newStart);
-        
-        if (!isNaN(end.getTime()) && !isNaN(start.getTime())) {
-          const duration = end.getTime() - start.getTime();
-          if (duration > 0) {
-            const newEnd = new Date(newStart.getTime() + duration);
-            setEnd(newEnd);
-          } else {
-            const newEnd = new Date(newStart.getTime() + 3600000);
-            setEnd(newEnd);
-          }
-        } else {
-          const newEnd = new Date(newStart.getTime() + 3600000);
-          setEnd(newEnd);
-        }
-        
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      }
-    }
-  };
-
-  const handleStartTimeChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowPickerType(null);
-      if (selectedDate && !isNaN(selectedDate.getTime())) {
-        const newStart = !isNaN(start.getTime()) ? new Date(start) : new Date();
-        newStart.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
-        setStart(newStart);
-        
-        const newEnd = new Date(newStart);
-        newEnd.setHours(newStart.getHours() + 1, newStart.getMinutes(), 0, 0);
-        setEnd(newEnd);
-        
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      }
-    }
-  };
-
-  const setShowDatePickerIOS = (type: 'start-date' | 'start-time') => {
-    setShowPickerType(type);
-  };
-
-  const setShowDatePickerAndroid = (type: 'start-date' | 'start-time') => {
-    setShowPickerType(type);
-  };
-
-  const isValidDateRange = end > start;
-
   return (
     <View style={styles.modalOverlay}>
-      <View style={styles.dateTimeContainer}>
-        <View style={styles.pickerHeader}>
-          <Text style={styles.pickerTitle}>Edit Date & Time</Text>
-          <TouchableOpacity onPress={onClose}>
-            <X size={24} color="#6B7280" />
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView 
-          style={styles.dateTimeScrollView} 
-          contentContainerStyle={styles.dateTimeContent}
-        >
+      <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={onClose} />
+      <View style={styles.modalContent}>
+        <View style={styles.modalHandle} />
+        <Text style={styles.modalTitle}>Date & Time</Text>
+        
+        <View style={styles.dateTimeContainer}>
           <View style={styles.allDayRow}>
-            <View style={styles.allDayContent}>
-              <Text style={styles.dateTimeLabel}>Ganztägig</Text>
-              <Text style={styles.allDayHint}>Keine bestimmte Zeit</Text>
-            </View>
+            <Text style={styles.allDayLabel}>All Day</Text>
             <Switch
               value={isAllDay}
               onValueChange={(value) => {
@@ -1178,302 +890,108 @@ function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onS
                 if (value) {
                   const newStart = new Date(start);
                   newStart.setHours(0, 0, 0, 0);
-                  const newEnd = new Date(start);
-                  newEnd.setHours(23, 59, 59, 999);
                   setStart(newStart);
-                  setEnd(newEnd);
                 }
                 if (Platform.OS !== 'web') {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 }
               }}
-              trackColor={{ false: '#D1D5DB', true: '#93C5FD' }}
-              thumbColor={isAllDay ? '#3B82F6' : '#F3F4F6'}
+              trackColor={{ false: '#E5E7EB', true: '#93C5FD' }}
+              thumbColor={isAllDay ? '#3B82F6' : '#F9FAFB'}
             />
           </View>
 
-          <View style={styles.dateTimeRow}>
+          <TouchableOpacity
+            style={styles.dateTimeButton}
+            onPress={() => setShowDatePicker(true)}
+          >
+            <Calendar size={18} color="#6B7280" />
+            <Text style={styles.dateTimeValue}>{formatDate(start)}</Text>
+          </TouchableOpacity>
+
+          {!isAllDay && (
             <TouchableOpacity
               style={styles.dateTimeButton}
-              onPress={() => {
-                if (Platform.OS !== 'web') {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }
-                setTempStartDate(start);
-                if (Platform.OS === 'ios') {
-                  setShowDatePickerIOS('start-date');
-                } else {
-                  setShowDatePickerAndroid('start-date');
-                }
-              }}
+              onPress={() => setShowTimePicker(true)}
             >
-              <Calendar size={18} color="#6B7280" />
-              <Text style={styles.dateTimeValue}>{formatDate(start)}</Text>
+              <Clock size={18} color="#6B7280" />
+              <Text style={styles.dateTimeValue}>{formatTime(start)}</Text>
             </TouchableOpacity>
-
-            {!isAllDay && (
-              <TouchableOpacity
-                style={styles.dateTimeButton}
-                onPress={() => {
-                  if (Platform.OS !== 'web') {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }
-                  setTempStartDate(start);
-                  if (Platform.OS === 'ios') {
-                    setShowDatePickerIOS('start-time');
-                  } else {
-                    setShowDatePickerAndroid('start-time');
-                  }
-                }}
-              >
-                <Clock size={18} color="#6B7280" />
-                <Text style={styles.dateTimeValue}>{formatTime(start)}</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {!isValidDateRange && (
-            <View style={styles.errorMessage}>
-              <Text style={styles.errorMessageText}>End time must be after start time</Text>
-            </View>
           )}
-        </ScrollView>
-
-        <View style={styles.pickerFooter}>
-          <TouchableOpacity
-            style={[styles.pickerSaveButton, !isValidDateRange && styles.pickerSaveButtonDisabled]}
-            onPress={() => {
-              if (!isValidDateRange) return;
-              if (Platform.OS !== 'web') {
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              }
-              onSave(start, end, isAllDay);
-            }}
-            disabled={!isValidDateRange}
-          >
-            <Text style={styles.pickerSaveButtonText}>Save</Text>
-          </TouchableOpacity>
         </View>
+
+        <TouchableOpacity
+          style={styles.modalSaveButton}
+          onPress={() => {
+            if (Platform.OS !== 'web') {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            }
+            const end = new Date(start);
+            end.setHours(start.getHours() + 1, start.getMinutes(), 0, 0);
+            onSave(start, end, isAllDay);
+          }}
+        >
+          <Text style={styles.modalSaveButtonText}>Done</Text>
+        </TouchableOpacity>
       </View>
 
-      {Platform.OS === 'web' && showPickerType === 'start-date' && (
-        <View style={styles.iosPickerOverlay}>
-          <TouchableOpacity 
-            style={styles.iosPickerBackdrop}
-            activeOpacity={1}
-            onPress={() => setShowPickerType(null)}
-          />
-          <View style={styles.iosPickerContainer}>
-            <View style={styles.iosPickerHeader}>
-              <TouchableOpacity onPress={() => {
-                const newStart = new Date(tempStartDate);
-                newStart.setHours(start.getHours(), start.getMinutes(), 0, 0);
-                setStart(newStart);
-                
-                const duration = end.getTime() - start.getTime();
-                if (duration > 0) {
-                  const newEnd = new Date(newStart.getTime() + duration);
-                  setEnd(newEnd);
-                } else {
-                  const newEnd = new Date(newStart.getTime() + 3600000);
-                  setEnd(newEnd);
-                }
-                setShowPickerType(null);
-              }}>
-                <Text style={styles.iosPickerDoneButton}>Done</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={{ padding: 20 }}>
-              <Text style={styles.dateTimeLabel}>Select Date</Text>
-              <TextInput
-                style={[styles.input, { fontSize: 16, marginTop: 12 }]}
-                value={tempStartDate.toISOString().split('T')[0]}
-                onChangeText={(text) => {
-                  const date = new Date(text);
-                  if (!isNaN(date.getTime())) {
-                    setTempStartDate(date);
-                  }
-                }}
-                placeholder="YYYY-MM-DD"
-              />
-            </View>
-          </View>
-        </View>
-      )}
-
-      {Platform.OS === 'web' && showPickerType === 'start-time' && (
-        <View style={styles.iosPickerOverlay}>
-          <TouchableOpacity 
-            style={styles.iosPickerBackdrop}
-            activeOpacity={1}
-            onPress={() => setShowPickerType(null)}
-          />
-          <View style={styles.iosPickerContainer}>
-            <View style={styles.iosPickerHeader}>
-              <TouchableOpacity onPress={() => {
-                const newStart = new Date(start);
-                newStart.setHours(tempStartDate.getHours(), tempStartDate.getMinutes(), 0, 0);
-                setStart(newStart);
-                
-                const newEnd = new Date(newStart);
-                newEnd.setHours(newStart.getHours() + 1, newStart.getMinutes(), 0, 0);
-                setEnd(newEnd);
-                setShowPickerType(null);
-              }}>
-                <Text style={styles.iosPickerDoneButton}>Done</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={{ padding: 20 }}>
-              <Text style={styles.dateTimeLabel}>Select Time</Text>
-              <TextInput
-                style={[styles.input, { fontSize: 16, marginTop: 12 }]}
-                value={`${String(tempStartDate.getHours()).padStart(2, '0')}:${String(tempStartDate.getMinutes()).padStart(2, '0')}`}
-                onChangeText={(text) => {
-                  const [hours, minutes] = text.split(':').map(Number);
-                  if (!isNaN(hours) && !isNaN(minutes)) {
-                    const newTemp = new Date(tempStartDate);
-                    newTemp.setHours(hours, minutes, 0, 0);
-                    setTempStartDate(newTemp);
-                  }
-                }}
-                placeholder="HH:MM"
-              />
-            </View>
-          </View>
-        </View>
-      )}
-
-      {Platform.OS === 'ios' && showPickerType === 'start-date' && (
-        <View style={styles.iosPickerOverlay}>
-          <TouchableOpacity 
-            style={styles.iosPickerBackdrop}
-            activeOpacity={1}
-            onPress={() => {
-              const newStart = new Date(tempStartDate);
-              newStart.setHours(start.getHours(), start.getMinutes(), 0, 0);
-              setStart(newStart);
-              
-              const duration = end.getTime() - start.getTime();
-              if (duration > 0) {
-                const newEnd = new Date(newStart.getTime() + duration);
-                setEnd(newEnd);
-              }
-              setShowPickerType(null);
-              if (Platform.OS !== 'web') {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              }
-            }}
-          />
-          <View style={styles.iosPickerContainer}>
-            <View style={styles.iosPickerHeader}>
-              <TouchableOpacity onPress={() => {
-                const newStart = new Date(tempStartDate);
-                newStart.setHours(start.getHours(), start.getMinutes(), 0, 0);
-                setStart(newStart);
-                
-                const duration = end.getTime() - start.getTime();
-                if (duration > 0) {
-                  const newEnd = new Date(newStart.getTime() + duration);
-                  setEnd(newEnd);
-                }
-                setShowPickerType(null);
-                if (Platform.OS !== 'web') {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }
-              }}>
-                <Text style={styles.iosPickerDoneButton}>Done</Text>
+      {Platform.OS === 'ios' && showDatePicker && (
+        <View style={styles.pickerOverlay}>
+          <TouchableOpacity style={styles.pickerBackdrop} activeOpacity={1} onPress={() => setShowDatePicker(false)} />
+          <View style={styles.pickerContainer}>
+            <View style={styles.pickerHeader}>
+              <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                <Text style={styles.pickerDone}>Done</Text>
               </TouchableOpacity>
             </View>
             <DateTimePicker
-              value={tempStartDate}
+              value={start}
               mode="date"
               display="spinner"
-              onChange={(_event: DateTimePickerEvent, date?: Date) => {
-                if (date) {
-                  setTempStartDate(date);
-                }
-              }}
-              style={styles.iosPicker}
+              onChange={handleDateChange}
             />
           </View>
         </View>
       )}
 
-      {Platform.OS === 'android' && showPickerType === 'start-date' && (
+      {Platform.OS === 'android' && showDatePicker && (
         <DateTimePicker
           value={start}
           mode="date"
           display="default"
-          onChange={handleStartDateChange}
+          onChange={handleDateChange}
         />
       )}
 
-      {Platform.OS === 'ios' && showPickerType === 'start-time' && (
-        <View style={styles.iosPickerOverlay}>
-          <TouchableOpacity 
-            style={styles.iosPickerBackdrop}
-            activeOpacity={1}
-            onPress={() => {
-              const newStart = new Date(start);
-              newStart.setHours(tempStartDate.getHours(), tempStartDate.getMinutes(), 0, 0);
-              setStart(newStart);
-              
-              const newEnd = new Date(newStart);
-              newEnd.setHours(newStart.getHours() + 1, newStart.getMinutes(), 0, 0);
-              setEnd(newEnd);
-              
-              setShowPickerType(null);
-              if (Platform.OS !== 'web') {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              }
-            }}
-          />
-          <View style={styles.iosPickerContainer}>
-            <View style={styles.iosPickerHeader}>
-              <TouchableOpacity onPress={() => {
-                const newStart = new Date(start);
-                newStart.setHours(tempStartDate.getHours(), tempStartDate.getMinutes(), 0, 0);
-                setStart(newStart);
-                
-                const newEnd = new Date(newStart);
-                newEnd.setHours(newStart.getHours() + 1, newStart.getMinutes(), 0, 0);
-                setEnd(newEnd);
-                
-                setShowPickerType(null);
-                if (Platform.OS !== 'web') {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }
-              }}>
-                <Text style={styles.iosPickerDoneButton}>Done</Text>
+      {Platform.OS === 'ios' && showTimePicker && (
+        <View style={styles.pickerOverlay}>
+          <TouchableOpacity style={styles.pickerBackdrop} activeOpacity={1} onPress={() => setShowTimePicker(false)} />
+          <View style={styles.pickerContainer}>
+            <View style={styles.pickerHeader}>
+              <TouchableOpacity onPress={() => setShowTimePicker(false)}>
+                <Text style={styles.pickerDone}>Done</Text>
               </TouchableOpacity>
             </View>
             <DateTimePicker
-              value={tempStartDate}
+              value={start}
               mode="time"
               display="spinner"
-              onChange={(_event: DateTimePickerEvent, date?: Date) => {
-                if (date) {
-                  setTempStartDate(date);
-                }
-              }}
+              onChange={handleTimeChange}
               is24Hour={true}
-              style={styles.iosPicker}
             />
           </View>
         </View>
       )}
 
-      {Platform.OS === 'android' && showPickerType === 'start-time' && (
+      {Platform.OS === 'android' && showTimePicker && (
         <DateTimePicker
           value={start}
           mode="time"
           display="default"
-          onChange={handleStartTimeChange}
+          onChange={handleTimeChange}
           is24Hour={true}
         />
       )}
-
-
     </View>
   );
 }
@@ -1481,223 +999,159 @@ function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onS
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#FFFFFF',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600' as const,
-    color: '#111827',
+    paddingVertical: 12,
   },
   headerButton: {
-    padding: 8,
-    borderRadius: 8,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
+    paddingHorizontal: 20,
     paddingBottom: 40,
   },
-  statusSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+  focusGoalCard: {
+    backgroundColor: '#F5F3FF',
     borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#E9D5FF',
   },
-  statusText: {
-    fontSize: 14,
-    fontWeight: '600' as const,
-    color: '#FFFFFF',
-  },
-  completeButton: {
+  focusGoalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: '#ECFDF5',
-    borderRadius: 12,
+    marginBottom: 12,
   },
-  completeButtonText: {
-    fontSize: 15,
-    fontWeight: '600' as const,
-    color: '#10B981',
+  focusGoalLabel: {
+    fontSize: 11,
+    fontWeight: '700' as const,
+    color: '#8B5CF6',
+    letterSpacing: 1,
   },
-  section: {
-    backgroundColor: '#FFFFFF',
-    marginTop: 12,
-    paddingVertical: 8,
+  focusGoalContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: '600' as const,
-    color: '#9CA3AF',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+  focusGoalEmoji: {
+    fontSize: 32,
   },
-  titleContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+  focusGoalTextContainer: {
+    flex: 1,
   },
-  taskTitle: {
-    fontSize: 24,
+  focusGoalName: {
+    fontSize: 18,
+    fontWeight: '700' as const,
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  focusGoalStake: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  mainSection: {
+    marginBottom: 32,
+  },
+  title: {
+    fontSize: 28,
     fontWeight: '700' as const,
     color: '#111827',
-    lineHeight: 32,
+    lineHeight: 36,
+    marginBottom: 12,
   },
-  descriptionContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
+  titleInput: {
+    fontSize: 28,
+    fontWeight: '700' as const,
+    color: '#111827',
+    lineHeight: 36,
+    marginBottom: 12,
+    padding: 0,
   },
-  taskDescription: {
+  description: {
     fontSize: 16,
     color: '#6B7280',
     lineHeight: 24,
   },
-  addDescriptionButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-  },
-  addDescriptionText: {
-    fontSize: 15,
-    color: '#9CA3AF',
-    fontStyle: 'italic',
-  },
-  editableField: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  fieldIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  fieldContent: {
-    flex: 1,
-    gap: 4,
-  },
-  fieldLabel: {
-    fontSize: 13,
-    fontWeight: '500' as const,
-    color: '#9CA3AF',
-  },
-  fieldValue: {
+  descriptionInput: {
     fontSize: 16,
-    fontWeight: '500' as const,
-    color: '#111827',
+    color: '#6B7280',
+    lineHeight: 24,
+    padding: 0,
+    minHeight: 60,
+    textAlignVertical: 'top',
   },
-  fieldValueMultiline: {
-    lineHeight: 22,
+  descriptionPlaceholder: {
+    fontSize: 16,
+    color: '#D1D5DB',
+    lineHeight: 24,
   },
-  fieldRowLeft: {
+  propertiesGrid: {
+    gap: 8,
+    marginBottom: 24,
+  },
+  propertyCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 16,
     gap: 12,
   },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    backgroundColor: '#F9FAFB',
-  },
-  infoText: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  fundTargetHero: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 16,
-  },
-  fundTargetHeroCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#F5F3FF',
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: '#8B5CF6',
-    gap: 16,
-    shadowColor: '#8B5CF6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  fundTargetHeroIcon: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+  propertyIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
   },
-  fundTargetHeroEmoji: {
-    fontSize: 36,
+  propertyEmoji: {
+    fontSize: 18,
   },
-  fundTargetHeroContent: {
+  propertyContent: {
     flex: 1,
-    gap: 6,
+    gap: 2,
   },
-  fundTargetHeroLabel: {
-    fontSize: 13,
-    fontWeight: '700' as const,
-    color: '#8B5CF6',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+  propertyLabel: {
+    fontSize: 12,
+    fontWeight: '500' as const,
+    color: '#9CA3AF',
   },
-  fundTargetHeroName: {
-    fontSize: 22,
-    fontWeight: '800' as const,
-    color: '#111827',
-    lineHeight: 28,
-  },
-  fundTargetHeroStake: {
+  propertyValue: {
     fontSize: 15,
+    fontWeight: '500' as const,
+    color: '#111827',
+  },
+  completeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#10B981',
+    borderRadius: 14,
+    paddingVertical: 16,
+    marginBottom: 24,
+  },
+  completeButtonText: {
+    fontSize: 16,
     fontWeight: '600' as const,
-    color: '#6B7280',
-    marginTop: 2,
+    color: '#FFFFFF',
   },
   metadataSection: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
     gap: 8,
   },
   metadataText: {
@@ -1733,30 +1187,76 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+    justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
   },
-  inlineEditorContainer: {
+  modalContent: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    width: '100%',
-    maxWidth: 500,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingBottom: 40,
+    maxHeight: '70%',
   },
-  inlineEditorHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
+  modalHandle: {
+    width: 36,
+    height: 5,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 3,
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 20,
   },
-  inlineEditorTitle: {
-    fontSize: 18,
+  modalTitle: {
+    fontSize: 20,
     fontWeight: '700' as const,
     color: '#111827',
+    paddingHorizontal: 24,
+    marginBottom: 20,
   },
-  inlineEditorInput: {
+  pickerList: {
+    paddingHorizontal: 16,
+  },
+  pickerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginBottom: 4,
+  },
+  pickerItemSelected: {
+    backgroundColor: '#EFF6FF',
+  },
+  pickerEmoji: {
+    fontSize: 20,
+  },
+  pickerLabel: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '500' as const,
+    color: '#111827',
+  },
+  memberAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  memberAvatarText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600' as const,
+  },
+  inputContainer: {
+    paddingHorizontal: 24,
+    marginBottom: 20,
+  },
+  modalInput: {
     backgroundColor: '#F9FAFB',
     borderRadius: 12,
     padding: 16,
@@ -1764,176 +1264,41 @@ const styles = StyleSheet.create({
     color: '#111827',
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    marginBottom: 16,
   },
-  inlineEditorInputMultiline: {
-    minHeight: 120,
-    textAlignVertical: 'top',
-  },
-  inlineEditorButton: {
+  modalSaveButton: {
+    marginHorizontal: 24,
     backgroundColor: '#3B82F6',
     borderRadius: 12,
-    paddingVertical: 14,
+    paddingVertical: 16,
     alignItems: 'center',
   },
-  inlineEditorButtonText: {
+  modalSaveButtonText: {
     fontSize: 16,
     fontWeight: '600' as const,
     color: '#FFFFFF',
-  },
-  pickerContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    width: '100%',
-    maxWidth: 500,
-    maxHeight: '80%',
-  },
-  pickerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  pickerTitle: {
-    fontSize: 18,
-    fontWeight: '700' as const,
-    color: '#111827',
-  },
-  pickerScroll: {
-    maxHeight: 400,
-  },
-  pickerOption: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  pickerOptionSelected: {
-    backgroundColor: '#EFF6FF',
-  },
-  pickerOptionText: {
-    fontSize: 16,
-    fontWeight: '500' as const,
-    color: '#111827',
-  },
-  categoryPickerList: {
-    padding: 16,
-  },
-  categoryPickerOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    backgroundColor: '#EFF6FF',
-    borderRadius: 12,
-    marginBottom: 8,
-  },
-  categoryPickerOptionSelected: {
-    backgroundColor: '#DBEAFE',
-  },
-  categoryPickerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
-  },
-  categoryPickerEmoji: {
-    fontSize: 24,
-  },
-  categoryPickerText: {
-    fontSize: 17,
-    color: '#111827',
-    fontWeight: '500' as const,
-  },
-  categoryPickerCheck: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#3B82F6',
-  },
-  pickerFooter: {
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-  },
-  pickerSaveButton: {
-    backgroundColor: '#3B82F6',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  pickerSaveButtonDisabled: {
-    backgroundColor: '#D1D5DB',
-  },
-  pickerSaveButtonText: {
-    fontSize: 16,
-    fontWeight: '600' as const,
-    color: '#FFFFFF',
-  },
-  memberRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  memberBadge: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
   },
   dateTimeContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    width: '100%',
-    maxWidth: 500,
-    maxHeight: '85%',
-  },
-  dateTimeScrollView: {
-    maxHeight: 500,
-  },
-  dateTimeContent: {
-    padding: 20,
-    gap: 16,
+    paddingHorizontal: 24,
+    marginBottom: 20,
+    gap: 12,
   },
   allDayRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  allDayContent: {
-    gap: 2,
-  },
-  dateTimeLabel: {
+  allDayLabel: {
     fontSize: 16,
     fontWeight: '500' as const,
     color: '#111827',
   },
-  allDayHint: {
-    fontSize: 13,
-    color: '#9CA3AF',
-  },
-  dateTimeRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
   dateTimeButton: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 16,
+    gap: 12,
+    paddingVertical: 14,
     paddingHorizontal: 16,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F9FAFB',
     borderRadius: 12,
   },
   dateTimeValue: {
@@ -1941,38 +1306,7 @@ const styles = StyleSheet.create({
     fontWeight: '500' as const,
     color: '#111827',
   },
-  dateTimeField: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  dateTimePreview: {
-    fontSize: 16,
-    fontWeight: '500' as const,
-    color: '#111827',
-  },
-  dateValue: {
-    fontSize: 14,
-    fontWeight: '400' as const,
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  errorMessage: {
-    padding: 12,
-    backgroundColor: '#FEE2E2',
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  errorMessageText: {
-    fontSize: 14,
-    color: '#DC2626',
-    textAlign: 'center',
-  },
-  iosPickerOverlay: {
+  pickerOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
@@ -1980,86 +1314,25 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: 'flex-end',
   },
-  iosPickerBackdrop: {
+  pickerBackdrop: {
     flex: 1,
   },
-  iosPickerContainer: {
+  pickerContainer: {
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
-    paddingBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
   },
-  iosPickerHeader: {
+  pickerHeader: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
-  iosPickerDoneButton: {
+  pickerDone: {
     fontSize: 17,
     fontWeight: '600' as const,
     color: '#3B82F6',
-  },
-  iosPicker: {
-    height: 200,
-  },
-  fundTargetPickerOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  fundTargetPickerOptionSelected: {
-    backgroundColor: '#EFF6FF',
-  },
-  fundTargetPickerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
-  },
-  fundTargetPickerIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  fundTargetPickerEmoji: {
-    fontSize: 24,
-  },
-  fundTargetPickerContent: {
-    flex: 1,
-    gap: 2,
-  },
-  fundTargetPickerName: {
-    fontSize: 17,
-    fontWeight: '600' as const,
-    color: '#111827',
-  },
-  fundTargetPickerDescription: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  input: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: '#111827',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
 });
