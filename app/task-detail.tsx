@@ -458,6 +458,7 @@ export default function TaskDetailScreen() {
         initialDate={pickerDate}
         allDay={pickerAllDay}
         title="Set Due Date"
+        taskPriority={task.priority}
         onClose={() => setShowDateTimePicker(false)}
         onSave={(date, allDay) => {
           if (!task) return;
