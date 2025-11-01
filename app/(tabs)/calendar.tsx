@@ -7,10 +7,12 @@ import {
   TouchableOpacity,
   Platform,
   Modal,
+  Animated,
+  PanResponder,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, CheckCircle2, List } from 'lucide-react-native';
+import { Plus, CheckCircle2 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useApp } from '@/contexts/AppContext';
 import { TaskCategory } from '@/types';
@@ -26,7 +28,7 @@ export default function CalendarScreen() {
     currentListMembers,
     calendarView,
     selectedDate,
-    setCalendarViewType,
+
     setCalendarSelectedDate,
     addTask,
     t,
@@ -36,6 +38,7 @@ export default function CalendarScreen() {
   const [preselectedDate, setPreselectedDate] = useState<Date | null>(null);
   const [showDayAgenda, setShowDayAgenda] = useState(false);
   const [agendaDate, setAgendaDate] = useState<Date>(new Date());
+  const swipeX = useRef(new Animated.Value(0)).current;
 
   const [currentMonth, setCurrentMonth] = useState(() => ({
     year: selectedDate.getFullYear(),
@@ -279,6 +282,32 @@ export default function CalendarScreen() {
 
   const tickerScrollRef = useRef<ScrollView>(null);
 
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return Math.abs(gestureState.dx) > 10 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+      },
+      onPanResponderMove: (_, gestureState) => {
+        swipeX.setValue(gestureState.dx);
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (Math.abs(gestureState.dx) > 80) {
+          if (gestureState.dx > 0) {
+            handlePrevious();
+          } else {
+            handleNext();
+          }
+        }
+        Animated.spring(swipeX, {
+          toValue: 0,
+          useNativeDriver: true,
+          friction: 8,
+          tension: 40,
+        }).start();
+      },
+    })
+  ).current;
+
   useEffect(() => {
     if (tickerScrollRef.current) {
       const todayIndex = tickerDays.findIndex(date => 
@@ -320,7 +349,7 @@ export default function CalendarScreen() {
                 isSelected && styles.tickerDaySelected,
               ]}
               onPress={() => handleDayPress(date)}
-              activeOpacity={0.7}
+              activeOpacity={0.6}
             >
               <Text style={[
                 styles.tickerDayName,
@@ -338,7 +367,7 @@ export default function CalendarScreen() {
               </Text>
               {marker && marker.markers.length > 0 && (
                 <View style={styles.tickerMarkerRow}>
-                  {marker.markers.slice(0, 2).map((m, i) => (
+                  {marker.markers.slice(0, 3).map((m, i) => (
                     <View
                       key={i}
                       style={[styles.tickerMarker, { backgroundColor: m.color }]}
@@ -681,70 +710,19 @@ export default function CalendarScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.viewToggle}>
-        <TouchableOpacity
-          style={[styles.viewButton, calendarView === 'day' && styles.viewButtonActive]}
-          onPress={() => {
-            if (Platform.OS !== 'web') {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            }
-            setCalendarViewType('day');
-          }}
-        >
-          <Text style={[styles.viewButtonText, calendarView === 'day' && styles.viewButtonTextActive]}>
-            {t.calendar.day}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.viewButton, calendarView === 'week' && styles.viewButtonActive]}
-          onPress={() => {
-            if (Platform.OS !== 'web') {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            }
-            setCalendarViewType('week');
-          }}
-        >
-          <Text style={[styles.viewButtonText, calendarView === 'week' && styles.viewButtonTextActive]}>
-            {t.calendar.week}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.viewButton, calendarView === 'month' && styles.viewButtonActive]}
-          onPress={() => {
-            if (Platform.OS !== 'web') {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            }
-            setCalendarViewType('month');
-          }}
-        >
-          <Text style={[styles.viewButtonText, calendarView === 'month' && styles.viewButtonTextActive]}>
-            {t.calendar.month}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.viewButton, calendarView === 'list' && styles.viewButtonActive]}
-          onPress={() => {
-            if (Platform.OS !== 'web') {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            }
-            setCalendarViewType('list');
-          }}
-        >
-          <List size={16} color={calendarView === 'list' ? '#3B82F6' : '#6B7280'} />
-        </TouchableOpacity>
-      </View>
+
 
       {calendarView !== 'list' && renderDayTicker()}
 
-      <View style={styles.navigation}>
-        <TouchableOpacity style={styles.navButton} onPress={handlePrevious}>
-          <ChevronLeft size={24} color="#3B82F6" />
-        </TouchableOpacity>
+      <Animated.View 
+        style={[styles.navigation, {
+          transform: [{ translateX: Animated.multiply(swipeX, 0.3) }]
+        }]}
+        {...panResponder.panHandlers}
+      >
         <Text style={styles.currentDate}>{currentDateDisplay}</Text>
-        <TouchableOpacity style={styles.navButton} onPress={handleNext}>
-          <ChevronRight size={24} color="#3B82F6" />
-        </TouchableOpacity>
-      </View>
+        <Text style={styles.swipeHint}>← swipe →</Text>
+      </Animated.View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {calendarView === 'month' && renderMonthView()}
@@ -753,14 +731,7 @@ export default function CalendarScreen() {
         {calendarView === 'list' && renderListView()}
       </ScrollView>
 
-      <View style={styles.hint}>
-        <CalendarIcon size={16} color="#3B82F6" />
-        <Text style={styles.hintText}>
-          {calendarView === 'day'
-            ? '💡 Tap + to create a task for today'
-            : '💡 Long press a date to quickly create a task'}
-        </Text>
-      </View>
+
 
       {showTaskModal && currentList && (
         <TaskFormModal
@@ -918,65 +889,38 @@ const styles = StyleSheet.create({
     color: '#111827',
   },
   createButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: '#3B82F6',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#3B82F6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 8,
   },
-  viewToggle: {
-    flexDirection: 'row',
-    padding: 3,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 10,
-    marginHorizontal: 16,
-    marginVertical: 8,
-  },
-  viewButton: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  viewButtonActive: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  viewButtonText: {
-    fontSize: 14,
-    fontWeight: '600' as const,
-    color: '#6B7280',
-  },
-  viewButtonTextActive: {
-    color: '#3B82F6',
-  },
+
   navigation: {
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  navButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: '#EFF6FF',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#FFFFFF',
   },
   currentDate: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700' as const,
     color: '#111827',
+    letterSpacing: -0.5,
+  },
+  swipeHint: {
+    fontSize: 11,
+    fontWeight: '500' as const,
+    color: '#9CA3AF',
+    marginTop: 4,
+    letterSpacing: 1,
   },
   scrollView: {
     flex: 1,
@@ -1252,55 +1196,53 @@ const styles = StyleSheet.create({
     fontWeight: '600' as const,
     color: '#FFFFFF',
   },
-  hint: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: '#EFF6FF',
-    marginHorizontal: 16,
-    marginBottom: 12,
-    borderRadius: 10,
-  },
-  hintText: {
-    fontSize: 12,
-    fontWeight: '500' as const,
-    color: '#1E40AF',
-    flex: 1,
-  },
+
   dayTicker: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FAFAFA',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
   dayTickerContent: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 8,
   },
   tickerDay: {
-    width: 48,
-    height: 64,
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-    borderRadius: 12,
+    width: 60,
+    height: 72,
+    paddingVertical: 10,
+    paddingHorizontal: 6,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F9FAFB',
-    marginRight: 8,
+    backgroundColor: '#FFFFFF',
+    marginRight: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   tickerDayToday: {
-    backgroundColor: '#DBEAFE',
+    backgroundColor: '#EFF6FF',
+    borderWidth: 2,
+    borderColor: '#BFDBFE',
   },
   tickerDaySelected: {
     backgroundColor: '#3B82F6',
+    shadowColor: '#3B82F6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   tickerDayName: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600' as const,
-    color: '#9CA3AF',
-    marginBottom: 4,
+    color: '#6B7280',
+    marginBottom: 6,
     textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
   },
   tickerDayNameToday: {
     color: '#3B82F6',
@@ -1309,10 +1251,10 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   tickerDayNumber: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '700' as const,
     color: '#111827',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   tickerDayNumberToday: {
     color: '#3B82F6',
@@ -1322,13 +1264,13 @@ const styles = StyleSheet.create({
   },
   tickerMarkerRow: {
     flexDirection: 'row',
-    gap: 3,
-    marginTop: 4,
+    gap: 4,
+    marginTop: 6,
   },
   tickerMarker: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   listView: {
     flex: 1,
