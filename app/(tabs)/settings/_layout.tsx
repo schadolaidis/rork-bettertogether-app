@@ -43,6 +43,22 @@ export default function SettingsLayout() {
           presentation: 'modal',
         }}
       />
+      <Stack.Screen
+        name="notifications"
+        options={{
+          headerShown: true,
+          title: 'Notifications',
+          presentation: 'modal',
+        }}
+      />
+      <Stack.Screen
+        name="funds"
+        options={{
+          headerShown: true,
+          title: 'Fund Manager',
+          presentation: 'modal',
+        }}
+      />
     </Stack>
   );
 }
