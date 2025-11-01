@@ -18,8 +18,8 @@ export default function TabLayout() {
         options={{
           title: t.tabs.dashboard,
           tabBarIcon: Platform.OS === "ios" 
-            ? () => ({ sfSymbol: "house.fill" })
-            : () => ({ uri: "https://img.icons8.com/fluency-systems-filled/48/3B82F6/home.png" }),
+            ? { sfSymbol: "house.fill" }
+            : { uri: "https://img.icons8.com/fluency-systems-filled/48/3B82F6/home.png" },
         }}
       />
       <Tabs.Screen
@@ -27,8 +27,8 @@ export default function TabLayout() {
         options={{
           title: t.tabs.calendar,
           tabBarIcon: Platform.OS === "ios" 
-            ? () => ({ sfSymbol: "calendar" })
-            : () => ({ uri: "https://img.icons8.com/fluency-systems-filled/48/3B82F6/calendar.png" }),
+            ? { sfSymbol: "calendar" }
+            : { uri: "https://img.icons8.com/fluency-systems-filled/48/3B82F6/calendar.png" },
         }}
       />
       <Tabs.Screen
@@ -36,8 +36,8 @@ export default function TabLayout() {
         options={{
           title: t.tabs.tasks,
           tabBarIcon: Platform.OS === "ios" 
-            ? () => ({ sfSymbol: "checkmark.square.fill" })
-            : () => ({ uri: "https://img.icons8.com/fluency-systems-filled/48/3B82F6/checked-checkbox.png" }),
+            ? { sfSymbol: "checkmark.square.fill" }
+            : { uri: "https://img.icons8.com/fluency-systems-filled/48/3B82F6/checked-checkbox.png" },
         }}
       />
       <Tabs.Screen
@@ -45,8 +45,8 @@ export default function TabLayout() {
         options={{
           title: t.tabs.fundGoals,
           tabBarIcon: Platform.OS === "ios" 
-            ? () => ({ sfSymbol: "target" })
-            : () => ({ uri: "https://img.icons8.com/fluency-systems-filled/48/3B82F6/target.png" }),
+            ? { sfSymbol: "target" }
+            : { uri: "https://img.icons8.com/fluency-systems-filled/48/3B82F6/target.png" },
         }}
       />
       <Tabs.Screen
@@ -54,8 +54,8 @@ export default function TabLayout() {
         options={{
           title: t.tabs.settings,
           tabBarIcon: Platform.OS === "ios" 
-            ? () => ({ sfSymbol: "gearshape.fill" })
-            : () => ({ uri: "https://img.icons8.com/fluency-systems-filled/48/3B82F6/settings.png" }),
+            ? { sfSymbol: "gearshape.fill" }
+            : { uri: "https://img.icons8.com/fluency-systems-filled/48/3B82F6/settings.png" },
         }}
       />
     </Tabs>
