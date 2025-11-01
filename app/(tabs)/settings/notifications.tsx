@@ -1,233 +1,272 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
   View,
   ScrollView,
-  Switch,
   TouchableOpacity,
+  Switch,
   Platform,
+  Alert,
 } from 'react-native';
+import { Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import {
-  ChevronLeft,
-  Bell,
-  CheckSquare,
-  XCircle,
-  AlertCircle,
-  Users,
-  DollarSign,
-  Volume2,
-  Hash,
-} from 'lucide-react-native';
+import * as Notifications from 'expo-notifications';
+import { Bell, CheckCircle, AlertCircle, Target } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { useApp } from '@/contexts/AppContext';
-import { useNotifications } from '@/contexts/NotificationContext';
-
-interface PreferenceSwitchProps {
-  icon: React.ReactNode;
-  title: string;
-  subtitle: string;
-  value: boolean;
-  onValueChange: (value: boolean) => void;
-  color?: string;
-}
-
-function PreferenceSwitch({
-  icon,
-  title,
-  subtitle,
-  value,
-  onValueChange,
-  color = '#3B82F6',
-}: PreferenceSwitchProps) {
-  return (
-    <View style={styles.preferenceItem}>
-      <View style={[styles.preferenceIcon, { backgroundColor: `${color}15` }]}>
-        <>{icon}</>
-      </View>
-      <View style={styles.preferenceContent}>
-        <Text style={styles.preferenceTitle}>{title}</Text>
-        <Text style={styles.preferenceSubtitle}>{subtitle}</Text>
-      </View>
-      <Switch
-        value={value}
-        onValueChange={(val) => {
-          if (Platform.OS !== 'web') {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          }
-          onValueChange(val);
-        }}
-        trackColor={{ false: '#E5E7EB', true: `${color}50` }}
-        thumbColor={value ? color : '#FFFFFF'}
-        ios_backgroundColor="#E5E7EB"
-      />
-    </View>
-  );
-}
+import { NotificationService } from '@/services/NotificationService';
 
 export default function NotificationsScreen() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
-  const { currentUser, t } = useApp();
-  const { preferences, updatePreferences, initializePreferences } = useNotifications();
+  const [permissionStatus, setPermissionStatus] = useState<string>('loading');
+  const [taskRemindersEnabled, setTaskRemindersEnabled] = useState(true);
+  const [overdueAlertsEnabled, setOverdueAlertsEnabled] = useState(true);
+  const [fundGoalsEnabled, setFundGoalsEnabled] = useState(true);
+  const [dailySummaryEnabled, setDailySummaryEnabled] = useState(false);
 
   useEffect(() => {
-    if (currentUser && !preferences) {
-      initializePreferences(currentUser.id);
-    }
-  }, [currentUser, preferences, initializePreferences]);
+    checkPermissionStatus();
+  }, []);
 
-  if (!preferences) {
-    return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => {
-              if (Platform.OS !== 'web') {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              }
-              router.back();
-            }}
-          >
-            <ChevronLeft size={24} color="#111827" />
-          </TouchableOpacity>
-          <Text style={styles.title}>{t.notifications.title}</Text>
-          <View style={styles.placeholder} />
+  const checkPermissionStatus = async () => {
+    if (Platform.OS === 'web') {
+      setPermissionStatus('not_supported');
+      return;
+    }
+
+    try {
+      const { status } = await Notifications.getPermissionsAsync();
+      setPermissionStatus(status);
+    } catch (error) {
+      console.error('[Notifications] Error checking permission:', error);
+      setPermissionStatus('error');
+    }
+  };
+
+  const requestPermission = async () => {
+    if (Platform.OS === 'web') {
+      Alert.alert(
+        'Not Available',
+        'Notifications are not supported on web platform.'
+      );
+      return;
+    }
+
+    try {
+      const { status } = await Notifications.requestPermissionsAsync();
+      setPermissionStatus(status);
+
+      if (status === 'granted') {
+        await NotificationService.initialize();
+        if (Platform.OS === 'ios' || Platform.OS === 'android') {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+        Alert.alert('Success', 'Notifications enabled successfully!');
+      } else {
+        Alert.alert(
+          'Permission Denied',
+          'Please enable notifications in your device settings to receive task reminders and updates.'
+        );
+      }
+    } catch (error) {
+      console.error('[Notifications] Error requesting permission:', error);
+      Alert.alert('Error', 'Failed to request notification permission');
+    }
+  };
+
+  const toggleDailySummary = async () => {
+    const newValue = !dailySummaryEnabled;
+    setDailySummaryEnabled(newValue);
+
+    if (Platform.OS === 'ios' || Platform.OS === 'android') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+
+    if (newValue) {
+      await NotificationService.scheduleDailySummary();
+      Alert.alert(
+        'Daily Summary Enabled',
+        'You will receive a daily summary at 9:00 AM'
+      );
+    } else {
+      await NotificationService.clearAllNotifications();
+      Alert.alert('Daily Summary Disabled', 'Daily summary notifications turned off');
+    }
+  };
+
+  const toggleSetting = (
+    currentValue: boolean,
+    setter: (value: boolean) => void
+  ) => {
+    if (Platform.OS === 'ios' || Platform.OS === 'android') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    setter(!currentValue);
+  };
+
+  const renderPermissionStatus = () => {
+    if (Platform.OS === 'web') {
+      return (
+        <View style={styles.statusCard}>
+          <AlertCircle size={24} color="#F59E0B" />
+          <View style={styles.statusContent}>
+            <Text style={styles.statusTitle}>Not Available on Web</Text>
+            <Text style={styles.statusText}>
+              Notifications are only supported on mobile devices. Please use the mobile app to enable notifications.
+            </Text>
+          </View>
         </View>
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>{t.common.loading}...</Text>
+      );
+    }
+
+    if (permissionStatus === 'loading') {
+      return (
+        <View style={styles.statusCard}>
+          <Text style={styles.statusText}>Checking permission...</Text>
+        </View>
+      );
+    }
+
+    if (permissionStatus === 'granted') {
+      return (
+        <View style={[styles.statusCard, styles.statusCardSuccess]}>
+          <CheckCircle size={24} color="#10B981" />
+          <View style={styles.statusContent}>
+            <Text style={styles.statusTitle}>Notifications Enabled</Text>
+            <Text style={styles.statusText}>
+              You will receive task reminders and important updates
+            </Text>
+          </View>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.statusCard}>
+        <AlertCircle size={24} color="#EF4444" />
+        <View style={styles.statusContent}>
+          <Text style={styles.statusTitle}>Notifications Disabled</Text>
+          <Text style={styles.statusText}>
+            Enable notifications to receive task reminders and updates
+          </Text>
+          <TouchableOpacity
+            style={styles.enableButton}
+            onPress={requestPermission}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.enableButtonText}>Enable Notifications</Text>
+          </TouchableOpacity>
         </View>
       </View>
     );
-  }
+  };
+
+  const renderSettingItem = (
+    icon: React.ReactNode,
+    title: string,
+    description: string,
+    value: boolean,
+    onValueChange: (value: boolean) => void,
+    disabled: boolean = false
+  ) => (
+    <View style={[styles.settingItem, disabled && styles.settingItemDisabled]}>
+      <View style={styles.settingIconContainer}>
+        {icon}
+      </View>
+      <View style={styles.settingContent}>
+        <Text style={[styles.settingTitle, disabled && styles.settingTitleDisabled]}>
+          {title}
+        </Text>
+        <Text style={[styles.settingDescription, disabled && styles.settingDescriptionDisabled]}>
+          {description}
+        </Text>
+      </View>
+      <Switch
+        value={value}
+        onValueChange={onValueChange}
+        disabled={disabled || Platform.OS === 'web'}
+        trackColor={{ false: '#D1D5DB', true: '#3B82F6' }}
+        thumbColor={value ? '#FFFFFF' : '#F3F4F6'}
+        ios_backgroundColor="#D1D5DB"
+      />
+    </View>
+  );
+
+  const isDisabled = permissionStatus !== 'granted' || Platform.OS === 'web';
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => {
-            if (Platform.OS !== 'web') {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            }
-            router.back();
-          }}
-        >
-          <ChevronLeft size={24} color="#111827" />
-        </TouchableOpacity>
-        <Text style={styles.title}>{t.notifications.title}</Text>
-        <View style={styles.placeholder} />
-      </View>
-
+      <Stack.Screen
+        options={{
+          headerShown: false,
+        }}
+      />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.descriptionCard}>
-          <Bell size={32} color="#3B82F6" />
-          <Text style={styles.descriptionTitle}>{t.notifications.preferences}</Text>
-          <Text style={styles.descriptionText}>{t.notifications.whatToNotify}</Text>
-        </View>
+        {renderPermissionStatus()}
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t.tasks.title}</Text>
-          <View style={styles.preferencesList}>
-            <PreferenceSwitch
-              icon={<CheckSquare size={20} color="#3B82F6" />}
-              title={t.notifications.taskAssignments}
-              subtitle="When someone assigns you a task"
-              value={preferences.taskAssignments}
-              onValueChange={(val) => updatePreferences({ taskAssignments: val })}
-              color="#3B82F6"
-            />
-            <PreferenceSwitch
-              icon={<CheckSquare size={20} color="#10B981" />}
-              title={t.notifications.taskCompletions}
-              subtitle="When a team member completes a task"
-              value={preferences.taskCompletions}
-              onValueChange={(val) => updatePreferences({ taskCompletions: val })}
-              color="#10B981"
-            />
-            <PreferenceSwitch
-              icon={<XCircle size={20} color="#EF4444" />}
-              title={t.notifications.taskFailures}
-              subtitle="When a task fails"
-              value={preferences.taskFailures}
-              onValueChange={(val) => updatePreferences({ taskFailures: val })}
-              color="#EF4444"
-            />
-            <PreferenceSwitch
-              icon={<AlertCircle size={20} color="#F59E0B" />}
-              title={t.notifications.taskOverdueAlerts}
-              subtitle="When your tasks become overdue"
-              value={preferences.taskOverdue}
-              onValueChange={(val) => updatePreferences({ taskOverdue: val })}
-              color="#F59E0B"
-            />
-            <PreferenceSwitch
-              icon={<Bell size={20} color="#8B5CF6" />}
-              title={t.notifications.taskReminders}
-              subtitle="Task deadline reminders"
-              value={preferences.taskReminders}
-              onValueChange={(val) => updatePreferences({ taskReminders: val })}
-              color="#8B5CF6"
-            />
+          <Text style={styles.sectionTitle}>NOTIFICATION TYPES</Text>
+          <View style={styles.settingsList}>
+            {renderSettingItem(
+              <Bell size={20} color={isDisabled ? '#9CA3AF' : '#3B82F6'} />,
+              'Task Reminders',
+              'Get notified before tasks are due',
+              taskRemindersEnabled,
+              () => toggleSetting(taskRemindersEnabled, setTaskRemindersEnabled),
+              isDisabled
+            )}
+            {renderSettingItem(
+              <AlertCircle size={20} color={isDisabled ? '#9CA3AF' : '#EF4444'} />,
+              'Overdue Alerts',
+              'Receive alerts when tasks become overdue',
+              overdueAlertsEnabled,
+              () => toggleSetting(overdueAlertsEnabled, setOverdueAlertsEnabled),
+              isDisabled
+            )}
+            {renderSettingItem(
+              <Target size={20} color={isDisabled ? '#9CA3AF' : '#10B981'} />,
+              'Fund Goal Updates',
+              'Get notified when fund goals are reached',
+              fundGoalsEnabled,
+              () => toggleSetting(fundGoalsEnabled, setFundGoalsEnabled),
+              isDisabled
+            )}
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t.teams.title}</Text>
-          <View style={styles.preferencesList}>
-            <PreferenceSwitch
-              icon={<Users size={20} color="#06B6D4" />}
-              title={t.notifications.memberActivity}
-              subtitle="When members join or leave"
-              value={preferences.memberActivity}
-              onValueChange={(val) => updatePreferences({ memberActivity: val })}
-              color="#06B6D4"
-            />
-            <PreferenceSwitch
-              icon={<DollarSign size={20} color="#F59E0B" />}
-              title={t.notifications.balanceUpdates}
-              subtitle="When your balance changes"
-              value={preferences.balanceUpdates}
-              onValueChange={(val) => updatePreferences({ balanceUpdates: val })}
-              color="#F59E0B"
-            />
+          <Text style={styles.sectionTitle}>DAILY DIGEST</Text>
+          <View style={styles.settingsList}>
+            {renderSettingItem(
+              <CheckCircle size={20} color={isDisabled ? '#9CA3AF' : '#8B5CF6'} />,
+              'Daily Summary',
+              'Receive a summary of your tasks at 9:00 AM',
+              dailySummaryEnabled,
+              toggleDailySummary,
+              isDisabled
+            )}
           </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t.notifications.general}</Text>
-          <View style={styles.preferencesList}>
-            <PreferenceSwitch
-              icon={<Volume2 size={20} color="#6B7280" />}
-              title={t.notifications.enableSounds}
-              subtitle="Play sounds for notifications"
-              value={preferences.enableSounds}
-              onValueChange={(val) => updatePreferences({ enableSounds: val })}
-              color="#6B7280"
-            />
-            <PreferenceSwitch
-              icon={<Hash size={20} color="#6B7280" />}
-              title={t.notifications.enableBadges}
-              subtitle="Show unread notification count"
-              value={preferences.enableBadges}
-              onValueChange={(val) => updatePreferences({ enableBadges: val })}
-              color="#6B7280"
-            />
+        {Platform.OS === 'web' && (
+          <View style={styles.infoBox}>
+            <Text style={styles.infoText}>
+              💡 Notifications are only available on mobile devices. Install the app on your phone to enable notifications.
+            </Text>
           </View>
-        </View>
+        )}
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            Changes are saved automatically
-          </Text>
-        </View>
+        {permissionStatus === 'granted' && Platform.OS !== 'web' && (
+          <View style={styles.infoBox}>
+            <Text style={styles.infoText}>
+              ℹ️ These settings control which types of notifications you receive. You can also manage notifications in your device settings.
+            </Text>
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -238,41 +277,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F9FAFB',
   },
-  header: {
-    flexDirection: 'row' as const,
-    justifyContent: 'space-between' as const,
-    alignItems: 'center' as const,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '700' as const,
-    color: '#111827',
-  },
-  placeholder: {
-    width: 40,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: '#6B7280',
-  },
   scrollView: {
     flex: 1,
   },
@@ -280,37 +284,58 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 40,
   },
-  descriptionCard: {
+  statusCard: {
+    flexDirection: 'row' as const,
+    alignItems: 'flex-start' as const,
+    padding: 20,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 24,
-    marginBottom: 32,
-    alignItems: 'center' as const,
+    marginBottom: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
-    shadowRadius: 4,
+    shadowRadius: 8,
     elevation: 2,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
-  descriptionTitle: {
-    fontSize: 20,
+  statusCardSuccess: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#BBF7D0',
+  },
+  statusContent: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  statusTitle: {
+    fontSize: 16,
     fontWeight: '700' as const,
     color: '#111827',
-    marginTop: 16,
-    marginBottom: 8,
-    textAlign: 'center' as const,
+    marginBottom: 4,
   },
-  descriptionText: {
-    fontSize: 15,
+  statusText: {
+    fontSize: 14,
     color: '#6B7280',
-    textAlign: 'center' as const,
-    lineHeight: 22,
+    lineHeight: 20,
+  },
+  enableButton: {
+    marginTop: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: '#3B82F6',
+    borderRadius: 12,
+    alignSelf: 'flex-start' as const,
+  },
+  enableButtonText: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: '#FFFFFF',
   },
   section: {
-    marginBottom: 32,
+    marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600' as const,
     color: '#9CA3AF',
     textTransform: 'uppercase' as const,
@@ -318,7 +343,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     paddingHorizontal: 4,
   },
-  preferencesList: {
+  settingsList: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     overflow: 'hidden',
@@ -328,41 +353,57 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  preferenceItem: {
+  settingItem: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
   },
-  preferenceIcon: {
+  settingItemDisabled: {
+    opacity: 0.5,
+  },
+  settingIconContainer: {
     width: 40,
     height: 40,
     borderRadius: 20,
+    backgroundColor: '#F3F4F6',
     justifyContent: 'center' as const,
     alignItems: 'center' as const,
     marginRight: 12,
   },
-  preferenceContent: {
+  settingContent: {
     flex: 1,
+    marginRight: 12,
   },
-  preferenceTitle: {
+  settingTitle: {
     fontSize: 16,
     fontWeight: '600' as const,
     color: '#111827',
     marginBottom: 2,
   },
-  preferenceSubtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  footer: {
-    alignItems: 'center' as const,
-    paddingVertical: 24,
-  },
-  footerText: {
-    fontSize: 14,
+  settingTitleDisabled: {
     color: '#9CA3AF',
-    textAlign: 'center' as const,
+  },
+  settingDescription: {
+    fontSize: 13,
+    color: '#6B7280',
+    lineHeight: 18,
+  },
+  settingDescriptionDisabled: {
+    color: '#D1D5DB',
+  },
+  infoBox: {
+    padding: 16,
+    backgroundColor: '#EFF6FF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    marginTop: 8,
+  },
+  infoText: {
+    fontSize: 13,
+    color: '#1E40AF',
+    lineHeight: 20,
   },
 });

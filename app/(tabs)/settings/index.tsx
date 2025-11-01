@@ -264,9 +264,7 @@ export default function SettingsScreen() {
               icon={<Bell size={20} color="#F59E0B" />}
               title={t.settings.notifications}
               subtitle={t.settings.manageNotifications}
-              onPress={() => {
-                Alert.alert(t.alerts.comingSoon, t.alerts.featureComingSoon);
-              }}
+              onPress={() => router.push('./notifications' as any)}
             />
           </View>
         </View>
