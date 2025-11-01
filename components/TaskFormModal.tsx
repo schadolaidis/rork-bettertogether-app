@@ -481,6 +481,7 @@ export function TaskFormModal({
                 if (titleError) setTitleError('');
               }}
               maxLength={100}
+              autoFocus={false}
             />
             
             <TextInput
@@ -491,6 +492,7 @@ export function TaskFormModal({
               onChangeText={setDescription}
               multiline
               maxLength={500}
+              autoFocus={false}
             />
           </View>
 
