@@ -8,6 +8,7 @@ import { MOCK_TASKS, MOCK_USERS, MOCK_LISTS, MOCK_LEDGER_ENTRIES, MOCK_FUND_TARG
 import { ClockService } from '@/services/ClockService';
 import { LedgerService } from '@/services/LedgerService';
 import { SchedulerService } from '@/services/SchedulerService';
+import { NotificationService } from '@/services/NotificationService';
 import { InviteService } from '@/services/InviteService';
 import { ListService, ListSettingsPayload } from '@/services/ListService';
 import { CategoryService } from '@/services/CategoryService';
@@ -179,6 +180,10 @@ export const [AppProvider, useApp] = createContextHook(() => {
   }, [languageQuery.data]);
 
   useEffect(() => {
+    NotificationService.initialize();
+  }, []);
+
+  useEffect(() => {
     if (fundTargetsQuery.data) {
       setFundTargets(fundTargetsQuery.data);
     }
@@ -261,6 +266,8 @@ export const [AppProvider, useApp] = createContextHook(() => {
         setLedgerEntries((prev) => [...prev, ledgerEntry]);
         mutateLedger([...ledgerEntries, ledgerEntry]);
 
+        NotificationService.sendTaskFailedNotification(task, task.stake);
+
         return {
           ...task,
           status: 'failed' as const,
@@ -270,6 +277,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       } else if (isOverdue && task.status === 'pending') {
         console.log(`[Scheduler] Task ${task.id} (${task.title}) is now overdue`);
         hasChanges = true;
+        NotificationService.sendTaskOverdueNotification(task);
         return {
           ...task,
           status: 'overdue' as const,
@@ -324,6 +332,9 @@ export const [AppProvider, useApp] = createContextHook(() => {
       setLedgerEntries(updatedEntries);
       mutateLedger(updatedEntries);
     }
+
+    NotificationService.cancelTaskNotifications(taskId);
+    NotificationService.sendTaskCompletedNotification(task);
 
     console.log(`[Task] Completed: ${task.title}`);
   }, [tasks, ledgerEntries, mutateTasks, mutateLedger]);
@@ -419,6 +430,10 @@ export const [AppProvider, useApp] = createContextHook(() => {
       const updatedTasks = [...tasks, newTask];
       setTasks(updatedTasks);
       mutateTasks(updatedTasks);
+      
+      if (newTask.reminder && newTask.reminder !== 'none') {
+        NotificationService.scheduleTaskReminder(newTask);
+      }
     },
     [tasks, currentListId, mutateTasks]
   );
@@ -433,6 +448,15 @@ export const [AppProvider, useApp] = createContextHook(() => {
       });
       setTasks(updatedTasks);
       mutateTasks(updatedTasks);
+      
+      const updatedTask = updatedTasks.find(t => t.id === taskId);
+      if (updatedTask) {
+        NotificationService.cancelTaskNotifications(taskId);
+        if (updatedTask.reminder && updatedTask.reminder !== 'none') {
+          NotificationService.scheduleTaskReminder(updatedTask);
+        }
+      }
+      
       console.log(`[Task] Updated: ${taskId}`);
     },
     [tasks, mutateTasks]
@@ -799,7 +823,16 @@ export const [AppProvider, useApp] = createContextHook(() => {
     (fundId: string, updates: Partial<Pick<FundTarget, 'name' | 'emoji' | 'description' | 'targetAmountCents'>>) => {
       const updatedFunds = fundTargets.map((f) => {
         if (f.id === fundId) {
-          return { ...f, ...updates };
+          const updatedFund = { ...f, ...updates };
+          if (updatedFund.targetAmountCents && updatedFund.totalCollectedCents >= updatedFund.targetAmountCents && 
+              (!f.targetAmountCents || f.totalCollectedCents < f.targetAmountCents)) {
+            NotificationService.sendFundGoalReachedNotification(
+              updatedFund.name,
+              updatedFund.emoji,
+              updatedFund.targetAmountCents / 100
+            );
+          }
+          return updatedFund;
         }
         return f;
       });
