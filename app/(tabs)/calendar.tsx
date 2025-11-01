@@ -39,6 +39,7 @@ export default function CalendarScreen() {
   const [showDayAgenda, setShowDayAgenda] = useState(false);
   const [agendaDate, setAgendaDate] = useState<Date>(new Date());
   const swipeX = useRef(new Animated.Value(0)).current;
+  const [isDragging, setIsDragging] = useState(false);
 
   const [currentMonth, setCurrentMonth] = useState(() => ({
     year: selectedDate.getFullYear(),
@@ -285,13 +286,17 @@ export default function CalendarScreen() {
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, gestureState) => {
-        return Math.abs(gestureState.dx) > 10 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+        return Math.abs(gestureState.dx) > 20 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 2;
+      },
+      onPanResponderGrant: () => {
+        setIsDragging(true);
       },
       onPanResponderMove: (_, gestureState) => {
         swipeX.setValue(gestureState.dx);
       },
       onPanResponderRelease: (_, gestureState) => {
-        if (Math.abs(gestureState.dx) > 80) {
+        setIsDragging(false);
+        if (Math.abs(gestureState.dx) > 60 && Math.abs(gestureState.vx) > 0.3) {
           if (gestureState.dx > 0) {
             handlePrevious();
           } else {
@@ -301,8 +306,17 @@ export default function CalendarScreen() {
         Animated.spring(swipeX, {
           toValue: 0,
           useNativeDriver: true,
-          friction: 8,
-          tension: 40,
+          friction: 9,
+          tension: 50,
+        }).start();
+      },
+      onPanResponderTerminate: () => {
+        setIsDragging(false);
+        Animated.spring(swipeX, {
+          toValue: 0,
+          useNativeDriver: true,
+          friction: 9,
+          tension: 50,
         }).start();
       },
     })
@@ -314,7 +328,7 @@ export default function CalendarScreen() {
         CalendarService.isSameDay(date, selectedDate)
       );
       if (todayIndex >= 0) {
-        const scrollX = Math.max(0, (todayIndex - 2) * 64);
+        const scrollX = Math.max(0, (todayIndex - 2) * 60);
         setTimeout(() => {
           tickerScrollRef.current?.scrollTo({ x: scrollX, animated: true });
         }, 100);
@@ -706,7 +720,7 @@ export default function CalendarScreen() {
             setShowTaskModal(true);
           }}
         >
-          <Plus size={24} color="#FFFFFF" />
+          <Plus size={22} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
@@ -714,22 +728,24 @@ export default function CalendarScreen() {
 
       {calendarView !== 'list' && renderDayTicker()}
 
-      <Animated.View 
-        style={[styles.navigation, {
-          transform: [{ translateX: Animated.multiply(swipeX, 0.3) }]
-        }]}
-        {...panResponder.panHandlers}
-      >
+      <View style={styles.navigation}>
         <Text style={styles.currentDate}>{currentDateDisplay}</Text>
         <Text style={styles.swipeHint}>← swipe →</Text>
-      </Animated.View>
+      </View>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <Animated.ScrollView 
+        style={[styles.scrollView, {
+          transform: [{ translateX: Animated.multiply(swipeX, 0.2) }]
+        }]}
+        showsVerticalScrollIndicator={false}
+        {...panResponder.panHandlers}
+        scrollEnabled={!isDragging}
+      >
         {calendarView === 'month' && renderMonthView()}
         {calendarView === 'week' && renderWeekView()}
         {calendarView === 'day' && renderDayView()}
         {calendarView === 'list' && renderListView()}
-      </ScrollView>
+      </Animated.ScrollView>
 
 
 
@@ -889,50 +905,53 @@ const styles = StyleSheet.create({
     color: '#111827',
   },
   createButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: '#3B82F6',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#3B82F6',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
 
   navigation: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 12,
     backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
   currentDate: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700' as const,
     color: '#111827',
-    letterSpacing: -0.5,
+    letterSpacing: -0.3,
   },
   swipeHint: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '500' as const,
-    color: '#9CA3AF',
-    marginTop: 4,
+    color: '#D1D5DB',
+    marginTop: 2,
     letterSpacing: 1,
   },
   scrollView: {
     flex: 1,
   },
   monthView: {
-    paddingHorizontal: 8,
-    paddingBottom: 8,
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 12,
   },
   weekDayHeader: {
     flexDirection: 'row',
-    marginBottom: 12,
-    paddingHorizontal: 8,
+    marginBottom: 8,
+    paddingHorizontal: 4,
   },
   weekDayName: {
     flex: 1,
@@ -1198,49 +1217,39 @@ const styles = StyleSheet.create({
   },
 
   dayTicker: {
-    backgroundColor: '#FAFAFA',
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
   dayTickerContent: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 6,
   },
   tickerDay: {
-    width: 60,
-    height: 72,
-    paddingVertical: 10,
-    paddingHorizontal: 6,
-    borderRadius: 16,
+    width: 52,
+    height: 64,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    marginRight: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    backgroundColor: '#F9FAFB',
+    marginRight: 8,
   },
   tickerDayToday: {
     backgroundColor: '#EFF6FF',
-    borderWidth: 2,
-    borderColor: '#BFDBFE',
+    borderWidth: 1.5,
+    borderColor: '#93C5FD',
   },
   tickerDaySelected: {
     backgroundColor: '#3B82F6',
-    shadowColor: '#3B82F6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
   },
   tickerDayName: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '600' as const,
-    color: '#6B7280',
-    marginBottom: 6,
+    color: '#9CA3AF',
+    marginBottom: 4,
     textTransform: 'uppercase' as const,
     letterSpacing: 0.5,
   },
@@ -1251,10 +1260,10 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   tickerDayNumber: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700' as const,
     color: '#111827',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   tickerDayNumberToday: {
     color: '#3B82F6',
@@ -1264,13 +1273,13 @@ const styles = StyleSheet.create({
   },
   tickerMarkerRow: {
     flexDirection: 'row',
-    gap: 4,
-    marginTop: 6,
+    gap: 3,
+    marginTop: 4,
   },
   tickerMarker: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
   },
   listView: {
     flex: 1,
