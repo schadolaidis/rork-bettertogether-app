@@ -9,14 +9,12 @@ import {
   ScrollView,
   Switch,
   Animated,
-  Dimensions,
+  KeyboardAvoidingView,
 } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Calendar, Clock, X, ChevronLeft, ChevronRight, Zap } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { EUDateFormatter } from '@/utils/EULocale';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface DateTimePickerModalProps {
   visible: boolean;
@@ -78,7 +76,7 @@ export function DateTimePickerModal({
         }),
       ]).start();
     }
-  }, [visible, initialDate, initialAllDay]);
+  }, [visible, initialDate, initialAllDay, fadeAnim, slideAnim]);
 
   const handleDateChange = useCallback((_event: DateTimePickerEvent, date?: Date) => {
     if (Platform.OS === 'android') {
@@ -248,13 +246,19 @@ export function DateTimePickerModal({
   const minutes = useMemo(() => [0, 15, 30, 45], []);
 
   const handleSave = useCallback(() => {
-    console.log('[DateTimePicker] Saving:', selectedDate.toISOString(), 'AllDay:', isAllDay);
+    const finalDate = new Date(selectedDate);
+    
+    if (isAllDay) {
+      finalDate.setHours(0, 0, 0, 0);
+    }
+    
+    console.log('[DateTimePicker] Saving:', finalDate.toISOString(), 'AllDay:', isAllDay);
     
     if (Platform.OS !== 'web') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
     
-    onSave(selectedDate, isAllDay);
+    onSave(finalDate, isAllDay);
   }, [selectedDate, isAllDay, onSave]);
 
   const formatDate = (date: Date) => {
@@ -282,7 +286,10 @@ export function DateTimePickerModal({
 
   return (
     <Modal visible={visible} transparent animationType="fade">
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.overlay}
+      >
         <TouchableOpacity
           style={styles.backdrop}
           activeOpacity={1}
@@ -586,7 +593,7 @@ export function DateTimePickerModal({
             is24Hour={true}
           />
         )}
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -617,20 +624,11 @@ function QuickSelectButton({ label, active, onPress }: QuickSelectButtonProps) {
 
 const styles = StyleSheet.create({
   overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    flex: 1,
     justifyContent: 'flex-end',
-    zIndex: 9999,
   },
   backdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
   container: {
@@ -643,7 +641,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 16,
     elevation: 20,
-    zIndex: 10000,
   },
   handle: {
     width: 40,

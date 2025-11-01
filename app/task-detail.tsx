@@ -472,13 +472,20 @@ export default function TaskDetailScreen() {
             endDate.setHours(startDate.getHours() + 1, startDate.getMinutes(), 0, 0);
           }
           
-          console.log('[TaskDetail] Saving dates - Start:', startDate.toISOString(), 'End:', endDate.toISOString());
+          const startISO = startDate.toISOString();
+          const endISO = endDate.toISOString();
+          
+          console.log('[TaskDetail] Saving dates - Start:', startISO, 'End:', endISO, 'AllDay:', allDay);
           
           updateTask(task.id, {
-            startAt: startDate.toISOString(),
-            endAt: endDate.toISOString(),
+            startAt: startISO,
+            endAt: endISO,
             allDay
           });
+          
+          if (Platform.OS !== 'web') {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          }
           
           setShowDateTimePicker(false);
         }}
