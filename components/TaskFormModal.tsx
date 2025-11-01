@@ -357,22 +357,27 @@ export function TaskFormModal({
     
     if (selectedDate && !isNaN(selectedDate.getTime())) {
       console.log('[TimePicker] Time selected:', selectedDate.toISOString());
-      const newStart = new Date(startDate);
-      newStart.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
-      
-      const newEnd = new Date(newStart.getTime() + 3600000);
-      
-      setStartDate(newStart);
-      setEndDate(newEnd);
-      setTempStartDate(newStart);
-      
-      console.log('[TimePicker] Applied - Start:', newStart.toISOString(), 'End:', newEnd.toISOString());
-      
-      if (Platform.OS !== 'web') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      }
+      setTempStartDate(selectedDate);
     }
   };
+
+  const confirmTimePicker = useCallback(() => {
+    console.log('[TimePicker] Confirming time:', tempStartDate.toISOString());
+    const newStart = new Date(startDate);
+    newStart.setHours(tempStartDate.getHours(), tempStartDate.getMinutes(), 0, 0);
+    
+    const newEnd = new Date(newStart.getTime() + 3600000);
+    
+    setStartDate(newStart);
+    setEndDate(newEnd);
+    setShowStartTimePicker(false);
+    
+    console.log('[TimePicker] Applied - Start:', newStart.toISOString(), 'End:', newEnd.toISOString());
+    
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  }, [startDate, tempStartDate]);
 
   const formatDate = (date: Date) => {
     if (!date || isNaN(date.getTime())) {
@@ -1013,12 +1018,7 @@ export function TaskFormModal({
           />
           <View style={styles.iosPickerContainer}>
             <View style={styles.iosPickerHeader}>
-              <TouchableOpacity onPress={() => {
-                if (Platform.OS !== 'web') {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }
-                setShowStartTimePicker(false);
-              }}>
+              <TouchableOpacity onPress={confirmTimePicker}>
                 <Text style={styles.iosPickerDoneButton}>Done</Text>
               </TouchableOpacity>
             </View>

@@ -95,7 +95,63 @@ export default function TaskDetailScreen() {
     router.back();
   }, [task, completeTask, router]);
 
+  const handleStartDateChange = useCallback((_event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowStartDatePicker(false);
+    }
+    
+    if (!task || !selectedDate || isNaN(selectedDate.getTime())) return;
+    
+    console.log('[TaskDetail] Date selected:', selectedDate.toISOString());
+    const currentStart = new Date(task.startAt);
+    const newStart = new Date(selectedDate);
+    newStart.setHours(currentStart.getHours(), currentStart.getMinutes(), 0, 0);
+    
+    const duration = new Date(task.endAt).getTime() - currentStart.getTime();
+    const newEnd = new Date(newStart.getTime() + (duration > 0 ? duration : 3600000));
+    
+    updateTask(task.id, {
+      startAt: newStart.toISOString(),
+      endAt: newEnd.toISOString()
+    });
+    setTempStartDate(newStart);
+    
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  }, [task, updateTask]);
 
+  const handleStartTimeChange = useCallback((_event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowStartTimePicker(false);
+    }
+    
+    if (selectedDate && !isNaN(selectedDate.getTime())) {
+      console.log('[TaskDetail] Time selected:', selectedDate.toISOString());
+      setTempStartDate(selectedDate);
+    }
+  }, []);
+
+  const confirmTimePicker = useCallback(() => {
+    if (!task) return;
+    console.log('[TaskDetail] Confirming time:', tempStartDate.toISOString());
+    const newStart = new Date(task.startAt);
+    newStart.setHours(tempStartDate.getHours(), tempStartDate.getMinutes(), 0, 0);
+    
+    const newEnd = new Date(newStart.getTime() + 3600000);
+    
+    updateTask(task.id, {
+      startAt: newStart.toISOString(),
+      endAt: newEnd.toISOString()
+    });
+    setShowStartTimePicker(false);
+    
+    console.log('[TaskDetail] Applied - Start:', newStart.toISOString(), 'End:', newEnd.toISOString());
+    
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  }, [task, tempStartDate, updateTask]);
 
   const formatDate = (date: Date) => {
     if (!date || isNaN(date.getTime())) return 'Invalid Date';
@@ -128,56 +184,6 @@ export default function TaskDetailScreen() {
       </View>
     );
   }
-
-  const handleStartDateChange = useCallback((_event: DateTimePickerEvent, selectedDate?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowStartDatePicker(false);
-    }
-    
-    if (selectedDate && !isNaN(selectedDate.getTime())) {
-      console.log('[TaskDetail] Date selected:', selectedDate.toISOString());
-      const currentStart = new Date(task.startAt);
-      const newStart = new Date(selectedDate);
-      newStart.setHours(currentStart.getHours(), currentStart.getMinutes(), 0, 0);
-      
-      const duration = new Date(task.endAt).getTime() - currentStart.getTime();
-      const newEnd = new Date(newStart.getTime() + (duration > 0 ? duration : 3600000));
-      
-      updateTask(task.id, {
-        startAt: newStart.toISOString(),
-        endAt: newEnd.toISOString()
-      });
-      setTempStartDate(newStart);
-      
-      if (Platform.OS !== 'web') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      }
-    }
-  }, [task, updateTask]);
-
-  const handleStartTimeChange = useCallback((_event: DateTimePickerEvent, selectedDate?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowStartTimePicker(false);
-    }
-    
-    if (selectedDate && !isNaN(selectedDate.getTime())) {
-      console.log('[TaskDetail] Time selected:', selectedDate.toISOString());
-      const newStart = new Date(task.startAt);
-      newStart.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
-      
-      const newEnd = new Date(newStart.getTime() + 3600000);
-      
-      updateTask(task.id, {
-        startAt: newStart.toISOString(),
-        endAt: newEnd.toISOString()
-      });
-      setTempStartDate(newStart);
-      
-      if (Platform.OS !== 'web') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      }
-    }
-  }, [task, updateTask]);
 
   const categoryMeta = currentList.categories?.[task.category] || {
     emoji: '📋',
@@ -684,12 +690,7 @@ export default function TaskDetailScreen() {
           />
           <View style={styles.iosPickerContainer}>
             <View style={styles.iosPickerHeader}>
-              <TouchableOpacity onPress={() => {
-                if (Platform.OS !== 'web') {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }
-                setShowStartTimePicker(false);
-              }}>
+              <TouchableOpacity onPress={confirmTimePicker}>
                 <Text style={styles.iosPickerDoneButton}>Done</Text>
               </TouchableOpacity>
             </View>
