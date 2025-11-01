@@ -413,6 +413,36 @@ export default function TaskDetailScreen() {
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        {fundTargets && fundTargets.length > 0 && task.fundTargetId && (
+          <View style={styles.fundTargetHero}>
+            <TouchableOpacity
+              style={styles.fundTargetHeroCard}
+              onPress={() => {
+                if (Platform.OS !== 'web') {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+                router.push(`/(tabs)/settings/funds`);
+              }}
+            >
+              <View style={styles.fundTargetHeroIcon}>
+                <Text style={styles.fundTargetHeroEmoji}>
+                  {fundTargets.find((f) => f.id === task.fundTargetId)?.emoji || '🎯'}
+                </Text>
+              </View>
+              <View style={styles.fundTargetHeroContent}>
+                <Text style={styles.fundTargetHeroLabel}>Focus Goal</Text>
+                <Text style={styles.fundTargetHeroName}>
+                  {fundTargets.find((f) => f.id === task.fundTargetId)?.name || 'Unknown'}
+                </Text>
+                <Text style={styles.fundTargetHeroStake}>
+                  💶 {currentList.currencySymbol}{task.stake} stakes on this
+                </Text>
+              </View>
+              <ChevronRight size={20} color="#8B5CF6" />
+            </TouchableOpacity>
+          </View>
+        )}
+
         <View style={styles.statusSection}>
           <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
             <Text style={styles.statusText}>
@@ -429,34 +459,6 @@ export default function TaskDetailScreen() {
             </TouchableOpacity>
           )}
         </View>
-
-        {fundTargets && fundTargets.length > 0 && task.fundTargetId && (
-          <View style={styles.fundTargetHero}>
-            <TouchableOpacity
-              style={styles.fundTargetHeroCard}
-              onPress={() => {
-                if (Platform.OS !== 'web') {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }
-              }}
-            >
-              <View style={styles.fundTargetHeroIcon}>
-                <Text style={styles.fundTargetHeroEmoji}>
-                  {fundTargets.find((f) => f.id === task.fundTargetId)?.emoji || '🎯'}
-                </Text>
-              </View>
-              <View style={styles.fundTargetHeroContent}>
-                <Text style={styles.fundTargetHeroLabel}>Funding Goal</Text>
-                <Text style={styles.fundTargetHeroName}>
-                  {fundTargets.find((f) => f.id === task.fundTargetId)?.name || 'Unknown'}
-                </Text>
-                <Text style={styles.fundTargetHeroStake}>
-                  💶 {currentList.currencySymbol}{task.stake} will go here if task fails
-                </Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-        )}
 
         <View style={styles.section}>
           <TouchableOpacity
@@ -1636,56 +1638,62 @@ const styles = StyleSheet.create({
   },
   fundTargetHero: {
     paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 8,
+    paddingTop: 20,
+    paddingBottom: 16,
   },
   fundTargetHeroCard: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#EFF6FF',
-    borderRadius: 16,
+    backgroundColor: '#F5F3FF',
+    borderRadius: 20,
     borderWidth: 2,
-    borderColor: '#3B82F6',
+    borderColor: '#8B5CF6',
     gap: 16,
+    shadowColor: '#8B5CF6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 4,
   },
   fundTargetHeroIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 6,
+    shadowRadius: 8,
     elevation: 3,
   },
   fundTargetHeroEmoji: {
-    fontSize: 32,
+    fontSize: 36,
   },
   fundTargetHeroContent: {
     flex: 1,
-    gap: 4,
+    gap: 6,
   },
   fundTargetHeroLabel: {
-    fontSize: 12,
-    fontWeight: '600' as const,
-    color: '#6B7280',
+    fontSize: 13,
+    fontWeight: '700' as const,
+    color: '#8B5CF6',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   fundTargetHeroName: {
-    fontSize: 20,
-    fontWeight: '700' as const,
+    fontSize: 22,
+    fontWeight: '800' as const,
     color: '#111827',
+    lineHeight: 28,
   },
   fundTargetHeroStake: {
-    fontSize: 14,
-    fontWeight: '500' as const,
-    color: '#3B82F6',
-    marginTop: 4,
+    fontSize: 15,
+    fontWeight: '600' as const,
+    color: '#6B7280',
+    marginTop: 2,
   },
   metadataSection: {
     paddingHorizontal: 20,

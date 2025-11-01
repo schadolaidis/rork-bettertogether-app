@@ -87,11 +87,17 @@ function TaskCard({
   return (
     <Pressable onPress={onPress} style={styles.taskCardWrapper}>
       <View style={[styles.taskCard, { backgroundColor, opacity: isDisabled ? 0.6 : 1 }]}>
-        <View style={[styles.categoryIndicator, { backgroundColor: categoryColor }]} />
+        {fundTarget && (
+          <View style={styles.fundTargetBanner}>
+            <Text style={styles.fundTargetBannerEmoji}>{fundTarget.emoji}</Text>
+            <Text style={styles.fundTargetBannerText}>{fundTarget.name}</Text>
+          </View>
+        )}
         
         <View style={styles.taskCardContent}>
           <View style={styles.taskHeader}>
             <View style={styles.taskTitleRow}>
+              <View style={[styles.categoryDot, { backgroundColor: categoryColor }]} />
               <Text style={styles.categoryEmoji}>{categoryEmoji}</Text>
               <Text
                 style={[
@@ -112,7 +118,7 @@ function TaskCard({
 
           <View style={styles.taskDetails}>
             <View style={styles.detailRow}>
-              <Clock size={16} color={statusColor} />
+              <Clock size={14} color={statusColor} />
               <Text style={[styles.detailText, { color: statusColor }]}>{dateText}</Text>
               {task.gracePeriod > 0 && task.status !== 'completed' && (
                 <Text style={styles.graceText}>+{task.gracePeriod}m</Text>
@@ -120,50 +126,18 @@ function TaskCard({
             </View>
             
             <View style={styles.detailRow}>
-              <DollarSign size={16} color="#6B7280" />
-              <Text style={styles.detailText}>${task.stake}</Text>
+              <DollarSign size={14} color="#8B5CF6" />
+              <Text style={[styles.detailText, { color: '#8B5CF6' }]}>${task.stake}</Text>
             </View>
-          </View>
 
-          <View style={styles.taskMeta}>
             {assignedUsers.length > 0 && (
-              <View style={styles.metaItem}>
+              <View style={styles.detailRow}>
                 <UserIcon size={14} color="#6B7280" />
-                <View style={styles.avatarGroup}>
-                  {assignedUsers.slice(0, 3).map((user, idx) => (
-                    <View
-                      key={user.id}
-                      style={[
-                        styles.avatar,
-                        { backgroundColor: user.color, marginLeft: idx > 0 ? -8 : 0 },
-                      ]}
-                    >
-                      <Text style={styles.avatarText}>
-                        {user.name.charAt(0).toUpperCase()}
-                      </Text>
-                    </View>
-                  ))}
-                  {assignedUsers.length > 3 && (
-                    <View style={[styles.avatar, styles.avatarMore, { marginLeft: -8 }]}>
-                      <Text style={styles.avatarText}>+{assignedUsers.length - 3}</Text>
-                    </View>
-                  )}
-                </View>
-                <Text style={styles.metaText} numberOfLines={1}>
+                <Text style={styles.detailText} numberOfLines={1}>
                   {assignedUsers.length === 1
                     ? assignedUsers[0].name
                     : `${assignedUsers.length} members`}
                 </Text>
-              </View>
-            )}
-
-            {fundTarget && (
-              <View style={styles.metaItem}>
-                <Target size={14} color="#8B5CF6" />
-                <View style={styles.fundBadge}>
-                  <Text style={styles.fundEmoji}>{fundTarget.emoji}</Text>
-                  <Text style={styles.fundText} numberOfLines={1}>{fundTarget.name}</Text>
-                </View>
               </View>
             )}
           </View>
@@ -180,7 +154,7 @@ function TaskCard({
                   onComplete();
                 }}
               >
-                <CheckCircle2 size={18} color="#10B981" strokeWidth={2.5} />
+                <CheckCircle2 size={16} color="#10B981" strokeWidth={2.5} />
                 <Text style={styles.actionButtonText}>Complete</Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -193,7 +167,7 @@ function TaskCard({
                   onFail();
                 }}
               >
-                <XCircle size={18} color="#EF4444" strokeWidth={2.5} />
+                <XCircle size={16} color="#EF4444" strokeWidth={2.5} />
                 <Text style={styles.actionButtonText}>Fail</Text>
               </TouchableOpacity>
             </View>
@@ -426,157 +400,197 @@ export default function TasksScreen() {
         </View>
       </View>
 
-      <TouchableOpacity
-        style={styles.createTaskButton}
-        onPress={() => {
-          if (Platform.OS !== 'web') {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          }
-          setShowFullTaskForm(true);
-        }}
-      >
-        <View style={styles.createTaskContent}>
-          <View style={styles.createTaskTextWrapper}>
-            <Text style={styles.createTaskTitle}>Create New Task</Text>
-            <Text style={styles.createTaskSubtext}>
-              Add a task with category, schedule, stake, and members
-            </Text>
-          </View>
-          <View style={styles.createTaskIconCircle}>
-            <Plus size={24} color="#3B82F6" />
-          </View>
-        </View>
-      </TouchableOpacity>
-
-      {nextDueTask && (
-        <View style={styles.nextDueBar}>
-          <Clock size={16} color="#3B82F6" />
-          <Text style={styles.nextDueText}>
-            Next due: <Text style={styles.nextDueTask}>{nextDueTask.title}</Text>
-          </Text>
-        </View>
-      )}
-
-      {(filter !== 'all' || memberIdParam || fundTargetIdParam) && (
-        <View style={styles.activeFiltersBar}>
-          {fundTargetIdParam && (
-            <View style={styles.activeFilterPill}>
-              <Text style={styles.activeFilterText}>
-                {fundTargets.find(f => f.id === fundTargetIdParam)?.emoji || '🎯'} {fundTargets.find(f => f.id === fundTargetIdParam)?.name || 'Fund'}
-              </Text>
-              <TouchableOpacity
-                onPress={() => {
-                  if (Platform.OS !== 'web') {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }
-                  router.setParams({ fundTargetId: undefined });
-                }}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <X size={16} color="#3B82F6" strokeWidth={2} />
-              </TouchableOpacity>
-            </View>
-          )}
-          {memberIdParam && (
-            <View style={styles.activeFilterPill}>
-              <Text style={styles.activeFilterText}>
-                {currentListMembers.find(m => m.id === memberIdParam)?.name || 'Member'}
-              </Text>
-              <TouchableOpacity
-                onPress={() => {
-                  if (Platform.OS !== 'web') {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }
-                  router.setParams({ memberId: undefined });
-                }}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <X size={16} color="#3B82F6" strokeWidth={2} />
-              </TouchableOpacity>
-            </View>
-          )}
-          {filter !== 'all' && (
-            <View style={styles.activeFilterPill}>
-              <Text style={styles.activeFilterText}>
-                {filters.find(f => f.value === filter)?.label}
-              </Text>
-              <TouchableOpacity
-                onPress={() => {
-                  if (Platform.OS !== 'web') {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }
-                  setFilter('all');
-                  router.setParams({ filter: undefined });
-                }}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <X size={16} color="#3B82F6" strokeWidth={2} />
-              </TouchableOpacity>
-            </View>
-          )}
-          <TouchableOpacity
-            onPress={clearFilters}
-          >
-            <Text style={styles.clearFiltersText}>Clear All</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {showFilters && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.filterScroll}
-          contentContainerStyle={styles.filterScrollContent}
-        >
-          {filters.map((f) => (
-            <TouchableOpacity
-              key={f.value}
-              style={[styles.filterChip, filter === f.value && styles.filterChipActive]}
-              onPress={() => {
-                if (Platform.OS !== 'web') {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }
-                setFilter(f.value);
-                router.setParams({ filter: f.value === 'all' ? undefined : f.value });
-              }}
-            >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  filter === f.value && styles.filterChipTextActive,
-                ]}
-              >
-                {f.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      )}
-
-      {undoAction && remainingSeconds > 0 && (
-        <View style={styles.undoBar}>
-          <Text style={styles.undoText}>Task marked as failed ({remainingSeconds}s)</Text>
-          <TouchableOpacity
-            style={styles.undoButton}
-            onPress={() => {
-              if (Platform.OS !== 'web') {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              }
-              undoFailTask();
-            }}
-          >
-            <Undo2 size={16} color="#3B82F6" />
-            <Text style={styles.undoButtonText}>Undo</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {fundTargets.length > 0 && (
+          <View style={styles.focusGoalSection}>
+            <View style={styles.focusGoalHeader}>
+              <Target size={18} color="#8B5CF6" strokeWidth={2.5} />
+              <Text style={styles.focusGoalHeaderText}>Focus Goals</Text>
+              <Text style={styles.focusGoalHeaderSubtext}>Tap to filter tasks</Text>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.focusGoalScroll}
+            >
+              {fundTargets.map((fund) => {
+                const fundTasks = tasks.filter(t => t.fundTargetId === fund.id);
+                const activeFundTasks = fundTasks.filter(t => t.status === 'pending' || t.status === 'overdue');
+                const totalStaked = activeFundTasks.reduce((sum, t) => sum + t.stake, 0);
+                return (
+                  <TouchableOpacity
+                    key={fund.id}
+                    style={[
+                      styles.focusGoalCard,
+                      fundTargetIdParam === fund.id && styles.focusGoalCardActive
+                    ]}
+                    onPress={() => {
+                      if (Platform.OS !== 'web') {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      }
+                      if (fundTargetIdParam === fund.id) {
+                        router.setParams({ fundTargetId: undefined });
+                      } else {
+                        router.setParams({ fundTargetId: fund.id });
+                      }
+                    }}
+                  >
+                    <View style={styles.focusGoalEmoji}>
+                      <Text style={styles.focusGoalEmojiText}>{fund.emoji}</Text>
+                    </View>
+                    <View style={styles.focusGoalContent}>
+                      <Text style={styles.focusGoalName} numberOfLines={1}>{fund.name}</Text>
+                      <View style={styles.focusGoalStats}>
+                        <Text style={styles.focusGoalStatsText}>
+                          {activeFundTasks.length} active
+                        </Text>
+                        {totalStaked > 0 && (
+                          <>
+                            <View style={styles.focusGoalStatsDot} />
+                            <Text style={styles.focusGoalStatsAmount}>${totalStaked.toFixed(0)}</Text>
+                          </>
+                        )}
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
+
+        <TouchableOpacity
+          style={styles.createTaskButton}
+          onPress={() => {
+            if (Platform.OS !== 'web') {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            }
+            setShowFullTaskForm(true);
+          }}
+        >
+          <View style={styles.createTaskContent}>
+            <View style={styles.createTaskTextWrapper}>
+              <Text style={styles.createTaskTitle}>Create New Task</Text>
+              <Text style={styles.createTaskSubtext}>
+                Assign to a Focus Goal and set your commitment
+              </Text>
+            </View>
+            <View style={styles.createTaskIconCircle}>
+              <Plus size={22} color="#3B82F6" />
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        {nextDueTask && (
+          <View style={styles.nextDueBar}>
+            <Clock size={16} color="#3B82F6" />
+            <Text style={styles.nextDueText}>
+              Next due: <Text style={styles.nextDueTask}>{nextDueTask.title}</Text>
+            </Text>
+          </View>
+        )}
+
+        {(filter !== 'all' || memberIdParam) && (
+          <View style={styles.activeFiltersBar}>
+            {memberIdParam && (
+              <View style={styles.activeFilterPill}>
+                <Text style={styles.activeFilterText}>
+                  {currentListMembers.find(m => m.id === memberIdParam)?.name || 'Member'}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    if (Platform.OS !== 'web') {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }
+                    router.setParams({ memberId: undefined });
+                  }}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <X size={16} color="#3B82F6" strokeWidth={2} />
+                </TouchableOpacity>
+              </View>
+            )}
+            {filter !== 'all' && (
+              <View style={styles.activeFilterPill}>
+                <Text style={styles.activeFilterText}>
+                  {filters.find(f => f.value === filter)?.label}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    if (Platform.OS !== 'web') {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }
+                    setFilter('all');
+                    router.setParams({ filter: undefined });
+                  }}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <X size={16} color="#3B82F6" strokeWidth={2} />
+                </TouchableOpacity>
+              </View>
+            )}
+            <TouchableOpacity
+              onPress={clearFilters}
+            >
+              <Text style={styles.clearFiltersText}>Clear All</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {showFilters && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.filterScroll}
+            contentContainerStyle={styles.filterScrollContent}
+          >
+            {filters.map((f) => (
+              <TouchableOpacity
+                key={f.value}
+                style={[styles.filterChip, filter === f.value && styles.filterChipActive]}
+                onPress={() => {
+                  if (Platform.OS !== 'web') {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }
+                  setFilter(f.value);
+                  router.setParams({ filter: f.value === 'all' ? undefined : f.value });
+                }}
+              >
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    filter === f.value && styles.filterChipTextActive,
+                  ]}
+                >
+                  {f.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
+
+        {undoAction && remainingSeconds > 0 && (
+          <View style={styles.undoBar}>
+            <Text style={styles.undoText}>Task marked as failed ({remainingSeconds}s)</Text>
+            <TouchableOpacity
+              style={styles.undoButton}
+              onPress={() => {
+                if (Platform.OS !== 'web') {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                }
+                undoFailTask();
+              }}
+            >
+              <Undo2 size={16} color="#3B82F6" />
+              <Text style={styles.undoButtonText}>Undo</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {filteredTasks.length > 0 ? (
           <View style={styles.taskList}>
             {filteredTasks.map((task) => {
@@ -607,10 +621,10 @@ export default function TasksScreen() {
           </View>
         ) : (
           <View style={styles.emptyState}>
-            <CheckCircle2 size={64} color="#D1D5DB" />
-            <Text style={styles.emptyText}>No tasks yet</Text>
+            <Target size={64} color="#D1D5DB" />
+            <Text style={styles.emptyText}>No tasks here</Text>
             <Text style={styles.emptySubtext}>
-              Tap &quot;Create New Task&quot; to add your first one
+              Create a task and assign it to a Focus Goal
             </Text>
           </View>
         )}
@@ -696,6 +710,103 @@ const styles = StyleSheet.create({
   filterButtonActive: {
     backgroundColor: '#EFF6FF',
   },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  focusGoalSection: {
+    paddingTop: 20,
+    paddingBottom: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  focusGoalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  focusGoalHeaderText: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: '#111827',
+    flex: 1,
+  },
+  focusGoalHeaderSubtext: {
+    fontSize: 12,
+    fontWeight: '500' as const,
+    color: '#9CA3AF',
+  },
+  focusGoalScroll: {
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  focusGoalCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    minWidth: 180,
+    gap: 12,
+  },
+  focusGoalCardActive: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#8B5CF6',
+  },
+  focusGoalEmoji: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  focusGoalEmojiText: {
+    fontSize: 24,
+  },
+  focusGoalContent: {
+    flex: 1,
+    gap: 4,
+  },
+  focusGoalName: {
+    fontSize: 15,
+    fontWeight: '700' as const,
+    color: '#111827',
+  },
+  focusGoalStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  focusGoalStatsText: {
+    fontSize: 12,
+    fontWeight: '500' as const,
+    color: '#6B7280',
+  },
+  focusGoalStatsDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: '#9CA3AF',
+  },
+  focusGoalStatsAmount: {
+    fontSize: 12,
+    fontWeight: '700' as const,
+    color: '#8B5CF6',
+  },
   createTaskButton: {
     marginHorizontal: 20,
     marginTop: 16,
@@ -704,35 +815,35 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
   },
   createTaskContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 20,
+    padding: 18,
   },
   createTaskTextWrapper: {
     flex: 1,
     marginRight: 16,
   },
   createTaskTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700' as const,
     color: '#111827',
     marginBottom: 4,
   },
   createTaskSubtext: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#6B7280',
-    lineHeight: 20,
+    lineHeight: 18,
   },
   createTaskIconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: '#EFF6FF',
     justifyContent: 'center',
     alignItems: 'center',
@@ -744,11 +855,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     backgroundColor: '#EFF6FF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#DBEAFE',
+    marginHorizontal: 20,
+    marginTop: 8,
+    borderRadius: 12,
   },
   nextDueText: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#6B7280',
   },
   nextDueTask: {
@@ -758,6 +870,7 @@ const styles = StyleSheet.create({
   filterScroll: {
     backgroundColor: '#FFFFFF',
     maxHeight: 40,
+    marginTop: 8,
   },
   filterScrollContent: {
     paddingHorizontal: 16,
@@ -792,11 +905,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     backgroundColor: '#FEF3C7',
-    borderBottomWidth: 1,
-    borderBottomColor: '#FDE68A',
+    marginHorizontal: 20,
+    marginTop: 8,
+    borderRadius: 12,
   },
   undoText: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#92400E',
     fontWeight: '500' as const,
   },
@@ -810,69 +924,78 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   undoButtonText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600' as const,
     color: '#3B82F6',
   },
   activeFiltersBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingVertical: 8,
-    backgroundColor: '#F9FAFB',
-    gap: 12,
+    marginTop: 8,
+    gap: 8,
+    flexWrap: 'wrap' as const,
   },
   activeFilterPill: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#EFF6FF',
     borderRadius: 20,
     borderWidth: 1.5,
     borderColor: '#3B82F6',
-    gap: 8,
+    gap: 6,
   },
   activeFilterText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600' as const,
     color: '#3B82F6',
   },
   clearFiltersText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600' as const,
     color: '#3B82F6',
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 40,
-  },
   taskList: {
-    gap: 16,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    gap: 12,
   },
   taskCardWrapper: {
     width: '100%',
   },
   taskCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 16,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06,
     shadowRadius: 12,
     elevation: 2,
-    flexDirection: 'row',
   },
-  categoryIndicator: {
-    width: 4,
+  fundTargetBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: '#F5F3FF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E9D5FF',
+  },
+  fundTargetBannerEmoji: {
+    fontSize: 16,
+  },
+  fundTargetBannerText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '700' as const,
+    color: '#8B5CF6',
   },
   taskCardContent: {
-    flex: 1,
     padding: 16,
     gap: 12,
   },
@@ -887,6 +1010,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  categoryDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   taskTitle: {
     flex: 1,
@@ -906,85 +1034,30 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   statusText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700' as const,
     color: '#FFFFFF',
     textTransform: 'uppercase' as const,
     letterSpacing: 0.5,
   },
   categoryEmoji: {
-    fontSize: 18,
+    fontSize: 16,
   },
   taskDetails: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 12,
+    flexWrap: 'wrap' as const,
   },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
   },
   detailText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600' as const,
     color: '#111827',
-  },
-  taskMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap' as const,
-    gap: 12,
-  },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  avatarGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
-  avatarMore: {
-    backgroundColor: '#9CA3AF',
-  },
-  avatarText: {
-    fontSize: 10,
-    fontWeight: '700' as const,
-    color: '#FFFFFF',
-  },
-  metaText: {
-    fontSize: 13,
-    fontWeight: '500' as const,
-    color: '#6B7280',
-    maxWidth: 100,
-  },
-  fundBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  fundEmoji: {
-    fontSize: 12,
-  },
-  fundText: {
-    fontSize: 12,
-    fontWeight: '600' as const,
-    color: '#8B5CF6',
-    maxWidth: 80,
   },
   quickActions: {
     flexDirection: 'row',
@@ -999,9 +1072,9 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 10,
     paddingHorizontal: 12,
-    borderRadius: 8,
+    borderRadius: 10,
     backgroundColor: '#F9FAFB',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#E5E7EB',
   },
   completeButton: {
@@ -1027,6 +1100,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 80,
+    paddingHorizontal: 40,
   },
   emptyText: {
     fontSize: 18,
