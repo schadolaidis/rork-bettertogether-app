@@ -9,9 +9,10 @@ import {
   Switch,
   TextInput,
   ScrollView,
+  KeyboardAvoidingView,
 } from 'react-native';
 
-import { Calendar, Clock, X, Plus, Minus } from 'lucide-react-native';
+import { Calendar, Clock, X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
 export interface DueDateTime {
@@ -89,22 +90,6 @@ export function UnifiedDateTimePicker({
     }
   }, [localDate, isAllDay]);
 
-  const setSpecificDate = useCallback((year: number, month: number, day: number) => {
-    const updated = new Date(localDate);
-    updated.setFullYear(year, month, day);
-    
-    if (isAllDay) {
-      updated.setHours(0, 0, 0, 0);
-    }
-    
-    setLocalDate(updated);
-    console.log('[DateTimePicker] Date changed:', updated.toISOString());
-    
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-  }, [localDate, isAllDay]);
-
   const handleTimeInputChange = useCallback((text: string) => {
     const cleaned = text.replace(/[^0-9]/g, '');
     
@@ -164,36 +149,6 @@ export function UnifiedDateTimePicker({
     const now = new Date();
     setQuickTime(now.getHours(), now.getMinutes());
   }, [setQuickTime]);
-
-  const addMinutes = useCallback((delta: number) => {
-    const now = new Date();
-    now.setMinutes(now.getMinutes() + delta);
-    setQuickTime(now.getHours(), now.getMinutes());
-  }, [setQuickTime]);
-
-  const adjustTime = useCallback((minuteDelta: number) => {
-    const match = timeInput.match(/^(\d{2}):(\d{2})$/);
-    if (!match) return;
-    
-    let hours = parseInt(match[1], 10);
-    let minutes = parseInt(match[2], 10);
-    
-    minutes += minuteDelta;
-    
-    while (minutes >= 60) {
-      minutes -= 60;
-      hours++;
-    }
-    while (minutes < 0) {
-      minutes += 60;
-      hours--;
-    }
-    
-    if (hours >= 24) hours = 23;
-    if (hours < 0) hours = 0;
-    
-    setQuickTime(hours, minutes);
-  }, [timeInput, setQuickTime]);
 
   const handleAllDayToggle = useCallback((enabled: boolean) => {
     setIsAllDay(enabled);
@@ -278,7 +233,11 @@ export function UnifiedDateTimePicker({
 
   return (
     <Modal visible={visible} transparent animationType="slide">
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        style={styles.overlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}
+      >
         <TouchableOpacity
           style={styles.backdrop}
           activeOpacity={1}
@@ -331,149 +290,73 @@ export function UnifiedDateTimePicker({
 
             <View style={styles.divider} />
 
-            <View style={styles.pickerSection}>
+            <ScrollView style={styles.pickerSection} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <View style={styles.dateSection}>
                 <View style={styles.dateSectionHeader}>
-                  <Calendar size={20} color="#3B82F6" />
+                  <Calendar size={18} color="#6B7280" />
                   <Text style={styles.dateSectionTitle}>Date</Text>
                 </View>
                 
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.quickDateChips}>
-                  <TouchableOpacity
-                    style={styles.quickDateChip}
-                    onPress={() => setQuickDate(0)}
-                  >
-                    <Text style={styles.quickDateChipText}>Today</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.quickChipsScroll}>
+                  <TouchableOpacity style={styles.quickChip} onPress={() => setQuickDate(0)}>
+                    <Text style={styles.quickChipText}>Today</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.quickDateChip}
-                    onPress={() => setQuickDate(1)}
-                  >
-                    <Text style={styles.quickDateChipText}>Tomorrow</Text>
+                  <TouchableOpacity style={styles.quickChip} onPress={() => setQuickDate(1)}>
+                    <Text style={styles.quickChipText}>Tomorrow</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.quickDateChip}
-                    onPress={() => setQuickDate(7)}
-                  >
-                    <Text style={styles.quickDateChipText}>Next Week</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.quickDateChip}
-                    onPress={() => {
-                      const today = new Date();
-                      const nextMonth = new Date(today);
-                      nextMonth.setMonth(today.getMonth() + 1);
-                      setSpecificDate(nextMonth.getFullYear(), nextMonth.getMonth(), nextMonth.getDate());
-                    }}
-                  >
-                    <Text style={styles.quickDateChipText}>Next Month</Text>
+                  <TouchableOpacity style={styles.quickChip} onPress={() => setQuickDate(7)}>
+                    <Text style={styles.quickChipText}>Next Week</Text>
                   </TouchableOpacity>
                 </ScrollView>
                 
-                <View style={styles.currentDateDisplay}>
-                  <Text style={styles.currentDateLabel}>Selected Date</Text>
-                  <Text style={styles.currentDateValue}>{formatDate(localDate)}</Text>
-                </View>
+                <Text style={styles.selectedValue}>{formatDate(localDate)}</Text>
               </View>
 
               {!isAllDay && (
                 <View style={styles.timeSection}>
                   <View style={styles.timeSectionHeader}>
-                    <Clock size={20} color="#3B82F6" />
+                    <Clock size={18} color="#6B7280" />
                     <Text style={styles.timeSectionTitle}>Time</Text>
                   </View>
                   
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.quickTimeChips}>
-                    <TouchableOpacity
-                      style={styles.quickTimeChip}
-                      onPress={setTimeNow}
-                    >
-                      <Text style={styles.quickTimeChipText}>Now</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.quickChipsScroll}>
+                    <TouchableOpacity style={styles.quickChip} onPress={setTimeNow}>
+                      <Text style={styles.quickChipText}>Now</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.quickTimeChip}
-                      onPress={() => addMinutes(30)}
-                    >
-                      <Text style={styles.quickTimeChipText}>+30m</Text>
+                    <TouchableOpacity style={styles.quickChip} onPress={() => setQuickTime(8, 0)}>
+                      <Text style={styles.quickChipText}>08:00</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.quickTimeChip}
-                      onPress={() => setQuickTime(8, 0)}
-                    >
-                      <Text style={styles.quickTimeChipText}>08:00</Text>
+                    <TouchableOpacity style={styles.quickChip} onPress={() => setQuickTime(12, 0)}>
+                      <Text style={styles.quickChipText}>12:00</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.quickTimeChip}
-                      onPress={() => setQuickTime(12, 0)}
-                    >
-                      <Text style={styles.quickTimeChipText}>12:00</Text>
+                    <TouchableOpacity style={styles.quickChip} onPress={() => setQuickTime(17, 0)}>
+                      <Text style={styles.quickChipText}>17:00</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.quickTimeChip}
-                      onPress={() => setQuickTime(17, 0)}
-                    >
-                      <Text style={styles.quickTimeChipText}>17:00</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.quickTimeChip}
-                      onPress={() => setQuickTime(19, 0)}
-                    >
-                      <Text style={styles.quickTimeChipText}>19:00</Text>
+                    <TouchableOpacity style={styles.quickChip} onPress={() => setQuickTime(19, 0)}>
+                      <Text style={styles.quickChipText}>19:00</Text>
                     </TouchableOpacity>
                   </ScrollView>
 
-                  <View style={styles.timeInputContainer}>
-                    <TextInput
-                      style={[
-                        styles.timeInput,
-                        !isTimeValid && timeInput.length > 0 && styles.timeInputError
-                      ]}
-                      value={timeInput}
-                      onChangeText={handleTimeInputChange}
-                      onBlur={applyTimeFromInput}
-                      placeholder="HH:MM"
-                      placeholderTextColor="#9CA3AF"
-                      keyboardType="number-pad"
-                      maxLength={5}
-                    />
-                    <View style={styles.timeSteppers}>
-                      <TouchableOpacity
-                        style={styles.timeStepper}
-                        onPress={() => adjustTime(-5)}
-                      >
-                        <Minus size={16} color="#6B7280" />
-                        <Text style={styles.timeStepperText}>5m</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.timeStepper}
-                        onPress={() => adjustTime(5)}
-                      >
-                        <Plus size={16} color="#6B7280" />
-                        <Text style={styles.timeStepperText}>5m</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.timeStepper}
-                        onPress={() => adjustTime(-15)}
-                      >
-                        <Minus size={16} color="#6B7280" />
-                        <Text style={styles.timeStepperText}>15m</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.timeStepper}
-                        onPress={() => adjustTime(15)}
-                      >
-                        <Plus size={16} color="#6B7280" />
-                        <Text style={styles.timeStepperText}>15m</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
+                  <TextInput
+                    style={[
+                      styles.timeInput,
+                      !isTimeValid && timeInput.length > 0 && styles.timeInputError
+                    ]}
+                    value={timeInput}
+                    onChangeText={handleTimeInputChange}
+                    onBlur={applyTimeFromInput}
+                    placeholder="HH:MM"
+                    placeholderTextColor="#9CA3AF"
+                    keyboardType="number-pad"
+                    maxLength={5}
+                  />
                   
                   {!isTimeValid && timeInput.length > 0 && (
-                    <Text style={styles.timeErrorText}>Invalid time format (HH:MM, 00-23:00-59)</Text>
+                    <Text style={styles.errorText}>Enter time as HH:MM (00-23:00-59)</Text>
                   )}
                 </View>
               )}
-            </View>
+            </ScrollView>
           </View>
 
           <View style={styles.footer}>
@@ -485,9 +368,7 @@ export function UnifiedDateTimePicker({
             </TouchableOpacity>
           </View>
         </View>
-
-
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -496,7 +377,6 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     justifyContent: 'flex-end',
-    zIndex: 900,
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -506,13 +386,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    paddingBottom: 32,
+    maxHeight: '75%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 10,
-    zIndex: 910,
   },
   handle: {
     width: 40,
@@ -543,38 +422,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   content: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
+    paddingBottom: 12,
   },
   preview: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
-    paddingVertical: 20,
+    gap: 12,
+    paddingVertical: 16,
   },
   previewIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
+    width: 48,
+    height: 48,
+    borderRadius: 12,
     backgroundColor: '#EFF6FF',
     justifyContent: 'center',
     alignItems: 'center',
   },
   previewText: {
     flex: 1,
-    gap: 4,
   },
   previewDate: {
-    fontSize: 20,
-    fontWeight: '700' as const,
+    fontSize: 18,
+    fontWeight: '600' as const,
     color: '#111827',
+    marginBottom: 2,
   },
   previewTime: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '500' as const,
     color: '#6B7280',
   },
   allDayIndicator: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600' as const,
     color: '#3B82F6',
   },
@@ -605,65 +485,53 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   pickerSection: {
-    gap: 12,
-    paddingTop: 8,
+    maxHeight: 360,
+    paddingTop: 4,
   },
   dateSection: {
-    gap: 16,
-    paddingTop: 8,
-    marginBottom: 12,
+    paddingBottom: 20,
   },
   dateSectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    marginBottom: 12,
   },
   dateSectionTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600' as const,
-    color: '#111827',
+    color: '#6B7280',
   },
-  quickDateChips: {
-    flexDirection: 'row',
-    gap: 8,
+  quickChipsScroll: {
+    marginBottom: 12,
   },
-  quickDateChip: {
+  quickChip: {
     paddingVertical: 8,
     paddingHorizontal: 16,
     backgroundColor: '#F3F4F6',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderRadius: 16,
     marginRight: 8,
   },
-  quickDateChipText: {
+  quickChipText: {
     fontSize: 14,
     fontWeight: '600' as const,
     color: '#374151',
   },
-  currentDateDisplay: {
-    padding: 16,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  currentDateLabel: {
-    fontSize: 13,
-    fontWeight: '500' as const,
-    color: '#9CA3AF',
-    marginBottom: 4,
-  },
-  currentDateValue: {
-    fontSize: 18,
-    fontWeight: '700' as const,
+  selectedValue: {
+    fontSize: 17,
+    fontWeight: '600' as const,
     color: '#111827',
+    paddingVertical: 8,
   },
   footer: {
     flexDirection: 'row',
     gap: 12,
-    paddingHorizontal: 24,
-    paddingTop: 24,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 32,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
   },
   cancelButton: {
     flex: 1,
@@ -691,81 +559,38 @@ const styles = StyleSheet.create({
   },
 
   timeSection: {
-    gap: 16,
     paddingTop: 8,
+    paddingBottom: 20,
   },
   timeSectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    marginBottom: 12,
   },
   timeSectionTitle: {
-    fontSize: 15,
-    fontWeight: '600' as const,
-    color: '#111827',
-  },
-  quickTimeChips: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  quickTimeChip: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    marginRight: 8,
-  },
-  quickTimeChipText: {
     fontSize: 14,
     fontWeight: '600' as const,
-    color: '#374151',
-  },
-  timeInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+    color: '#6B7280',
   },
   timeInput: {
-    flex: 1,
-    fontSize: 24,
-    fontWeight: '700' as const,
+    fontSize: 28,
+    fontWeight: '600' as const,
     color: '#111827',
     padding: 16,
     backgroundColor: '#F9FAFB',
     borderRadius: 12,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: '#E5E7EB',
     textAlign: 'center',
+    marginTop: 8,
   },
   timeInputError: {
     borderColor: '#EF4444',
-    backgroundColor: '#FEE2E2',
   },
-  timeSteppers: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  timeStepper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  timeStepperText: {
-    fontSize: 12,
-    fontWeight: '600' as const,
-    color: '#6B7280',
-  },
-  timeErrorText: {
+  errorText: {
     fontSize: 13,
     color: '#EF4444',
-    marginTop: 4,
+    marginTop: 8,
   },
 });
