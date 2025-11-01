@@ -846,9 +846,11 @@ function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onS
       setShowDatePicker(false);
     }
     if (selectedDate && !isNaN(selectedDate.getTime())) {
+      console.log('[TaskDetail DatePicker] Date selected:', selectedDate.toISOString());
       const newStart = new Date(selectedDate);
       newStart.setHours(start.getHours(), start.getMinutes(), 0, 0);
       setStart(newStart);
+      console.log('[TaskDetail DatePicker] Applied:', newStart.toISOString());
     }
   };
 
@@ -857,9 +859,11 @@ function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onS
       setShowTimePicker(false);
     }
     if (selectedDate && !isNaN(selectedDate.getTime())) {
+      console.log('[TaskDetail TimePicker] Time selected:', selectedDate.toISOString());
       const newStart = new Date(start);
       newStart.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
       setStart(newStart);
+      console.log('[TaskDetail TimePicker] Applied:', newStart.toISOString());
     }
   };
 
@@ -937,10 +941,24 @@ function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onS
 
       {Platform.OS === 'ios' && showDatePicker && (
         <View style={styles.pickerOverlay}>
-          <TouchableOpacity style={styles.pickerBackdrop} activeOpacity={1} onPress={() => setShowDatePicker(false)} />
+          <TouchableOpacity 
+            style={styles.pickerBackdrop} 
+            activeOpacity={1} 
+            onPress={() => {
+              if (Platform.OS !== 'web') {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+              setShowDatePicker(false);
+            }} 
+          />
           <View style={styles.pickerContainer}>
             <View style={styles.pickerHeader}>
-              <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+              <TouchableOpacity onPress={() => {
+                if (Platform.OS !== 'web') {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+                setShowDatePicker(false);
+              }}>
                 <Text style={styles.pickerDone}>Done</Text>
               </TouchableOpacity>
             </View>
@@ -965,10 +983,24 @@ function DateTimePickerModal({ visible, startDate, endDate, allDay, onClose, onS
 
       {Platform.OS === 'ios' && showTimePicker && (
         <View style={styles.pickerOverlay}>
-          <TouchableOpacity style={styles.pickerBackdrop} activeOpacity={1} onPress={() => setShowTimePicker(false)} />
+          <TouchableOpacity 
+            style={styles.pickerBackdrop} 
+            activeOpacity={1} 
+            onPress={() => {
+              if (Platform.OS !== 'web') {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+              setShowTimePicker(false);
+            }} 
+          />
           <View style={styles.pickerContainer}>
             <View style={styles.pickerHeader}>
-              <TouchableOpacity onPress={() => setShowTimePicker(false)}>
+              <TouchableOpacity onPress={() => {
+                if (Platform.OS !== 'web') {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+                setShowTimePicker(false);
+              }}>
                 <Text style={styles.pickerDone}>Done</Text>
               </TouchableOpacity>
             </View>
