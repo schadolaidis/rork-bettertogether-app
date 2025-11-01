@@ -189,7 +189,7 @@ export default function TasksScreen() {
   const fundTargets: FundTargetOption[] = useMemo(() => {
     if (!currentList) return [];
     return MOCK_FUND_TARGETS
-      .filter(ft => ft.listId === currentList.id)
+      .filter(ft => ft.listId === currentList.id && ft.isActive)
       .map(ft => ({
         id: ft.id,
         name: ft.name,

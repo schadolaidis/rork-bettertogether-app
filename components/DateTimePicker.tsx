@@ -86,21 +86,23 @@ export function DateTimePickerModal({
     }
 
     if (date && !isNaN(date.getTime())) {
-      const newDate = new Date(selectedDate);
-      newDate.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
-      
-      if (isAllDay) {
-        newDate.setHours(0, 0, 0, 0);
-      }
-      
-      setSelectedDate(newDate);
-      console.log('[DateTimePicker] Date updated:', newDate.toISOString());
+      setSelectedDate((prev) => {
+        const newDate = new Date(prev);
+        newDate.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
+        
+        if (isAllDay) {
+          newDate.setHours(0, 0, 0, 0);
+        }
+        
+        console.log('[DateTimePicker] Date updated:', newDate.toISOString());
+        return newDate;
+      });
       
       if (Platform.OS !== 'web') {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
     }
-  }, [selectedDate, isAllDay]);
+  }, [isAllDay]);
 
   const handleTimeChange = useCallback((_event: DateTimePickerEvent, date?: Date) => {
     if (Platform.OS === 'android') {
@@ -108,17 +110,19 @@ export function DateTimePickerModal({
     }
 
     if (date && !isNaN(date.getTime())) {
-      const newDate = new Date(selectedDate);
-      newDate.setHours(date.getHours(), date.getMinutes(), 0, 0);
-      
-      setSelectedDate(newDate);
-      console.log('[DateTimePicker] Time updated:', newDate.toISOString());
+      setSelectedDate((prev) => {
+        const newDate = new Date(prev);
+        newDate.setHours(date.getHours(), date.getMinutes(), 0, 0);
+        
+        console.log('[DateTimePicker] Time updated:', newDate.toISOString());
+        return newDate;
+      });
       
       if (Platform.OS !== 'web') {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
     }
-  }, [selectedDate]);
+  }, []);
 
   const handleAllDayToggle = useCallback((value: boolean) => {
     setIsAllDay(value);
@@ -613,11 +617,20 @@ function QuickSelectButton({ label, active, onPress }: QuickSelectButtonProps) {
 
 const styles = StyleSheet.create({
   overlay: {
-    flex: 1,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     justifyContent: 'flex-end',
+    zIndex: 9999,
   },
   backdrop: {
-    flex: 1,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
   container: {
@@ -630,6 +643,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 16,
     elevation: 20,
+    zIndex: 10000,
   },
   handle: {
     width: 40,
