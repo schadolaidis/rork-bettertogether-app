@@ -178,7 +178,11 @@ export default function CalendarScreen() {
 
               <View style={styles.timeline}>
                 {group.tasks.map((task, taskIndex) => {
-                  const category = categoryMeta[task.category as TaskCategory];
+                  const category = categoryMeta[task.category as TaskCategory] || {
+                    emoji: '📋',
+                    color: '#6B7280',
+                    label: task.category
+                  };
                   const statusColor = getStatusColor(task.status);
                   const isLast = taskIndex === group.tasks.length - 1;
 

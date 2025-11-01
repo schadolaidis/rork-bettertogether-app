@@ -1,4 +1,4 @@
-import { Task } from '@/types';
+import { Task, TaskCategory } from '@/types';
 
 export interface DateMarker {
   color: string;
@@ -18,7 +18,7 @@ export class CalendarService {
     start: Date,
     end: Date,
     tasks: Task[],
-    options?: { categoryColors?: Record<string, string> }
+    options?: { categoryColors?: Record<TaskCategory, string> }
   ): DayMarkers[] {
     const dayMap = new Map<string, DayMarkers>();
 
@@ -52,7 +52,7 @@ export class CalendarService {
           dayData.hasFailed = true;
         }
 
-        const categoryColor = options?.categoryColors?.[task.category] || '#6B7280';
+        const categoryColor = options?.categoryColors?.[task.category as TaskCategory] || '#6B7280';
         const existingMarker = dayData.markers.find((m) => m.color === categoryColor);
 
         if (existingMarker) {

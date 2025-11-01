@@ -83,8 +83,8 @@ function DayAgenda({
         <ScrollView style={styles.agendaScroll} contentContainerStyle={styles.agendaContent}>
           {sortedTasks.length > 0 ? (
             sortedTasks.map((task) => {
-              const categoryColor = categoryColors[task.category] || '#6B7280';
-              const categoryEmoji = categoryEmojis[task.category] || '📋';
+              const categoryColor = categoryColors[task.category as TaskCategory] || '#6B7280';
+              const categoryEmoji = categoryEmojis[task.category as TaskCategory] || '📋';
               const statusColor = getStatusColor(task.status);
               const time = new Date(task.endAt).toLocaleTimeString('en-US', {
                 hour: 'numeric',
@@ -407,8 +407,8 @@ export function Calendar({
       <ScrollView style={styles.dayView} contentContainerStyle={styles.dayViewContent}>
         {dayViewTasks.length > 0 ? (
           dayViewTasks.map((task) => {
-            const categoryColor = categoryColors[task.category] || '#6B7280';
-            const categoryEmoji = categoryEmojis[task.category] || '📋';
+            const categoryColor = categoryColors[task.category as TaskCategory] || '#6B7280';
+            const categoryEmoji = categoryEmojis[task.category as TaskCategory] || '📋';
             const statusColor = getStatusColor(task.status);
             const time = new Date(task.endAt).toLocaleTimeString('en-US', {
               hour: 'numeric',
