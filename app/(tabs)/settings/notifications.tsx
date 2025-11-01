@@ -10,14 +10,12 @@ import {
   Alert,
 } from 'react-native';
 import { Stack } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Notifications from 'expo-notifications';
 import { Bell, CheckCircle, AlertCircle, Target } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { NotificationService } from '@/services/NotificationService';
 
 export default function NotificationsScreen() {
-  const insets = useSafeAreaInsets();
   const [permissionStatus, setPermissionStatus] = useState<string>('loading');
   const [taskRemindersEnabled, setTaskRemindersEnabled] = useState(true);
   const [overdueAlertsEnabled, setOverdueAlertsEnabled] = useState(true);
@@ -195,12 +193,15 @@ export default function NotificationsScreen() {
   const isDisabled = permissionStatus !== 'granted' || Platform.OS === 'web';
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <>
       <Stack.Screen
         options={{
-          headerShown: false,
+          headerShown: true,
+          title: 'Notifications',
+          presentation: 'card',
         }}
       />
+      <View style={styles.container}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -268,7 +269,8 @@ export default function NotificationsScreen() {
           </View>
         )}
       </ScrollView>
-    </View>
+      </View>
+    </>
   );
 }
 

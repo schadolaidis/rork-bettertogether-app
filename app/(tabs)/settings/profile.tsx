@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, ScrollView, TextInput, TouchableOpacity, Alert, Platform, Image } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { useApp } from '@/contexts/AppContext';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
-import { Camera, Palette, Mail, User as UserIcon } from 'lucide-react-native';
+import { Camera, Palette, Mail, User as UserIcon, Check } from 'lucide-react-native';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -14,7 +14,7 @@ export default function ProfileScreen() {
   const [email, setEmail] = useState(currentUser?.email || '');
   const [avatar, setAvatar] = useState<string | undefined>(currentUser?.avatar || currentUser?.avatarUrl);
   const [selectedColor, setSelectedColor] = useState(currentUser?.color || '#3B82F6');
-  const [showColorPicker, setShowColorPicker] = useState(false);
+
 
   const PRESET_COLORS = [
     '#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6',
@@ -23,26 +23,69 @@ export default function ProfileScreen() {
   ];
 
   const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
-    if (status !== 'granted') {
-      Alert.alert(t.profile.permissionNeeded, t.profile.cameraPermission);
+    if (Platform.OS === 'web') {
+      Alert.alert(
+        'Feature not available',
+        'Image upload is not supported on web. Please use the mobile app.'
+      );
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
+    Alert.alert(
+      'Select Photo',
+      'Choose an option',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Choose from Library',
+          onPress: async () => {
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            
+            if (status !== 'granted') {
+              Alert.alert(t.profile.permissionNeeded, t.profile.cameraPermission);
+              return;
+            }
 
-    if (!result.canceled && result.assets[0]) {
-      setAvatar(result.assets[0].uri);
-      if (Platform.OS !== 'web') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      }
-    }
+            const result = await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ['images'],
+              allowsEditing: true,
+              aspect: [1, 1],
+              quality: 0.8,
+            });
+
+            if (!result.canceled && result.assets[0]) {
+              setAvatar(result.assets[0].uri);
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            }
+          },
+        },
+        {
+          text: 'Take Photo',
+          onPress: async () => {
+            const { status } = await ImagePicker.requestCameraPermissionsAsync();
+            
+            if (status !== 'granted') {
+              Alert.alert('Permission needed', 'Camera access is required to take photos');
+              return;
+            }
+
+            const result = await ImagePicker.launchCameraAsync({
+              allowsEditing: true,
+              aspect: [1, 1],
+              quality: 0.8,
+            });
+
+            if (!result.canceled && result.assets[0]) {
+              setAvatar(result.assets[0].uri);
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const removeAvatar = () => {
@@ -72,7 +115,20 @@ export default function ProfileScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <>
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          title: t.profile.title,
+          presentation: 'card',
+          headerRight: () => (
+            <TouchableOpacity onPress={handleSave}>
+              <Check size={24} color="#3B82F6" strokeWidth={2.5} />
+            </TouchableOpacity>
+          ),
+        }}
+      />
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.avatarSection}>
         <TouchableOpacity onPress={pickImage} style={styles.avatarContainer}>
           {avatar ? (
@@ -160,10 +216,8 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-        <Text style={styles.saveButtonText}>{t.profile.saveChanges}</Text>
-      </TouchableOpacity>
-    </ScrollView>
+      </ScrollView>
+    </>
   );
 }
 
@@ -178,7 +232,8 @@ const styles = StyleSheet.create({
   },
   avatarSection: {
     alignItems: 'center' as const,
-    marginBottom: 32,
+    marginBottom: 28,
+    paddingTop: 8,
   },
   avatarContainer: {
     position: 'relative' as const,
@@ -229,7 +284,7 @@ const styles = StyleSheet.create({
   },
   section: {
     width: '100%',
-    marginBottom: 32,
+    marginBottom: 24,
   },
   sectionHeader: {
     flexDirection: 'row' as const,
@@ -238,11 +293,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 14,
-    fontWeight: '600' as const,
-    color: '#6B7280',
+    fontSize: 12,
+    fontWeight: '700' as const,
+    color: '#9CA3AF',
     textTransform: 'uppercase' as const,
-    letterSpacing: 1,
+    letterSpacing: 1.2,
+    marginBottom: 12,
   },
   inputGroup: {
     marginBottom: 20,
@@ -270,8 +326,8 @@ const styles = StyleSheet.create({
   colorGrid: {
     flexDirection: 'row' as const,
     flexWrap: 'wrap' as const,
-    gap: 12,
-    paddingVertical: 8,
+    gap: 10,
+    paddingVertical: 4,
   },
   colorOption: {
     width: 52,
@@ -304,22 +360,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#000000',
     opacity: 0.2,
   },
-  saveButton: {
-    width: '100%',
-    backgroundColor: '#3B82F6',
-    padding: 18,
-    borderRadius: 12,
-    alignItems: 'center' as const,
-    shadowColor: '#3B82F6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  saveButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700' as const,
-  },
+
 });
 
