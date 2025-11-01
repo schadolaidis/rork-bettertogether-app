@@ -245,6 +245,27 @@ export const [AppProvider, useApp] = createContextHook(() => {
     },
   });
 
+  useEffect(() => {
+    if (fundTargets.length > 0 && ledgerEntries.length > 0) {
+      const synced = fundTargets.map((fund) => {
+        const totalFromLedger = LedgerService.getFundTargetTotal(ledgerEntries, fund.id);
+        const totalCents = Math.round(totalFromLedger * 100);
+        
+        if (totalCents !== fund.totalCollectedCents) {
+          console.log(`[FundTarget] Syncing ${fund.name}: ${fund.totalCollectedCents} -> ${totalCents}`);
+          return { ...fund, totalCollectedCents: totalCents };
+        }
+        return fund;
+      });
+      
+      const hasChanges = synced.some((fund, i) => fund.totalCollectedCents !== fundTargets[i].totalCollectedCents);
+      if (hasChanges) {
+        setFundTargets(synced);
+        mutateFundTargets(synced);
+      }
+    }
+  }, [ledgerEntries]);
+
   const updateTaskStatuses = useCallback(() => {
     const now = ClockService.getCurrentTime();
     let hasChanges = false;
