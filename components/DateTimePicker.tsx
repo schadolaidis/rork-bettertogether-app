@@ -283,21 +283,28 @@ export function UnifiedDateTimePicker({
 
             <View style={styles.divider} />
 
-            <View style={styles.allDaySection}>
+            <TouchableOpacity 
+              style={[styles.allDaySection, isAllDay && styles.allDaySectionActive]}
+              onPress={() => handleAllDayToggle(!isAllDay)}
+              activeOpacity={0.7}
+            >
               <View style={styles.allDayLeft}>
-                <Clock size={20} color="#6B7280" />
-                <View>
-                  <Text style={styles.allDayLabel}>All Day</Text>
+                <View style={[styles.allDayIconContainer, isAllDay && styles.allDayIconContainerActive]}>
+                  <Clock size={20} color={isAllDay ? '#3B82F6' : '#6B7280'} />
+                </View>
+                <View style={styles.allDayTextContainer}>
+                  <Text style={[styles.allDayLabel, isAllDay && styles.allDayLabelActive]}>All Day</Text>
                   <Text style={styles.allDayHint}>No specific time</Text>
                 </View>
               </View>
               <Switch
                 value={isAllDay}
                 onValueChange={handleAllDayToggle}
-                trackColor={{ false: '#E5E7EB', true: '#93C5FD' }}
-                thumbColor={isAllDay ? '#3B82F6' : '#F9FAFB'}
+                trackColor={{ false: '#E5E7EB', true: '#3B82F6' }}
+                thumbColor='#FFFFFF'
+                ios_backgroundColor="#E5E7EB"
               />
-            </View>
+            </TouchableOpacity>
 
             <View style={styles.divider} />
 
@@ -481,17 +488,44 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+  },
+  allDaySectionActive: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#3B82F6',
   },
   allDayLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    flex: 1,
+  },
+  allDayIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  allDayIconContainerActive: {
+    backgroundColor: '#DBEAFE',
+  },
+  allDayTextContainer: {
+    flex: 1,
   },
   allDayLabel: {
-    fontSize: 16,
-    fontWeight: '600' as const,
+    fontSize: 17,
+    fontWeight: '700' as const,
     color: '#111827',
+  },
+  allDayLabelActive: {
+    color: '#3B82F6',
   },
   allDayHint: {
     fontSize: 13,
