@@ -27,7 +27,7 @@ import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TaskCategory, User, TaskPriority, ReminderType, RecurrenceType, Task } from '@/types';
 import { EUDateFormatter } from '@/utils/EULocale';
-import { NativeDatePicker } from '@/components/NativeDatePicker';
+import { UnifiedDateTimePicker, DueDateTime } from '@/components/DateTimePicker';
 
 export interface TaskFormData {
   title: string;
@@ -142,6 +142,12 @@ export function TaskFormModal({
       
       if (!isNaN(validStartDate.getTime())) {
         setStartDate(validStartDate);
+        setDueDateTime({
+          dateISO: validStartDate.toISOString(),
+          timeISO: existingTask.allDay ? null : validStartDate.toISOString(),
+          allDay: existingTask.allDay || false,
+          timezone: 'Europe/Vienna',
+        });
       } else {
         console.warn('[TaskForm] Invalid startAt date:', existingTask.startAt);
       }
@@ -180,6 +186,25 @@ export function TaskFormModal({
   const [showStakePicker, setShowStakePicker] = useState(false);
   const [titleError, setTitleError] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [dueDateTime, setDueDateTime] = useState<DueDateTime>(() => {
+    if (existingTask) {
+      const date = new Date(existingTask.startAt);
+      return {
+        dateISO: date.toISOString(),
+        timeISO: existingTask.allDay ? null : date.toISOString(),
+        allDay: existingTask.allDay || false,
+        timezone: 'Europe/Vienna',
+      };
+    }
+    const date = new Date();
+    date.setHours(date.getHours() + 1, 0, 0, 0);
+    return {
+      dateISO: date.toISOString(),
+      timeISO: date.toISOString(),
+      allDay: false,
+      timezone: 'Europe/Vienna',
+    };
+  });
 
   const loadDraft = useCallback(async () => {
     if (mode === 'edit') return;
@@ -322,20 +347,32 @@ export function TaskFormModal({
     });
   }, []);
 
-  const handleDateSave = useCallback((newDate: Date, newAllDay: boolean) => {
-    console.log('[DatePicker] Saving date:', newDate.toISOString(), 'AllDay:', newAllDay);
+  const handleDateTimeConfirm = useCallback((newDueDateTime: DueDateTime) => {
+    console.log('[DatePicker] Confirming:', newDueDateTime);
+    
+    setDueDateTime(newDueDateTime);
+    
+    const dateBase = new Date(newDueDateTime.dateISO);
+    let startDateTime: Date;
+    
+    if (newDueDateTime.allDay || !newDueDateTime.timeISO) {
+      startDateTime = new Date(dateBase);
+      startDateTime.setHours(0, 0, 0, 0);
+    } else {
+      const timeDate = new Date(newDueDateTime.timeISO);
+      startDateTime = new Date(dateBase);
+      startDateTime.setHours(timeDate.getHours(), timeDate.getMinutes(), 0, 0);
+    }
     
     const duration = endDate.getTime() - startDate.getTime();
-    const newEnd = new Date(newDate.getTime() + (duration > 0 ? duration : 3600000));
+    const endDateTime = new Date(startDateTime.getTime() + (duration > 0 ? duration : 3600000));
     
-    setStartDate(newDate);
-    setEndDate(newEnd);
-    setAllDay(newAllDay);
+    setStartDate(startDateTime);
+    setEndDate(endDateTime);
+    setAllDay(newDueDateTime.allDay);
     setShowDatePicker(false);
     
-    if (Platform.OS !== 'web') {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    }
+    console.log('[DatePicker] Applied - Start:', startDateTime.toISOString(), 'End:', endDateTime.toISOString());
   }, [startDate, endDate]);
 
 
@@ -794,14 +831,12 @@ export function TaskFormModal({
         </View>
       </Modal>
 
-      <NativeDatePicker
+      <UnifiedDateTimePicker
         visible={showDatePicker}
-        date={startDate}
-        allDay={allDay}
+        value={dueDateTime}
         minDate={mode === 'create' ? new Date() : undefined}
         onClose={() => setShowDatePicker(false)}
-        onSave={handleDateSave}
-        title="Set Due Date & Time"
+        onConfirm={handleDateTimeConfirm}
       />
 
       <Modal visible={showPriorityPicker} transparent animationType="slide">
