@@ -151,25 +151,38 @@ export function UnifiedDateTimePicker({
   }, [setQuickTime]);
 
   const handleAllDayToggle = useCallback((enabled: boolean) => {
-    setIsAllDay(enabled);
-    
-    if (!enabled && savedTime) {
-      const updated = new Date(localDate);
-      updated.setHours(savedTime.hours, savedTime.minutes, 0, 0);
-      setLocalDate(updated);
-      setTimeInput(`${String(savedTime.hours).padStart(2, '0')}:${String(savedTime.minutes).padStart(2, '0')}`);
-    } else if (!enabled) {
-      const now = new Date();
-      const updated = new Date(localDate);
-      updated.setHours(now.getHours() + 1, 0, 0, 0);
-      setLocalDate(updated);
-      setSavedTime({ hours: now.getHours() + 1, minutes: 0 });
-      setTimeInput(`${String(now.getHours() + 1).padStart(2, '0')}:00`);
-    }
+    console.log('[DateTimePicker] All-day toggle:', enabled);
     
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
+    
+    if (enabled) {
+      const currentHours = localDate.getHours();
+      const currentMinutes = localDate.getMinutes();
+      if (currentHours !== 0 || currentMinutes !== 0) {
+        setSavedTime({ hours: currentHours, minutes: currentMinutes });
+      }
+      const updated = new Date(localDate);
+      updated.setHours(0, 0, 0, 0);
+      setLocalDate(updated);
+    } else {
+      if (savedTime) {
+        const updated = new Date(localDate);
+        updated.setHours(savedTime.hours, savedTime.minutes, 0, 0);
+        setLocalDate(updated);
+        setTimeInput(`${String(savedTime.hours).padStart(2, '0')}:${String(savedTime.minutes).padStart(2, '0')}`);
+      } else {
+        const now = new Date();
+        const updated = new Date(localDate);
+        updated.setHours(now.getHours() + 1, 0, 0, 0);
+        setLocalDate(updated);
+        setSavedTime({ hours: now.getHours() + 1, minutes: 0 });
+        setTimeInput(`${String(now.getHours() + 1).padStart(2, '0')}:00`);
+      }
+    }
+    
+    setIsAllDay(enabled);
   }, [localDate, savedTime]);
 
   const handleConfirm = useCallback(() => {
