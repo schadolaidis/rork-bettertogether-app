@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -7,9 +7,11 @@ import {
   Platform,
   Modal,
   Switch,
+  TextInput,
+  ScrollView,
 } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { Calendar, Clock, X } from 'lucide-react-native';
+import { Calendar, Clock, X, Plus, Minus } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
 export interface DueDateTime {
@@ -37,7 +39,8 @@ export function UnifiedDateTimePicker({
   const [localDate, setLocalDate] = useState<Date>(new Date());
   const [isAllDay, setIsAllDay] = useState<boolean>(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [timeInput, setTimeInput] = useState('');
+  const [savedTime, setSavedTime] = useState<{ hours: number; minutes: number } | null>(null);
 
   useEffect(() => {
     if (visible) {
@@ -47,13 +50,20 @@ export function UnifiedDateTimePicker({
           const timeDate = new Date(value.timeISO);
           if (!isNaN(timeDate.getTime())) {
             parsedDate.setHours(timeDate.getHours(), timeDate.getMinutes(), 0, 0);
+            setSavedTime({ hours: timeDate.getHours(), minutes: timeDate.getMinutes() });
+            setTimeInput(`${String(timeDate.getHours()).padStart(2, '0')}:${String(timeDate.getMinutes()).padStart(2, '0')}`);
           }
+        } else {
+          const now = new Date();
+          parsedDate.setHours(now.getHours(), 0, 0, 0);
+          setTimeInput(`${String(now.getHours()).padStart(2, '0')}:00`);
         }
         setLocalDate(parsedDate);
       } else {
         const now = new Date();
         now.setHours(now.getHours() + 1, 0, 0, 0);
         setLocalDate(now);
+        setTimeInput(`${String(now.getHours() + 1).padStart(2, '0')}:00`);
       }
       setIsAllDay(value.allDay);
       console.log('[DateTimePicker] Initialized:', parsedDate.toISOString(), 'AllDay:', value.allDay);
@@ -82,41 +92,129 @@ export function UnifiedDateTimePicker({
     }
   }, [localDate, isAllDay]);
 
-  const handleTimeChange = useCallback((_event: DateTimePickerEvent, newDate?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowTimePicker(false);
+  const handleTimeInputChange = useCallback((text: string) => {
+    const cleaned = text.replace(/[^0-9]/g, '');
+    
+    if (cleaned.length === 0) {
+      setTimeInput('');
+      return;
     }
-
-    if (newDate && !isNaN(newDate.getTime())) {
-      const updated = new Date(localDate);
-      updated.setHours(newDate.getHours(), newDate.getMinutes(), 0, 0);
-      setLocalDate(updated);
-      console.log('[DateTimePicker] Time changed:', updated.toISOString());
-      
-      if (Platform.OS !== 'web') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      }
+    
+    if (cleaned.length <= 2) {
+      setTimeInput(cleaned);
+    } else if (cleaned.length === 3) {
+      setTimeInput(`${cleaned.slice(0, 2)}:${cleaned.slice(2)}`);
+    } else if (cleaned.length === 4) {
+      setTimeInput(`${cleaned.slice(0, 2)}:${cleaned.slice(2, 4)}`);
+    } else {
+      setTimeInput(`${cleaned.slice(0, 2)}:${cleaned.slice(2, 4)}`);
     }
-  }, [localDate]);
+  }, []);
 
-  const handleAllDayToggle = useCallback((enabled: boolean) => {
-    setIsAllDay(enabled);
+  const applyTimeFromInput = useCallback(() => {
+    const match = timeInput.match(/^(\d{1,2}):?(\d{0,2})$/);
+    if (!match) return false;
+    
+    let hours = parseInt(match[1], 10);
+    let minutes = match[2] ? parseInt(match[2], 10) : 0;
+    
+    if (isNaN(hours) || hours > 23 || isNaN(minutes) || minutes > 59) {
+      return false;
+    }
     
     const updated = new Date(localDate);
-    if (enabled) {
-      updated.setHours(0, 0, 0, 0);
-    } else {
-      const now = new Date();
-      updated.setHours(now.getHours() + 1, 0, 0, 0);
-    }
+    updated.setHours(hours, minutes, 0, 0);
     setLocalDate(updated);
+    setSavedTime({ hours, minutes });
+    setTimeInput(`${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`);
+    
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    
+    return true;
+  }, [timeInput, localDate]);
+
+  const setQuickTime = useCallback((hours: number, minutes: number) => {
+    const updated = new Date(localDate);
+    updated.setHours(hours, minutes, 0, 0);
+    setLocalDate(updated);
+    setSavedTime({ hours, minutes });
+    setTimeInput(`${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`);
     
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
   }, [localDate]);
 
+  const setTimeNow = useCallback(() => {
+    const now = new Date();
+    setQuickTime(now.getHours(), now.getMinutes());
+  }, [setQuickTime]);
+
+  const addMinutes = useCallback((delta: number) => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() + delta);
+    setQuickTime(now.getHours(), now.getMinutes());
+  }, [setQuickTime]);
+
+  const adjustTime = useCallback((minuteDelta: number) => {
+    const match = timeInput.match(/^(\d{2}):(\d{2})$/);
+    if (!match) return;
+    
+    let hours = parseInt(match[1], 10);
+    let minutes = parseInt(match[2], 10);
+    
+    minutes += minuteDelta;
+    
+    while (minutes >= 60) {
+      minutes -= 60;
+      hours++;
+    }
+    while (minutes < 0) {
+      minutes += 60;
+      hours--;
+    }
+    
+    if (hours >= 24) hours = 23;
+    if (hours < 0) hours = 0;
+    
+    setQuickTime(hours, minutes);
+  }, [timeInput, setQuickTime]);
+
+  const handleAllDayToggle = useCallback((enabled: boolean) => {
+    setIsAllDay(enabled);
+    
+    if (!enabled && savedTime) {
+      const updated = new Date(localDate);
+      updated.setHours(savedTime.hours, savedTime.minutes, 0, 0);
+      setLocalDate(updated);
+      setTimeInput(`${String(savedTime.hours).padStart(2, '0')}:${String(savedTime.minutes).padStart(2, '0')}`);
+    } else if (!enabled) {
+      const now = new Date();
+      const updated = new Date(localDate);
+      updated.setHours(now.getHours() + 1, 0, 0, 0);
+      setLocalDate(updated);
+      setSavedTime({ hours: now.getHours() + 1, minutes: 0 });
+      setTimeInput(`${String(now.getHours() + 1).padStart(2, '0')}:00`);
+    }
+    
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  }, [localDate, savedTime]);
+
   const handleConfirm = useCallback(() => {
+    if (!isAllDay) {
+      const isValid = applyTimeFromInput();
+      if (!isValid) {
+        if (Platform.OS !== 'web') {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        }
+        return;
+      }
+    }
+    
     const dateOnly = new Date(localDate);
     dateOnly.setHours(0, 0, 0, 0);
     
@@ -129,11 +227,12 @@ export function UnifiedDateTimePicker({
 
     console.log('[DateTimePicker] Confirming:', result);
     onConfirm(result);
+    onClose();
     
     if (Platform.OS !== 'web') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
-  }, [localDate, isAllDay, onConfirm]);
+  }, [localDate, isAllDay, onConfirm, onClose, applyTimeFromInput]);
 
   const formatDate = (date: Date): string => {
     return date.toLocaleDateString('de-AT', {
@@ -151,6 +250,16 @@ export function UnifiedDateTimePicker({
       hour12: false,
     });
   };
+
+  const isTimeValid = useMemo(() => {
+    const match = timeInput.match(/^(\d{1,2}):?(\d{0,2})$/);
+    if (!match) return false;
+    
+    const hours = parseInt(match[1], 10);
+    const minutes = match[2] ? parseInt(match[2], 10) : 0;
+    
+    return !isNaN(hours) && hours <= 23 && !isNaN(minutes) && minutes <= 59;
+  }, [timeInput]);
 
   if (!visible) return null;
 
@@ -227,21 +336,101 @@ export function UnifiedDateTimePicker({
               </TouchableOpacity>
 
               {!isAllDay && (
-                <TouchableOpacity
-                  style={styles.pickerButton}
-                  onPress={() => {
-                    if (Platform.OS !== 'web') {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    }
-                    setShowTimePicker(true);
-                  }}
-                >
-                  <Clock size={20} color="#3B82F6" />
-                  <View style={styles.pickerButtonText}>
-                    <Text style={styles.pickerButtonLabel}>Time</Text>
-                    <Text style={styles.pickerButtonValue}>{formatTime(localDate)}</Text>
+                <View style={styles.timeSection}>
+                  <View style={styles.timeSectionHeader}>
+                    <Clock size={20} color="#3B82F6" />
+                    <Text style={styles.timeSectionTitle}>Time</Text>
                   </View>
-                </TouchableOpacity>
+                  
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.quickTimeChips}>
+                    <TouchableOpacity
+                      style={styles.quickTimeChip}
+                      onPress={setTimeNow}
+                    >
+                      <Text style={styles.quickTimeChipText}>Now</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.quickTimeChip}
+                      onPress={() => addMinutes(30)}
+                    >
+                      <Text style={styles.quickTimeChipText}>+30m</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.quickTimeChip}
+                      onPress={() => setQuickTime(8, 0)}
+                    >
+                      <Text style={styles.quickTimeChipText}>08:00</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.quickTimeChip}
+                      onPress={() => setQuickTime(12, 0)}
+                    >
+                      <Text style={styles.quickTimeChipText}>12:00</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.quickTimeChip}
+                      onPress={() => setQuickTime(17, 0)}
+                    >
+                      <Text style={styles.quickTimeChipText}>17:00</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.quickTimeChip}
+                      onPress={() => setQuickTime(19, 0)}
+                    >
+                      <Text style={styles.quickTimeChipText}>19:00</Text>
+                    </TouchableOpacity>
+                  </ScrollView>
+
+                  <View style={styles.timeInputContainer}>
+                    <TextInput
+                      style={[
+                        styles.timeInput,
+                        !isTimeValid && timeInput.length > 0 && styles.timeInputError
+                      ]}
+                      value={timeInput}
+                      onChangeText={handleTimeInputChange}
+                      onBlur={applyTimeFromInput}
+                      placeholder="HH:MM"
+                      placeholderTextColor="#9CA3AF"
+                      keyboardType="number-pad"
+                      maxLength={5}
+                    />
+                    <View style={styles.timeSteppers}>
+                      <TouchableOpacity
+                        style={styles.timeStepper}
+                        onPress={() => adjustTime(-5)}
+                      >
+                        <Minus size={16} color="#6B7280" />
+                        <Text style={styles.timeStepperText}>5m</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.timeStepper}
+                        onPress={() => adjustTime(5)}
+                      >
+                        <Plus size={16} color="#6B7280" />
+                        <Text style={styles.timeStepperText}>5m</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.timeStepper}
+                        onPress={() => adjustTime(-15)}
+                      >
+                        <Minus size={16} color="#6B7280" />
+                        <Text style={styles.timeStepperText}>15m</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.timeStepper}
+                        onPress={() => adjustTime(15)}
+                      >
+                        <Plus size={16} color="#6B7280" />
+                        <Text style={styles.timeStepperText}>15m</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                  
+                  {!isTimeValid && timeInput.length > 0 && (
+                    <Text style={styles.timeErrorText}>Invalid time format (HH:MM, 00-23:00-59)</Text>
+                  )}
+                </View>
               )}
             </View>
           </View>
@@ -291,40 +480,7 @@ export function UnifiedDateTimePicker({
           />
         )}
 
-        {Platform.OS === 'ios' && showTimePicker && (
-          <View style={styles.pickerOverlay}>
-            <TouchableOpacity
-              style={styles.pickerBackdrop}
-              activeOpacity={1}
-              onPress={() => setShowTimePicker(false)}
-            />
-            <View style={styles.pickerContainer}>
-              <View style={styles.pickerHeader}>
-                <TouchableOpacity onPress={() => setShowTimePicker(false)}>
-                  <Text style={styles.pickerDone}>Done</Text>
-                </TouchableOpacity>
-              </View>
-              <DateTimePicker
-                value={localDate}
-                mode="time"
-                display="spinner"
-                onChange={handleTimeChange}
-                is24Hour={true}
-                locale="de-AT"
-              />
-            </View>
-          </View>
-        )}
 
-        {Platform.OS === 'android' && showTimePicker && (
-          <DateTimePicker
-            value={localDate}
-            mode="time"
-            display="default"
-            onChange={handleTimeChange}
-            is24Hour={true}
-          />
-        )}
       </View>
     </Modal>
   );
@@ -531,5 +687,83 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '600' as const,
     color: '#3B82F6',
+  },
+  timeSection: {
+    gap: 16,
+    paddingTop: 8,
+  },
+  timeSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  timeSectionTitle: {
+    fontSize: 15,
+    fontWeight: '600' as const,
+    color: '#111827',
+  },
+  quickTimeChips: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  quickTimeChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginRight: 8,
+  },
+  quickTimeChipText: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: '#374151',
+  },
+  timeInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  timeInput: {
+    flex: 1,
+    fontSize: 24,
+    fontWeight: '700' as const,
+    color: '#111827',
+    padding: 16,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    textAlign: 'center',
+  },
+  timeInputError: {
+    borderColor: '#EF4444',
+    backgroundColor: '#FEE2E2',
+  },
+  timeSteppers: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  timeStepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  timeStepperText: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    color: '#6B7280',
+  },
+  timeErrorText: {
+    fontSize: 13,
+    color: '#EF4444',
+    marginTop: 4,
   },
 });
