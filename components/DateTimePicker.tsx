@@ -10,7 +10,7 @@ import {
   TextInput,
   ScrollView,
 } from 'react-native';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+
 import { Calendar, Clock, X, Plus, Minus } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
@@ -38,7 +38,7 @@ export function UnifiedDateTimePicker({
 }: DateTimePickerProps) {
   const [localDate, setLocalDate] = useState<Date>(new Date());
   const [isAllDay, setIsAllDay] = useState<boolean>(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
+
   const [timeInput, setTimeInput] = useState('');
   const [savedTime, setSavedTime] = useState<{ hours: number; minutes: number } | null>(null);
 
@@ -70,25 +70,38 @@ export function UnifiedDateTimePicker({
     }
   }, [visible, value]);
 
-  const handleDateChange = useCallback((_event: DateTimePickerEvent, newDate?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowDatePicker(false);
+  const setQuickDate = useCallback((daysOffset: number) => {
+    const today = new Date();
+    today.setDate(today.getDate() + daysOffset);
+    
+    const updated = new Date(localDate);
+    updated.setFullYear(today.getFullYear(), today.getMonth(), today.getDate());
+    
+    if (isAllDay) {
+      updated.setHours(0, 0, 0, 0);
     }
+    
+    setLocalDate(updated);
+    console.log('[DateTimePicker] Date changed:', updated.toISOString());
+    
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  }, [localDate, isAllDay]);
 
-    if (newDate && !isNaN(newDate.getTime())) {
-      const updated = new Date(localDate);
-      updated.setFullYear(newDate.getFullYear(), newDate.getMonth(), newDate.getDate());
-      
-      if (isAllDay) {
-        updated.setHours(0, 0, 0, 0);
-      }
-      
-      setLocalDate(updated);
-      console.log('[DateTimePicker] Date changed:', updated.toISOString());
-      
-      if (Platform.OS !== 'web') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      }
+  const setSpecificDate = useCallback((year: number, month: number, day: number) => {
+    const updated = new Date(localDate);
+    updated.setFullYear(year, month, day);
+    
+    if (isAllDay) {
+      updated.setHours(0, 0, 0, 0);
+    }
+    
+    setLocalDate(updated);
+    console.log('[DateTimePicker] Date changed:', updated.toISOString());
+    
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
   }, [localDate, isAllDay]);
 
@@ -319,21 +332,49 @@ export function UnifiedDateTimePicker({
             <View style={styles.divider} />
 
             <View style={styles.pickerSection}>
-              <TouchableOpacity
-                style={styles.pickerButton}
-                onPress={() => {
-                  if (Platform.OS !== 'web') {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }
-                  setShowDatePicker(true);
-                }}
-              >
-                <Calendar size={20} color="#3B82F6" />
-                <View style={styles.pickerButtonText}>
-                  <Text style={styles.pickerButtonLabel}>Date</Text>
-                  <Text style={styles.pickerButtonValue}>{formatDate(localDate)}</Text>
+              <View style={styles.dateSection}>
+                <View style={styles.dateSectionHeader}>
+                  <Calendar size={20} color="#3B82F6" />
+                  <Text style={styles.dateSectionTitle}>Date</Text>
                 </View>
-              </TouchableOpacity>
+                
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.quickDateChips}>
+                  <TouchableOpacity
+                    style={styles.quickDateChip}
+                    onPress={() => setQuickDate(0)}
+                  >
+                    <Text style={styles.quickDateChipText}>Today</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.quickDateChip}
+                    onPress={() => setQuickDate(1)}
+                  >
+                    <Text style={styles.quickDateChipText}>Tomorrow</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.quickDateChip}
+                    onPress={() => setQuickDate(7)}
+                  >
+                    <Text style={styles.quickDateChipText}>Next Week</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.quickDateChip}
+                    onPress={() => {
+                      const today = new Date();
+                      const nextMonth = new Date(today);
+                      nextMonth.setMonth(today.getMonth() + 1);
+                      setSpecificDate(nextMonth.getFullYear(), nextMonth.getMonth(), nextMonth.getDate());
+                    }}
+                  >
+                    <Text style={styles.quickDateChipText}>Next Month</Text>
+                  </TouchableOpacity>
+                </ScrollView>
+                
+                <View style={styles.currentDateDisplay}>
+                  <Text style={styles.currentDateLabel}>Selected Date</Text>
+                  <Text style={styles.currentDateValue}>{formatDate(localDate)}</Text>
+                </View>
+              </View>
 
               {!isAllDay && (
                 <View style={styles.timeSection}>
@@ -444,41 +485,6 @@ export function UnifiedDateTimePicker({
             </TouchableOpacity>
           </View>
         </View>
-
-        {Platform.OS === 'ios' && showDatePicker && (
-          <View style={styles.pickerOverlay}>
-            <TouchableOpacity
-              style={styles.pickerBackdrop}
-              activeOpacity={1}
-              onPress={() => setShowDatePicker(false)}
-            />
-            <View style={styles.pickerContainer}>
-              <View style={styles.pickerHeader}>
-                <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                  <Text style={styles.pickerDone}>Done</Text>
-                </TouchableOpacity>
-              </View>
-              <DateTimePicker
-                value={localDate}
-                mode="date"
-                display="spinner"
-                onChange={handleDateChange}
-                minimumDate={minDate}
-                locale="de-AT"
-              />
-            </View>
-          </View>
-        )}
-
-        {Platform.OS === 'android' && showDatePicker && (
-          <DateTimePicker
-            value={localDate}
-            mode="date"
-            display="default"
-            onChange={handleDateChange}
-            minimumDate={minDate}
-          />
-        )}
 
 
       </View>
@@ -602,28 +608,55 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingTop: 8,
   },
-  pickerButton: {
+  dateSection: {
+    gap: 16,
+    paddingTop: 8,
+    marginBottom: 12,
+  },
+  dateSectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
+  },
+  dateSectionTitle: {
+    fontSize: 15,
+    fontWeight: '600' as const,
+    color: '#111827',
+  },
+  quickDateChips: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  quickDateChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginRight: 8,
+  },
+  quickDateChipText: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: '#374151',
+  },
+  currentDateDisplay: {
     padding: 16,
     backgroundColor: '#F9FAFB',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
-  pickerButtonText: {
-    flex: 1,
-    gap: 2,
-  },
-  pickerButtonLabel: {
+  currentDateLabel: {
     fontSize: 13,
     fontWeight: '500' as const,
     color: '#9CA3AF',
+    marginBottom: 4,
   },
-  pickerButtonValue: {
-    fontSize: 16,
-    fontWeight: '600' as const,
+  currentDateValue: {
+    fontSize: 18,
+    fontWeight: '700' as const,
     color: '#111827',
   },
   footer: {
@@ -656,38 +689,7 @@ const styles = StyleSheet.create({
     fontWeight: '700' as const,
     color: '#FFFFFF',
   },
-  pickerOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'flex-end',
-    zIndex: 920,
-  },
-  pickerBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-  },
-  pickerContainer: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingBottom: 20,
-  },
-  pickerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  pickerDone: {
-    fontSize: 17,
-    fontWeight: '600' as const,
-    color: '#3B82F6',
-  },
+
   timeSection: {
     gap: 16,
     paddingTop: 8,
