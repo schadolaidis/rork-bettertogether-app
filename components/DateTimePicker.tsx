@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -8,11 +8,15 @@ import {
   Modal,
   ScrollView,
   Switch,
+  Animated,
+  Dimensions,
 } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { Calendar, Clock, X } from 'lucide-react-native';
+import { Calendar, Clock, X, ChevronLeft, ChevronRight, Zap } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { EUDateFormatter } from '@/utils/EULocale';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface DateTimePickerModalProps {
   visible: boolean;
@@ -37,6 +41,9 @@ export function DateTimePickerModal({
   const [isAllDay, setIsAllDay] = useState(false);
   const [showNativeDatePicker, setShowNativeDatePicker] = useState(false);
   const [showNativeTimePicker, setShowNativeTimePicker] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
+  const [fadeAnim] = useState(new Animated.Value(0));
+  const [slideAnim] = useState(new Animated.Value(50));
 
   useEffect(() => {
     if (visible) {
@@ -47,10 +54,29 @@ export function DateTimePickerModal({
         now.setMinutes(Math.ceil(now.getMinutes() / 15) * 15);
         now.setSeconds(0, 0);
         setSelectedDate(now);
+        setCurrentMonth(now);
       } else {
-        setSelectedDate(new Date(validDate));
+        const date = new Date(validDate);
+        setSelectedDate(date);
+        setCurrentMonth(new Date(date.getFullYear(), date.getMonth(), 1));
       }
       setIsAllDay(initialAllDay);
+      
+      fadeAnim.setValue(0);
+      slideAnim.setValue(50);
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          tension: 50,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+      ]).start();
     }
   }, [visible, initialDate, initialAllDay]);
 
@@ -124,11 +150,98 @@ export function DateTimePickerModal({
     }
     
     setSelectedDate(newDate);
+    setCurrentMonth(new Date(newDate.getFullYear(), newDate.getMonth(), 1));
+    
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+  }, [isAllDay]);
+
+  const handleDateSelect = useCallback((date: Date) => {
+    const newDate = new Date(date);
+    newDate.setHours(
+      isAllDay ? 0 : selectedDate.getHours(),
+      isAllDay ? 0 : selectedDate.getMinutes(),
+      0,
+      0
+    );
+    setSelectedDate(newDate);
     
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-  }, [isAllDay]);
+  }, [selectedDate, isAllDay]);
+
+  const handleTimeSelect = useCallback((hours: number, minutes: number) => {
+    const newDate = new Date(selectedDate);
+    newDate.setHours(hours, minutes, 0, 0);
+    setSelectedDate(newDate);
+    
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  }, [selectedDate]);
+
+  const navigateMonth = useCallback((direction: 'prev' | 'next') => {
+    setCurrentMonth((prev) => {
+      const newMonth = new Date(prev);
+      if (direction === 'prev') {
+        newMonth.setMonth(newMonth.getMonth() - 1);
+      } else {
+        newMonth.setMonth(newMonth.getMonth() + 1);
+      }
+      return newMonth;
+    });
+    
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  }, []);
+
+  const calendarDays = useMemo(() => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startDayOfWeek = firstDay.getDay();
+    
+    const days: (Date | null)[] = [];
+    
+    for (let i = 0; i < startDayOfWeek; i++) {
+      days.push(null);
+    }
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push(new Date(year, month, day));
+    }
+    
+    return days;
+  }, [currentMonth]);
+
+  const getRelativeTimeText = useCallback((date: Date) => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const targetDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const diffDays = Math.floor((targetDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Tomorrow';
+    if (diffDays === -1) return 'Yesterday';
+    if (diffDays > 0 && diffDays < 7) return `In ${diffDays} days`;
+    if (diffDays < 0 && diffDays > -7) return `${Math.abs(diffDays)} days ago`;
+    return null;
+  }, []);
+
+  const hours = useMemo(() => {
+    const result = [];
+    for (let i = 0; i < 24; i++) {
+      result.push(i);
+    }
+    return result;
+  }, []);
+
+  const minutes = useMemo(() => [0, 15, 30, 45], []);
 
   const handleSave = useCallback(() => {
     console.log('[DateTimePicker] Saving:', selectedDate.toISOString(), 'AllDay:', isAllDay);
@@ -164,7 +277,7 @@ export function DateTimePickerModal({
   if (!visible) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="slide">
+    <Modal visible={visible} transparent animationType="fade">
       <View style={styles.overlay}>
         <TouchableOpacity
           style={styles.backdrop}
@@ -172,7 +285,15 @@ export function DateTimePickerModal({
           onPress={onClose}
         />
         
-        <View style={styles.container}>
+        <Animated.View 
+          style={[
+            styles.container,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            },
+          ]}
+        >
           <View style={styles.handle} />
           
           <View style={styles.header}>
@@ -190,8 +311,25 @@ export function DateTimePickerModal({
             contentContainerStyle={styles.contentContainer}
             showsVerticalScrollIndicator={false}
           >
+            <View style={styles.previewSection}>
+              <View style={styles.previewIcon}>
+                <Calendar size={24} color="#3B82F6" />
+              </View>
+              <View style={styles.previewTextContainer}>
+                <Text style={styles.previewDate}>{formatDate(selectedDate)}</Text>
+                {!isAllDay && (
+                  <Text style={styles.previewTime}>{formatTime(selectedDate)}</Text>
+                )}
+                {getRelativeTimeText(selectedDate) && (
+                  <View style={styles.relativeTimeBadge}>
+                    <Zap size={12} color="#3B82F6" />
+                    <Text style={styles.relativeTimeText}>{getRelativeTimeText(selectedDate)}</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+
             <View style={styles.quickSelectSection}>
-              <Text style={styles.sectionLabel}>Quick Select</Text>
               <View style={styles.quickSelectGrid}>
                 <QuickSelectButton
                   label="Today"
@@ -218,10 +356,79 @@ export function DateTimePickerModal({
 
             <View style={styles.divider} />
 
+            <View style={styles.calendarSection}>
+              <View style={styles.calendarHeader}>
+                <TouchableOpacity
+                  style={styles.monthNavButton}
+                  onPress={() => navigateMonth('prev')}
+                >
+                  <ChevronLeft size={20} color="#6B7280" />
+                </TouchableOpacity>
+                <Text style={styles.monthTitle}>
+                  {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </Text>
+                <TouchableOpacity
+                  style={styles.monthNavButton}
+                  onPress={() => navigateMonth('next')}
+                >
+                  <ChevronRight size={20} color="#6B7280" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.weekdayHeader}>
+                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
+                  <View key={i} style={styles.weekdayCell}>
+                    <Text style={styles.weekdayText}>{day}</Text>
+                  </View>
+                ))}
+              </View>
+
+              <View style={styles.calendarGrid}>
+                {calendarDays.map((day, index) => {
+                  if (!day) {
+                    return <View key={`empty-${index}`} style={styles.dayCell} />;
+                  }
+                  
+                  const isSelected = day.toDateString() === selectedDate.toDateString();
+                  const isTodayDate = day.toDateString() === new Date().toDateString();
+                  const isPast = day < new Date(new Date().setHours(0, 0, 0, 0));
+                  
+                  return (
+                    <TouchableOpacity
+                      key={index}
+                      style={[
+                        styles.dayCell,
+                        isSelected && styles.dayCellSelected,
+                        isTodayDate && !isSelected && styles.dayCellToday,
+                      ]}
+                      onPress={() => handleDateSelect(day)}
+                      disabled={isPast}
+                    >
+                      <Text
+                        style={[
+                          styles.dayText,
+                          isSelected && styles.dayTextSelected,
+                          isTodayDate && !isSelected && styles.dayTextToday,
+                          isPast && styles.dayTextPast,
+                        ]}
+                      >
+                        {day.getDate()}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={styles.divider} />
+
             <View style={styles.allDaySection}>
               <View style={styles.allDayLeft}>
-                <Text style={styles.allDayLabel}>All Day</Text>
-                <Text style={styles.allDayHint}>No specific time</Text>
+                <Clock size={20} color="#6B7280" />
+                <View>
+                  <Text style={styles.allDayLabel}>All Day Event</Text>
+                  <Text style={styles.allDayHint}>No specific time needed</Text>
+                </View>
               </View>
               <Switch
                 value={isAllDay}
@@ -231,49 +438,65 @@ export function DateTimePickerModal({
               />
             </View>
 
-            <View style={styles.divider} />
-
-            <View style={styles.currentSelectionSection}>
-              <Text style={styles.sectionLabel}>Selected</Text>
-              
-              <TouchableOpacity
-                style={styles.selectionButton}
-                onPress={() => {
-                  if (Platform.OS !== 'web') {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }
-                  setShowNativeDatePicker(true);
-                }}
-              >
-                <View style={styles.selectionIcon}>
-                  <Calendar size={20} color="#3B82F6" />
-                </View>
-                <View style={styles.selectionContent}>
-                  <Text style={styles.selectionLabel}>Date</Text>
-                  <Text style={styles.selectionValue}>{formatDate(selectedDate)}</Text>
-                </View>
-              </TouchableOpacity>
-
-              {!isAllDay && (
-                <TouchableOpacity
-                  style={styles.selectionButton}
-                  onPress={() => {
-                    if (Platform.OS !== 'web') {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    }
-                    setShowNativeTimePicker(true);
-                  }}
-                >
-                  <View style={styles.selectionIcon}>
-                    <Clock size={20} color="#3B82F6" />
+            {!isAllDay && (
+              <>
+                <View style={styles.divider} />
+                <View style={styles.timeSection}>
+                  <Text style={styles.sectionLabel}>Time</Text>
+                  <View style={styles.timePickerContainer}>
+                    <ScrollView
+                      style={styles.timePicker}
+                      showsVerticalScrollIndicator={false}
+                    >
+                      {hours.map((hour) => (
+                        <TouchableOpacity
+                          key={hour}
+                          style={[
+                            styles.timeOption,
+                            selectedDate.getHours() === hour && styles.timeOptionSelected,
+                          ]}
+                          onPress={() => handleTimeSelect(hour, selectedDate.getMinutes())}
+                        >
+                          <Text
+                            style={[
+                              styles.timeOptionText,
+                              selectedDate.getHours() === hour && styles.timeOptionTextSelected,
+                            ]}
+                          >
+                            {String(hour).padStart(2, '0')}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                    <Text style={styles.timeSeparator}>:</Text>
+                    <ScrollView
+                      style={styles.timePicker}
+                      showsVerticalScrollIndicator={false}
+                    >
+                      {minutes.map((minute) => (
+                        <TouchableOpacity
+                          key={minute}
+                          style={[
+                            styles.timeOption,
+                            selectedDate.getMinutes() === minute && styles.timeOptionSelected,
+                          ]}
+                          onPress={() => handleTimeSelect(selectedDate.getHours(), minute)}
+                        >
+                          <Text
+                            style={[
+                              styles.timeOptionText,
+                              selectedDate.getMinutes() === minute && styles.timeOptionTextSelected,
+                            ]}
+                          >
+                            {String(minute).padStart(2, '0')}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
                   </View>
-                  <View style={styles.selectionContent}>
-                    <Text style={styles.selectionLabel}>Time</Text>
-                    <Text style={styles.selectionValue}>{formatTime(selectedDate)}</Text>
-                  </View>
-                </TouchableOpacity>
-              )}
-            </View>
+                </View>
+              </>
+            )}
           </ScrollView>
 
           <View style={styles.footer}>
@@ -290,7 +513,7 @@ export function DateTimePickerModal({
               <Text style={styles.saveButtonText}>Done</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </Animated.View>
 
         {Platform.OS === 'ios' && showNativeDatePicker && (
           <View style={styles.pickerOverlay}>
@@ -395,21 +618,26 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
   container: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: '75%',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    maxHeight: '90%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 20,
   },
   handle: {
-    width: 36,
-    height: 5,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 3,
+    width: 40,
+    height: 4,
+    backgroundColor: '#D1D5DB',
+    borderRadius: 2,
     alignSelf: 'center',
-    marginTop: 12,
+    marginTop: 10,
   },
   header: {
     flexDirection: 'row',
@@ -436,16 +664,58 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingBottom: 24,
   },
+  previewSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 16,
+  },
+  previewIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: '#EFF6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  previewTextContainer: {
+    flex: 1,
+    gap: 4,
+  },
+  previewDate: {
+    fontSize: 20,
+    fontWeight: '700' as const,
+    color: '#111827',
+    letterSpacing: -0.5,
+  },
+  previewTime: {
+    fontSize: 16,
+    fontWeight: '500' as const,
+    color: '#6B7280',
+  },
+  relativeTimeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  relativeTimeText: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: '#3B82F6',
+  },
   quickSelectSection: {
     paddingHorizontal: 24,
     paddingVertical: 16,
   },
   sectionLabel: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600' as const,
     color: '#9CA3AF',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 1,
     marginBottom: 12,
   },
   quickSelectGrid: {
@@ -454,16 +724,21 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   quickSelectButton: {
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 20,
-    borderRadius: 12,
-    backgroundColor: '#F3F4F6',
-    borderWidth: 2,
-    borderColor: 'transparent',
+    borderRadius: 14,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
   },
   quickSelectButtonActive: {
     backgroundColor: '#EFF6FF',
     borderColor: '#3B82F6',
+    shadowColor: '#3B82F6',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   quickSelectText: {
     fontSize: 15,
@@ -472,22 +747,96 @@ const styles = StyleSheet.create({
   },
   quickSelectTextActive: {
     color: '#3B82F6',
-    fontWeight: '600' as const,
+    fontWeight: '700' as const,
   },
   divider: {
     height: 1,
     backgroundColor: '#F3F4F6',
     marginHorizontal: 24,
   },
+  calendarSection: {
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  monthNavButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  monthTitle: {
+    fontSize: 17,
+    fontWeight: '700' as const,
+    color: '#111827',
+  },
+  weekdayHeader: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  weekdayCell: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  weekdayText: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    color: '#9CA3AF',
+  },
+  calendarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  dayCell: {
+    width: `${100 / 7}%` as any,
+    aspectRatio: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  dayCellSelected: {
+    backgroundColor: '#3B82F6',
+    borderRadius: 12,
+  },
+  dayCellToday: {
+    backgroundColor: '#FEF3C7',
+    borderRadius: 12,
+  },
+  dayText: {
+    fontSize: 15,
+    fontWeight: '500' as const,
+    color: '#111827',
+  },
+  dayTextSelected: {
+    color: '#FFFFFF',
+    fontWeight: '700' as const,
+  },
+  dayTextToday: {
+    color: '#F59E0B',
+    fontWeight: '700' as const,
+  },
+  dayTextPast: {
+    color: '#D1D5DB',
+  },
   allDaySection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingVertical: 16,
+    paddingVertical: 20,
   },
   allDayLeft: {
-    gap: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   allDayLabel: {
     fontSize: 16,
@@ -497,43 +846,47 @@ const styles = StyleSheet.create({
   allDayHint: {
     fontSize: 13,
     color: '#9CA3AF',
+    marginTop: 2,
   },
-  currentSelectionSection: {
+  timeSection: {
     paddingHorizontal: 24,
-    paddingVertical: 16,
-    gap: 12,
+    paddingVertical: 20,
   },
-  selectionButton: {
+  timePickerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    gap: 12,
-  },
-  selectionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#EFF6FF',
     justifyContent: 'center',
+    gap: 16,
+    marginTop: 8,
+  },
+  timePicker: {
+    maxHeight: 180,
+    width: 80,
+  },
+  timeSeparator: {
+    fontSize: 32,
+    fontWeight: '700' as const,
+    color: '#3B82F6',
+  },
+  timeOption: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
     alignItems: 'center',
+    borderRadius: 10,
+    marginBottom: 4,
   },
-  selectionContent: {
-    flex: 1,
-    gap: 2,
+  timeOptionSelected: {
+    backgroundColor: '#EFF6FF',
   },
-  selectionLabel: {
-    fontSize: 13,
+  timeOptionText: {
+    fontSize: 18,
     fontWeight: '500' as const,
-    color: '#9CA3AF',
+    color: '#6B7280',
   },
-  selectionValue: {
-    fontSize: 16,
-    fontWeight: '600' as const,
-    color: '#111827',
+  timeOptionTextSelected: {
+    fontSize: 20,
+    fontWeight: '700' as const,
+    color: '#3B82F6',
   },
   footer: {
     flexDirection: 'row',
@@ -546,8 +899,8 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: 16,
+    borderRadius: 14,
     backgroundColor: '#F3F4F6',
     alignItems: 'center',
   },
@@ -558,15 +911,21 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     flex: 2,
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: 16,
+    borderRadius: 14,
     backgroundColor: '#3B82F6',
     alignItems: 'center',
+    shadowColor: '#3B82F6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   saveButtonText: {
     fontSize: 16,
     fontWeight: '700' as const,
     color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
   pickerOverlay: {
     position: 'absolute',
