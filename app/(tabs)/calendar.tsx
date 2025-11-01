@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -6,17 +6,13 @@ import {
   ScrollView,
   TouchableOpacity,
   Platform,
-  Modal,
-  Animated,
-  PanResponder,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Plus, CheckCircle2 } from 'lucide-react-native';
+import { Plus, Calendar as CalendarIcon, Clock, ChevronRight } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useApp } from '@/contexts/AppContext';
-import { TaskCategory } from '@/types';
-import { CalendarService, DayMarkers } from '@/services/CalendarService';
+import { Task, TaskCategory } from '@/types';
 import { TaskFormModal, TaskFormData } from '@/components/TaskFormModal';
 
 export default function CalendarScreen() {
@@ -26,57 +22,20 @@ export default function CalendarScreen() {
     tasks,
     currentList,
     currentListMembers,
-    calendarView,
-    selectedDate,
-
-    setCalendarSelectedDate,
     addTask,
-    t,
   } = useApp();
 
   const [showTaskModal, setShowTaskModal] = useState(false);
-  const [preselectedDate, setPreselectedDate] = useState<Date | null>(null);
-  const [showDayAgenda, setShowDayAgenda] = useState(false);
-  const [agendaDate, setAgendaDate] = useState<Date>(new Date());
-  const swipeX = useRef(new Animated.Value(0)).current;
-  const [isDragging, setIsDragging] = useState(false);
-
-  const [currentMonth, setCurrentMonth] = useState(() => ({
-    year: selectedDate.getFullYear(),
-    month: selectedDate.getMonth(),
-  }));
-
-  useEffect(() => {
-    if (calendarView === 'month') {
-      setCurrentMonth({
-        year: selectedDate.getFullYear(),
-        month: selectedDate.getMonth(),
-      });
-    }
-  }, [selectedDate, calendarView]);
-
-  const categoryColors = useMemo(() => {
-    if (!currentList) return {} as Record<TaskCategory, string>;
-    return {
-      Household: currentList.categories.Household.color,
-      Finance: currentList.categories.Finance.color,
-      Work: currentList.categories.Work.color,
-      Leisure: currentList.categories.Leisure.color,
-    };
-  }, [currentList]);
-
-  const categoryEmojis = useMemo(() => {
-    if (!currentList) return {} as Record<TaskCategory, string>;
-    return {
-      Household: currentList.categories.Household?.emoji || '🏠',
-      Finance: currentList.categories.Finance?.emoji || '💰',
-      Work: currentList.categories.Work?.emoji || '💼',
-      Leisure: currentList.categories.Leisure?.emoji || '🎮',
-    };
-  }, [currentList]);
 
   const categoryMeta = useMemo(() => {
-    if (!currentList) return {} as Record<TaskCategory, { emoji: string; color: string; label: string }>;
+    if (!currentList) {
+      return {
+        Household: { emoji: '🏠', color: '#10B981', label: 'Household' },
+        Finance: { emoji: '💰', color: '#3B82F6', label: 'Finance' },
+        Work: { emoji: '💼', color: '#8B5CF6', label: 'Work' },
+        Leisure: { emoji: '🎮', color: '#F59E0B', label: 'Leisure' },
+      };
+    }
     return {
       Household: {
         emoji: currentList.categories.Household?.emoji || '🏠',
@@ -101,100 +60,27 @@ export default function CalendarScreen() {
     };
   }, [currentList]);
 
-  const monthDays = useMemo(() => {
-    return CalendarService.getMonthDays(currentMonth.year, currentMonth.month);
-  }, [currentMonth]);
+  const groupedTasks = useMemo(() => {
+    const now = new Date();
+    const upcoming = tasks.filter(task => {
+      const taskDate = new Date(task.endAt);
+      return (task.status === 'pending' || task.status === 'overdue') && taskDate >= now;
+    }).sort((a, b) => new Date(a.endAt).getTime() - new Date(b.endAt).getTime());
 
-  const weekDays = useMemo(() => {
-    return CalendarService.getWeekDays(selectedDate);
-  }, [selectedDate]);
-
-  const dayMarkers = useMemo(() => {
-    const start = calendarView === 'month' ? monthDays[0] : weekDays[0];
-    const end = calendarView === 'month' ? monthDays[monthDays.length - 1] : weekDays[6];
-    const markers = CalendarService.getRange(start, end, tasks, { categoryColors });
-    console.log('[Calendar] Day markers:', markers.length, 'View:', calendarView, 'Tasks:', tasks.length);
-    return markers;
-  }, [calendarView, monthDays, weekDays, tasks, categoryColors]);
-
-  const markerMap = useMemo(() => {
-    const map = new Map<string, DayMarkers>();
-    dayMarkers.forEach((marker) => {
-      map.set(marker.date, marker);
+    const groups: Record<string, { date: Date; tasks: Task[] }> = {};
+    
+    upcoming.forEach(task => {
+      const taskDate = new Date(task.endAt);
+      const dateKey = taskDate.toDateString();
+      
+      if (!groups[dateKey]) {
+        groups[dateKey] = { date: taskDate, tasks: [] };
+      }
+      groups[dateKey].tasks.push(task);
     });
-    return map;
-  }, [dayMarkers]);
 
-  const handlePrevious = useCallback(() => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-
-    if (calendarView === 'month') {
-      const newMonth = currentMonth.month - 1;
-      const newYear = newMonth < 0 ? currentMonth.year - 1 : currentMonth.year;
-      setCurrentMonth({
-        year: newYear,
-        month: newMonth < 0 ? 11 : newMonth,
-      });
-    } else if (calendarView === 'week') {
-      const newDate = new Date(selectedDate);
-      newDate.setDate(selectedDate.getDate() - 7);
-      setCalendarSelectedDate(newDate);
-    } else {
-      const newDate = new Date(selectedDate);
-      newDate.setDate(selectedDate.getDate() - 1);
-      setCalendarSelectedDate(newDate);
-    }
-  }, [calendarView, currentMonth, selectedDate, setCalendarSelectedDate]);
-
-  const handleNext = useCallback(() => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-
-    if (calendarView === 'month') {
-      const newMonth = currentMonth.month + 1;
-      const newYear = newMonth > 11 ? currentMonth.year + 1 : currentMonth.year;
-      setCurrentMonth({
-        year: newYear,
-        month: newMonth > 11 ? 0 : newMonth,
-      });
-    } else if (calendarView === 'week') {
-      const newDate = new Date(selectedDate);
-      newDate.setDate(selectedDate.getDate() + 7);
-      setCalendarSelectedDate(newDate);
-    } else {
-      const newDate = new Date(selectedDate);
-      newDate.setDate(selectedDate.getDate() + 1);
-      setCalendarSelectedDate(newDate);
-    }
-  }, [calendarView, currentMonth, selectedDate, setCalendarSelectedDate]);
-
-  const handleDayPress = useCallback(
-    (date: Date) => {
-      if (Platform.OS !== 'web') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      }
-      setCalendarSelectedDate(date);
-      setAgendaDate(date);
-      setShowDayAgenda(true);
-    },
-    [setCalendarSelectedDate]
-  );
-
-  const handleCreateTaskForDate = useCallback(
-    (date: Date) => {
-      if (Platform.OS !== 'web') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      }
-      const taskDate = new Date(date);
-      taskDate.setHours(taskDate.getHours() + 1, 0, 0, 0);
-      setPreselectedDate(taskDate);
-      setShowTaskModal(true);
-    },
-    []
-  );
+    return Object.values(groups);
+  }, [tasks]);
 
   const handleTaskSubmit = useCallback(
     (data: TaskFormData) => {
@@ -216,397 +102,36 @@ export default function CalendarScreen() {
         fundTargetId: data.fundTargetId,
       });
       setShowTaskModal(false);
-      setPreselectedDate(null);
     },
     [addTask]
   );
 
-  const currentDateDisplay = useMemo(() => {
-    if (calendarView === 'month') {
-      return CalendarService.formatMonthYear(new Date(currentMonth.year, currentMonth.month));
-    } else if (calendarView === 'week') {
-      return CalendarService.formatWeekRange(weekDays[0]);
+  const formatDate = (date: Date) => {
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    if (date.toDateString() === today.toDateString()) {
+      return 'Today';
+    } else if (date.toDateString() === tomorrow.toDateString()) {
+      return 'Tomorrow';
     } else {
-      return CalendarService.formatDayDate(selectedDate);
+      const dayName = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][date.getDay()];
+      const monthName = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][date.getMonth()];
+      return `${dayName}, ${monthName} ${date.getDate()}`;
     }
-  }, [calendarView, currentMonth, weekDays, selectedDate]);
-
-  const agendaTasks = useMemo(() => {
-    return CalendarService.getTasksForDate(agendaDate, tasks);
-  }, [agendaDate, tasks]);
-
-  const dayViewTasks = useMemo(() => {
-    return CalendarService.getTasksForDate(selectedDate, tasks);
-  }, [selectedDate, tasks]);
-
-  const tasksByHour = useMemo(() => {
-    const map = new Map<number, typeof dayViewTasks>();
-    dayViewTasks.forEach(task => {
-      const endDate = new Date(task.endAt);
-      const hour = endDate.getHours();
-      const existing = map.get(hour) || [];
-      map.set(hour, [...existing, task]);
-    });
-    console.log('[Calendar] Tasks by hour:', map.size, 'Total tasks:', dayViewTasks.length);
-    return map;
-  }, [dayViewTasks]);
-
-  const tickerDays = useMemo(() => {
-    const days = [];
-    const baseDate = new Date();
-    for (let i = -3; i <= 10; i++) {
-      const date = new Date(baseDate);
-      date.setDate(baseDate.getDate() + i);
-      days.push(date);
-    }
-    return days;
-  }, []);
-
-  const groupedTasksByDate = useMemo(() => {
-    const now = new Date();
-    const sorted = [...tasks].sort((a, b) => 
-      new Date(a.endAt).getTime() - new Date(b.endAt).getTime()
-    );
-    
-    const groups: Record<string, typeof tasks> = {};
-    sorted.forEach(task => {
-      const taskDate = new Date(task.endAt);
-      if (taskDate >= now || task.status === 'overdue' || task.status === 'pending') {
-        const dateKey = CalendarService.getDateKey(taskDate);
-        if (!groups[dateKey]) groups[dateKey] = [];
-        groups[dateKey].push(task);
-      }
-    });
-    
-    return groups;
-  }, [tasks]);
-
-  const tickerScrollRef = useRef<ScrollView>(null);
-
-  const panResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gestureState) => {
-        return Math.abs(gestureState.dx) > 20 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 2;
-      },
-      onPanResponderGrant: () => {
-        setIsDragging(true);
-      },
-      onPanResponderMove: (_, gestureState) => {
-        swipeX.setValue(gestureState.dx);
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        setIsDragging(false);
-        if (Math.abs(gestureState.dx) > 60 && Math.abs(gestureState.vx) > 0.3) {
-          if (gestureState.dx > 0) {
-            handlePrevious();
-          } else {
-            handleNext();
-          }
-        }
-        Animated.spring(swipeX, {
-          toValue: 0,
-          useNativeDriver: true,
-          friction: 9,
-          tension: 50,
-        }).start();
-      },
-      onPanResponderTerminate: () => {
-        setIsDragging(false);
-        Animated.spring(swipeX, {
-          toValue: 0,
-          useNativeDriver: true,
-          friction: 9,
-          tension: 50,
-        }).start();
-      },
-    })
-  ).current;
-
-  useEffect(() => {
-    if (tickerScrollRef.current) {
-      const todayIndex = tickerDays.findIndex(date => 
-        CalendarService.isSameDay(date, selectedDate)
-      );
-      if (todayIndex >= 0) {
-        const scrollX = Math.max(0, (todayIndex - 2) * 60);
-        setTimeout(() => {
-          tickerScrollRef.current?.scrollTo({ x: scrollX, animated: true });
-        }, 100);
-      }
-    }
-  }, [selectedDate, tickerDays]);
-
-  const renderDayTicker = () => {
-    const today = new Date();
-
-    return (
-      <ScrollView 
-        ref={tickerScrollRef}
-        horizontal 
-        style={styles.dayTicker}
-        contentContainerStyle={styles.dayTickerContent}
-        showsHorizontalScrollIndicator={false}
-      >
-        {tickerDays.map((date, index) => {
-          const dateKey = CalendarService.getDateKey(date);
-          const marker = markerMap.get(dateKey);
-          const isToday = CalendarService.isSameDay(date, today);
-          const isSelected = CalendarService.isSameDay(date, selectedDate);
-          const dayName = ['S', 'M', 'T', 'W', 'T', 'F', 'S'][date.getDay()];
-
-          return (
-            <TouchableOpacity
-              key={index}
-              style={[
-                styles.tickerDay,
-                isToday && styles.tickerDayToday,
-                isSelected && styles.tickerDaySelected,
-              ]}
-              onPress={() => handleDayPress(date)}
-              activeOpacity={0.6}
-            >
-              <Text style={[
-                styles.tickerDayName,
-                isToday && styles.tickerDayNameToday,
-                isSelected && styles.tickerDayNameSelected,
-              ]}>
-                {dayName}
-              </Text>
-              <Text style={[
-                styles.tickerDayNumber,
-                isToday && styles.tickerDayNumberToday,
-                isSelected && styles.tickerDayNumberSelected,
-              ]}>
-                {date.getDate()}
-              </Text>
-              {marker && marker.markers.length > 0 && (
-                <View style={styles.tickerMarkerRow}>
-                  {marker.markers.slice(0, 3).map((m, i) => (
-                    <View
-                      key={i}
-                      style={[styles.tickerMarker, { backgroundColor: m.color }]}
-                    />
-                  ))}
-                </View>
-              )}
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-    );
   };
 
-  const renderListView = () => {
-    return (
-      <ScrollView style={styles.listView} contentContainerStyle={styles.listViewContent}>
-        {Object.entries(groupedTasksByDate).map(([dateKey, dateTasks]) => {
-          const date = new Date(dateTasks[0].endAt);
-          const isToday = CalendarService.isSameDay(date, new Date());
-          
-          return (
-            <View key={dateKey} style={styles.listGroup}>
-              <View style={styles.listGroupHeader}>
-                <Text style={[styles.listGroupDate, isToday && styles.listGroupDateToday]}>
-                  {isToday ? 'Today' : CalendarService.formatDayDate(date)}
-                </Text>
-                <Text style={styles.listGroupCount}>{dateTasks.length} {dateTasks.length === 1 ? 'task' : 'tasks'}</Text>
-              </View>
-              {dateTasks.map(task => {
-                const categoryColor = categoryColors[task.category] || '#6B7280';
-                const categoryEmoji = categoryEmojis[task.category] || '📋';
-                const statusColor = getStatusColor(task.status);
-                const time = new Date(task.endAt).toLocaleTimeString('en-US', {
-                  hour: 'numeric',
-                  minute: '2-digit',
-                });
-
-                return (
-                  <TouchableOpacity
-                    key={task.id}
-                    style={styles.listTaskCard}
-                    onPress={() => {
-                      if (Platform.OS !== 'web') {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      }
-                      router.push(`/task-detail?id=${task.id}`);
-                    }}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.listTaskTime}>
-                      <Text style={[styles.listTaskTimeText, { color: statusColor }]}>{time}</Text>
-                    </View>
-                    <View style={[styles.listTaskIndicator, { backgroundColor: categoryColor }]} />
-                    <View style={styles.listTaskContent}>
-                      <View style={styles.listTaskHeader}>
-                        <Text style={styles.listTaskTitle} numberOfLines={1}>
-                          {task.title}
-                        </Text>
-                        <View style={[styles.listTaskStatus, { backgroundColor: statusColor }]}>
-                          <Text style={styles.listTaskStatusText}>
-                            {task.status === 'completed' ? '✓' : task.status.charAt(0).toUpperCase()}
-                          </Text>
-                        </View>
-                      </View>
-                      <View style={styles.listTaskFooter}>
-                        <View style={styles.listTaskCategory}>
-                          <Text style={styles.listTaskEmoji}>{categoryEmoji}</Text>
-                          <Text style={[styles.listTaskCategoryText, { color: categoryColor }]}>
-                            {task.category}
-                          </Text>
-                        </View>
-                        <Text style={styles.listTaskStake}>${task.stake}</Text>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          );
-        })}
-        {Object.keys(groupedTasksByDate).length === 0 && (
-          <View style={styles.listEmpty}>
-            <CheckCircle2 size={64} color="#D1D5DB" />
-            <Text style={styles.listEmptyText}>No upcoming tasks</Text>
-          </View>
-        )}
-      </ScrollView>
-    );
-  };
-
-  const renderMonthView = () => {
-    const today = new Date();
-    const weekDayNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-
-    return (
-      <View style={styles.monthView}>
-        <View style={styles.weekDayHeader}>
-          {weekDayNames.map((name, index) => (
-            <Text key={index} style={styles.weekDayName}>
-              {name}
-            </Text>
-          ))}
-        </View>
-        <View style={styles.monthGrid}>
-          {monthDays.map((date, index) => {
-            const dateKey = CalendarService.getDateKey(date);
-            const marker = markerMap.get(dateKey);
-            const isToday = CalendarService.isSameDay(date, today);
-            const isSelected = CalendarService.isSameDay(date, selectedDate);
-            const isCurrentMonth = date.getMonth() === currentMonth.month;
-
-            return (
-              <TouchableOpacity
-                key={index}
-                style={[
-                  styles.dayCell,
-                  isToday && styles.dayCellToday,
-                  isSelected && styles.dayCellSelected,
-                ]}
-                onPress={() => handleDayPress(date)}
-                onLongPress={() => handleCreateTaskForDate(date)}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.dayNumber,
-                    !isCurrentMonth && styles.dayNumberOtherMonth,
-                    isToday && styles.dayNumberToday,
-                    isSelected && styles.dayNumberSelected,
-                  ]}
-                >
-                  {date.getDate()}
-                </Text>
-                {marker && marker.markers.length > 0 && (
-                  <View style={styles.markerContainer}>
-                    {marker.markers.slice(0, 3).map((m, i) => (
-                      <View
-                        key={i}
-                        style={[styles.marker, { backgroundColor: m.color }]}
-                      />
-                    ))}
-                  </View>
-                )}
-                {marker && (marker.hasOverdue || marker.hasFailed) && (
-                  <View
-                    style={[
-                      styles.badge,
-                      { backgroundColor: marker.hasFailed ? '#EF4444' : '#F59E0B' },
-                    ]}
-                  />
-                )}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-    );
-  };
-
-  const renderWeekView = () => {
-    const today = new Date();
-    const weekDayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-    return (
-      <View style={styles.weekView}>
-        <View style={styles.weekStrip}>
-          {weekDays.map((date, index) => {
-            const dateKey = CalendarService.getDateKey(date);
-            const marker = markerMap.get(dateKey);
-            const isToday = CalendarService.isSameDay(date, today);
-            const isSelected = CalendarService.isSameDay(date, selectedDate);
-
-            return (
-              <TouchableOpacity
-                key={index}
-                style={[
-                  styles.weekDay,
-                  isToday && styles.weekDayToday,
-                  isSelected && styles.weekDaySelected,
-                ]}
-                onPress={() => handleDayPress(date)}
-                onLongPress={() => handleCreateTaskForDate(date)}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.weekDayLabel,
-                    isToday && styles.weekDayLabelToday,
-                    isSelected && styles.weekDayLabelSelected,
-                  ]}
-                >
-                  {weekDayNames[date.getDay()].slice(0, 3)}
-                </Text>
-                <Text
-                  style={[
-                    styles.weekDayNumber,
-                    isToday && styles.weekDayNumberToday,
-                    isSelected && styles.weekDayNumberSelected,
-                  ]}
-                >
-                  {date.getDate()}
-                </Text>
-                {marker && marker.markers.length > 0 && (
-                  <View style={styles.weekMarkerContainer}>
-                    {marker.markers.slice(0, 4).map((m, i) => (
-                      <View
-                        key={i}
-                        style={[styles.weekMarker, { backgroundColor: m.color }]}
-                      />
-                    ))}
-                  </View>
-                )}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-    );
+  const formatTime = (date: Date) => {
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+    return `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed':
-        return '#10B981';
       case 'overdue':
         return '#F59E0B';
       case 'failed':
@@ -616,270 +141,150 @@ export default function CalendarScreen() {
     }
   };
 
-  const renderDayView = () => {
-    const hours = Array.from({ length: 24 }, (_, i) => i);
-
-    return (
-      <ScrollView style={styles.dayView} contentContainerStyle={styles.dayViewContent}>
-        {dayViewTasks.length > 0 ? (
-          <View style={styles.timelineView}>
-            {hours.map((hour) => {
-              const hourTasks = tasksByHour.get(hour) || [];
-              const displayTime = `${hour.toString().padStart(2, '0')}:00`;
-              
-              return (
-                <View key={hour} style={styles.timelineSlot}>
-                  <View style={styles.timelineSlotHeader}>
-                    <Text style={styles.timelineHour}>{displayTime}</Text>
-                    <View style={styles.timelineLine} />
-                  </View>
-                  {hourTasks.length > 0 ? (
-                    <View style={styles.timelineTasksContainer}>
-                      {hourTasks.map((task) => {
-                        const categoryColor = categoryColors[task.category] || '#6B7280';
-                        const categoryEmoji = categoryEmojis[task.category] || '📋';
-                        const statusColor = getStatusColor(task.status);
-                        const time = new Date(task.endAt).toLocaleTimeString('en-US', {
-                          hour: 'numeric',
-                          minute: '2-digit',
-                        });
-
-                        return (
-                          <TouchableOpacity
-                            key={task.id}
-                            style={styles.dayTaskCard}
-                            onPress={() => {
-                              if (Platform.OS !== 'web') {
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                              }
-                              router.push(`/task-detail?id=${task.id}`);
-                            }}
-                            activeOpacity={0.7}
-                          >
-                            <View style={[styles.dayTaskIndicator, { backgroundColor: categoryColor }]} />
-                            <View style={styles.dayTaskContent}>
-                              <View style={styles.dayTaskHeader}>
-                                <Text style={[styles.dayTaskTime, { color: statusColor }]}>{time}</Text>
-                                <View style={[styles.dayTaskStatus, { backgroundColor: statusColor }]}>
-                                  <Text style={styles.dayTaskStatusText}>
-                                    {task.status.charAt(0).toUpperCase() + task.status.slice(1)}
-                                  </Text>
-                                </View>
-                              </View>
-                              <Text style={styles.dayTaskTitle} numberOfLines={2}>
-                                {task.title}
-                              </Text>
-                              <View style={styles.dayTaskFooter}>
-                                <View style={styles.dayTaskCategory}>
-                                  <Text style={styles.dayTaskEmoji}>{categoryEmoji}</Text>
-                                  <Text style={[styles.dayTaskCategoryText, { color: categoryColor }]}>
-                                    {task.category}
-                                  </Text>
-                                </View>
-                                <Text style={styles.dayTaskStake}>${task.stake}</Text>
-                              </View>
-                            </View>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
-                  ) : null}
-                </View>
-              );
-            })}
-          </View>
-        ) : (
-          <View style={styles.dayEmpty}>
-            <CheckCircle2 size={64} color="#D1D5DB" />
-            <Text style={styles.dayEmptyText}>{t.calendar.noTasks}</Text>
-            <Text style={styles.dayEmptySubtext}>Start planning your day</Text>
-            <TouchableOpacity
-              style={styles.createTaskButton}
-              onPress={() => handleCreateTaskForDate(selectedDate)}
-            >
-              <Plus size={20} color="#FFFFFF" />
-              <Text style={styles.createTaskButtonText}>{t.calendar.createTask}</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </ScrollView>
-    );
-  };
-
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>{t.calendar.title}</Text>
+        <View style={styles.headerLeft}>
+          <CalendarIcon size={28} color="#3B82F6" />
+          <Text style={styles.headerTitle}>Timeline</Text>
+        </View>
         <TouchableOpacity
           style={styles.createButton}
           onPress={() => {
             if (Platform.OS !== 'web') {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             }
-            setPreselectedDate(null);
             setShowTaskModal(true);
           }}
         >
-          <Plus size={22} color="#FFFFFF" />
+          <Plus size={20} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
-
-
-      {calendarView !== 'list' && renderDayTicker()}
-
-      <View style={styles.navigation}>
-        <Text style={styles.currentDate}>{currentDateDisplay}</Text>
-        <Text style={styles.swipeHint}>← swipe →</Text>
-      </View>
-
-      <Animated.ScrollView 
-        style={[styles.scrollView, {
-          transform: [{ translateX: Animated.multiply(swipeX, 0.2) }]
-        }]}
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        {...panResponder.panHandlers}
-        scrollEnabled={!isDragging}
       >
-        {calendarView === 'month' && renderMonthView()}
-        {calendarView === 'week' && renderWeekView()}
-        {calendarView === 'day' && renderDayView()}
-        {calendarView === 'list' && renderListView()}
-      </Animated.ScrollView>
+        {groupedTasks.length > 0 ? (
+          groupedTasks.map((group, groupIndex) => (
+            <View key={groupIndex} style={styles.dateGroup}>
+              <View style={styles.dateHeader}>
+                <View style={styles.dateBadge}>
+                  <Text style={styles.dateText}>{formatDate(group.date)}</Text>
+                  <Text style={styles.taskCount}>{group.tasks.length}</Text>
+                </View>
+              </View>
 
+              <View style={styles.timeline}>
+                {group.tasks.map((task, taskIndex) => {
+                  const category = categoryMeta[task.category as TaskCategory];
+                  const statusColor = getStatusColor(task.status);
+                  const isLast = taskIndex === group.tasks.length - 1;
 
+                  return (
+                    <View key={task.id} style={styles.taskContainer}>
+                      <View style={styles.timelineLeft}>
+                        <View style={[styles.timelineDot, { backgroundColor: category.color }]} />
+                        {!isLast && <View style={styles.timelineLine} />}
+                      </View>
+
+                      <TouchableOpacity
+                        style={[styles.taskCard, { borderLeftColor: category.color }]}
+                        onPress={() => {
+                          if (Platform.OS !== 'web') {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          }
+                          router.push(`/task-detail?id=${task.id}`);
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <View style={styles.taskHeader}>
+                          <View style={styles.taskHeaderLeft}>
+                            <Text style={styles.categoryEmoji}>{category.emoji}</Text>
+                            <Text style={[styles.categoryLabel, { color: category.color }]}>
+                              {task.category}
+                            </Text>
+                          </View>
+                          <View style={styles.taskHeaderRight}>
+                            <Clock size={14} color={statusColor} />
+                            <Text style={[styles.taskTime, { color: statusColor }]}>
+                              {formatTime(new Date(task.endAt))}
+                            </Text>
+                          </View>
+                        </View>
+
+                        <Text style={styles.taskTitle}>{task.title}</Text>
+
+                        {task.description && (
+                          <Text style={styles.taskDescription} numberOfLines={2}>
+                            {task.description}
+                          </Text>
+                        )}
+
+                        <View style={styles.taskFooter}>
+                          <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
+                            <Text style={styles.statusText}>
+                              {task.status === 'overdue' ? '⚠️ Overdue' : '📌 Pending'}
+                            </Text>
+                          </View>
+                          <Text style={styles.stake}>${task.stake}</Text>
+                        </View>
+
+                        <TouchableOpacity 
+                          style={styles.detailsButton}
+                          onPress={() => {
+                            if (Platform.OS !== 'web') {
+                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            }
+                            router.push(`/task-detail?id=${task.id}`);
+                          }}
+                        >
+                          <ChevronRight size={16} color="#9CA3AF" />
+                        </TouchableOpacity>
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+          ))
+        ) : (
+          <View style={styles.emptyState}>
+            <View style={styles.emptyIconContainer}>
+              <CalendarIcon size={64} color="#D1D5DB" strokeWidth={1.5} />
+            </View>
+            <Text style={styles.emptyTitle}>No upcoming tasks</Text>
+            <Text style={styles.emptySubtitle}>Create your first task to see it here</Text>
+            <TouchableOpacity
+              style={styles.emptyButton}
+              onPress={() => {
+                if (Platform.OS !== 'web') {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                }
+                setShowTaskModal(true);
+              }}
+            >
+              <Plus size={20} color="#FFFFFF" />
+              <Text style={styles.emptyButtonText}>Create Task</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </ScrollView>
 
       {showTaskModal && currentList && (
         <TaskFormModal
           visible={showTaskModal}
-          onClose={() => {
-            setShowTaskModal(false);
-            setPreselectedDate(null);
-          }}
+          onClose={() => setShowTaskModal(false)}
           onSubmit={handleTaskSubmit}
           categories={categoryMeta}
           members={currentListMembers}
           defaultGraceMinutes={currentList.defaultGraceMinutes}
           defaultStakeCents={currentList.defaultStakeCents}
           currencySymbol={currentList.currencySymbol}
-          existingTask={
-            preselectedDate
-              ? ({
-                  startAt: preselectedDate.toISOString(),
-                  endAt: new Date(preselectedDate.getTime() + 3600000).toISOString(),
-                  category: 'Household',
-                  allDay: false,
-                } as any)
-              : undefined
-          }
           mode="create"
         />
       )}
-
-      <Modal
-        visible={showDayAgenda}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowDayAgenda(false)}
-      >
-        <View style={agendaStyles.container}>
-          <View style={agendaStyles.header}>
-            <View>
-              <Text style={agendaStyles.title}>{t.dashboard.tasks}</Text>
-              <Text style={agendaStyles.date}>{CalendarService.formatDayDate(agendaDate)}</Text>
-            </View>
-            <View style={agendaStyles.headerActions}>
-              <TouchableOpacity
-                style={agendaStyles.createButtonSmall}
-                onPress={() => {
-                  if (Platform.OS !== 'web') {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                  }
-                  handleCreateTaskForDate(agendaDate);
-                  setShowDayAgenda(false);
-                }}
-              >
-                <Plus size={20} color="#3B82F6" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={agendaStyles.closeButton}
-                onPress={() => {
-                  if (Platform.OS !== 'web') {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }
-                  setShowDayAgenda(false);
-                }}
-              >
-                <Text style={agendaStyles.closeText}>Close</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <ScrollView style={agendaStyles.scroll} contentContainerStyle={agendaStyles.content}>
-            {agendaTasks.length > 0 ? (
-              agendaTasks.map((task) => {
-                const categoryColor = categoryColors[task.category] || '#6B7280';
-                const categoryEmoji = categoryEmojis[task.category] || '📋';
-                const statusColor = getStatusColor(task.status);
-                const time = new Date(task.endAt).toLocaleTimeString('en-US', {
-                  hour: 'numeric',
-                  minute: '2-digit',
-                });
-
-                return (
-                  <TouchableOpacity
-                    key={task.id}
-                    style={agendaStyles.task}
-                    onPress={() => {
-                      if (Platform.OS !== 'web') {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      }
-                      setShowDayAgenda(false);
-                      router.push(`/task-detail?id=${task.id}`);
-                    }}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[agendaStyles.taskIndicator, { backgroundColor: categoryColor }]} />
-                    <View style={agendaStyles.taskContent}>
-                      <View style={agendaStyles.taskHeader}>
-                        <Text style={agendaStyles.taskTime}>{time}</Text>
-                        <View style={[agendaStyles.taskStatus, { backgroundColor: statusColor }]}>
-                          <Text style={agendaStyles.taskStatusText}>
-                            {task.status.charAt(0).toUpperCase() + task.status.slice(1)}
-                          </Text>
-                        </View>
-                      </View>
-                      <Text style={agendaStyles.taskTitle} numberOfLines={2}>
-                        {task.title}
-                      </Text>
-                      <View style={agendaStyles.taskMeta}>
-                        <Text style={agendaStyles.taskEmoji}>{categoryEmoji}</Text>
-                        <Text style={agendaStyles.taskCategory}>{task.category}</Text>
-                        <Text style={agendaStyles.taskStake}>${task.stake}</Text>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })
-            ) : (
-              <View style={agendaStyles.empty}>
-                <CheckCircle2 size={48} color="#D1D5DB" />
-                <Text style={agendaStyles.emptyText}>{t.dashboard.noTasksForDay}</Text>
-                <TouchableOpacity
-                  style={agendaStyles.createTaskButton}
-                  onPress={() => {
-                    handleCreateTaskForDate(agendaDate);
-                    setShowDayAgenda(false);
-                  }}
-                >
-                  <Plus size={20} color="#FFFFFF" />
-                  <Text style={agendaStyles.createTaskButtonText}>{t.calendar.createTask}</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </ScrollView>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -887,656 +292,228 @@ export default function CalendarScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F8FAFC',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingVertical: 16,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: '#F1F5F9',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '700' as const,
-    color: '#111827',
+    color: '#0F172A',
+    letterSpacing: -0.5,
   },
   createButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#3B82F6',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#3B82F6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-
-  navigation: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  currentDate: {
-    fontSize: 18,
-    fontWeight: '700' as const,
-    color: '#111827',
-    letterSpacing: -0.3,
-  },
-  swipeHint: {
-    fontSize: 10,
-    fontWeight: '500' as const,
-    color: '#D1D5DB',
-    marginTop: 2,
-    letterSpacing: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3,
   },
   scrollView: {
     flex: 1,
   },
-  monthView: {
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    paddingBottom: 12,
-  },
-  weekDayHeader: {
-    flexDirection: 'row',
-    marginBottom: 8,
-    paddingHorizontal: 4,
-  },
-  weekDayName: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: 12,
-    fontWeight: '600' as const,
-    color: '#9CA3AF',
-    textTransform: 'uppercase' as const,
-  },
-  monthGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: 4,
-  },
-  dayCell: {
-    width: '14.285%',
-    aspectRatio: 1,
-    padding: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-    marginBottom: 6,
-  },
-  dayCellToday: {
-    backgroundColor: '#DBEAFE',
-  },
-  dayCellSelected: {
-    backgroundColor: '#3B82F6',
-  },
-  dayNumber: {
-    fontSize: 16,
-    fontWeight: '500' as const,
-    color: '#111827',
-    textAlign: 'center',
-    width: '100%',
-    height: '100%',
-    textAlignVertical: 'center',
-    lineHeight: 40,
-  },
-  dayNumberOtherMonth: {
-    color: '#D1D5DB',
-  },
-  dayNumberToday: {
-    color: '#3B82F6',
-    fontWeight: '700' as const,
-  },
-  dayNumberSelected: {
-    color: '#FFFFFF',
-    fontWeight: '700' as const,
-  },
-  markerContainer: {
-    position: 'absolute',
-    bottom: 6,
-    flexDirection: 'row',
-    gap: 2,
-  },
-  marker: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-  },
-  badge: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  weekView: {
-    paddingBottom: 8,
-    paddingHorizontal: 12,
-  },
-  weekStrip: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  weekDay: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 16,
-    borderRadius: 12,
-    backgroundColor: '#F9FAFB',
-  },
-  weekDayToday: {
-    backgroundColor: '#DBEAFE',
-  },
-  weekDaySelected: {
-    backgroundColor: '#3B82F6',
-  },
-  weekDayLabel: {
-    fontSize: 12,
-    fontWeight: '600' as const,
-    color: '#6B7280',
-    marginBottom: 4,
-  },
-  weekDayLabelToday: {
-    color: '#3B82F6',
-  },
-  weekDayLabelSelected: {
-    color: '#FFFFFF',
-  },
-  weekDayNumber: {
-    fontSize: 22,
-    fontWeight: '700' as const,
-    color: '#111827',
-    marginBottom: 4,
-  },
-  weekDayNumberToday: {
-    color: '#3B82F6',
-  },
-  weekDayNumberSelected: {
-    color: '#FFFFFF',
-  },
-  weekMarkerContainer: {
-    flexDirection: 'row',
-    gap: 2,
-    marginTop: 6,
-  },
-  weekMarker: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-  },
-  dayView: {
-    flex: 1,
-  },
-  dayViewContent: {
+  scrollContent: {
+    paddingVertical: 20,
     paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 24,
   },
-  dayTaskCard: {
+  dateGroup: {
+    marginBottom: 32,
+  },
+  dateHeader: {
+    marginBottom: 16,
+  },
+  dateBadge: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    overflow: 'hidden',
+    alignItems: 'center',
+    gap: 8,
+    alignSelf: 'flex-start',
+  },
+  dateText: {
+    fontSize: 18,
+    fontWeight: '700' as const,
+    color: '#0F172A',
+    letterSpacing: -0.3,
+  },
+  taskCount: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: '#94A3B8',
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  timeline: {
+    position: 'relative',
+  },
+  taskContainer: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  timelineLeft: {
+    alignItems: 'center',
+    width: 32,
+    marginRight: 16,
+    position: 'relative',
+  },
+  timelineDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
     elevation: 2,
-    marginBottom: 12,
-  },
-  dayTaskIndicator: {
-    width: 4,
-  },
-  dayTaskContent: {
-    flex: 1,
-    padding: 16,
-  },
-  dayTaskHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  dayTaskTime: {
-    fontSize: 14,
-    fontWeight: '600' as const,
-  },
-  dayTaskStatus: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  dayTaskStatusText: {
-    fontSize: 11,
-    fontWeight: '600' as const,
-    color: '#FFFFFF',
-  },
-  dayTaskTitle: {
-    fontSize: 18,
-    fontWeight: '600' as const,
-    color: '#111827',
-    marginBottom: 8,
-  },
-  dayTaskFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  dayTaskCategory: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  dayTaskEmoji: {
-    fontSize: 18,
-  },
-  dayTaskCategoryText: {
-    fontSize: 14,
-    fontWeight: '500' as const,
-  },
-  dayTaskStake: {
-    fontSize: 16,
-    fontWeight: '700' as const,
-    color: '#111827',
-  },
-  dayEmpty: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 40,
-  },
-  dayEmptyText: {
-    fontSize: 18,
-    fontWeight: '600' as const,
-    color: '#6B7280',
-    marginTop: 16,
-  },
-  dayEmptySubtext: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    marginTop: 8,
-    marginBottom: 24,
-  },
-  timelineView: {
-    flex: 1,
-  },
-  timelineSlot: {
-    marginBottom: 4,
-  },
-  timelineSlotHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  timelineHour: {
-    fontSize: 12,
-    fontWeight: '600' as const,
-    color: '#9CA3AF',
-    width: 50,
+    zIndex: 1,
   },
   timelineLine: {
+    position: 'absolute',
+    top: 14,
+    bottom: -16,
+    width: 2,
+    backgroundColor: '#E2E8F0',
+  },
+  taskCard: {
     flex: 1,
-    height: 1,
-    backgroundColor: '#E5E7EB',
-    marginLeft: 8,
-  },
-  timelineTasksContainer: {
-    marginLeft: 58,
-    gap: 8,
-    marginBottom: 8,
-  },
-  createTaskButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    backgroundColor: '#3B82F6',
-    borderRadius: 12,
-    shadowColor: '#3B82F6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  createTaskButtonText: {
-    fontSize: 16,
-    fontWeight: '600' as const,
-    color: '#FFFFFF',
-  },
-
-  dayTicker: {
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  dayTickerContent: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 6,
-  },
-  tickerDay: {
-    width: 52,
-    height: 64,
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F9FAFB',
-    marginRight: 8,
-  },
-  tickerDayToday: {
-    backgroundColor: '#EFF6FF',
-    borderWidth: 1.5,
-    borderColor: '#93C5FD',
-  },
-  tickerDaySelected: {
-    backgroundColor: '#3B82F6',
-  },
-  tickerDayName: {
-    fontSize: 10,
-    fontWeight: '600' as const,
-    color: '#9CA3AF',
-    marginBottom: 4,
-    textTransform: 'uppercase' as const,
-    letterSpacing: 0.5,
-  },
-  tickerDayNameToday: {
-    color: '#3B82F6',
-  },
-  tickerDayNameSelected: {
-    color: '#FFFFFF',
-  },
-  tickerDayNumber: {
-    fontSize: 20,
-    fontWeight: '700' as const,
-    color: '#111827',
-    marginBottom: 2,
-  },
-  tickerDayNumberToday: {
-    color: '#3B82F6',
-  },
-  tickerDayNumberSelected: {
-    color: '#FFFFFF',
-  },
-  tickerMarkerRow: {
-    flexDirection: 'row',
-    gap: 3,
-    marginTop: 4,
-  },
-  tickerMarker: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-  },
-  listView: {
-    flex: 1,
-  },
-  listViewContent: {
+    borderRadius: 16,
     padding: 16,
-    paddingBottom: 24,
-  },
-  listGroup: {
-    marginBottom: 24,
-  },
-  listGroupHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-    paddingHorizontal: 4,
-  },
-  listGroupDate: {
-    fontSize: 18,
-    fontWeight: '700' as const,
-    color: '#111827',
-  },
-  listGroupDateToday: {
-    color: '#3B82F6',
-  },
-  listGroupCount: {
-    fontSize: 13,
-    fontWeight: '600' as const,
-    color: '#6B7280',
-  },
-  listTaskCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    marginBottom: 8,
+    borderLeftWidth: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
-    shadowRadius: 2,
+    shadowRadius: 3,
     elevation: 1,
-  },
-  listTaskTime: {
-    width: 68,
-    paddingHorizontal: 12,
-    paddingVertical: 16,
-  },
-  listTaskTimeText: {
-    fontSize: 13,
-    fontWeight: '600' as const,
-  },
-  listTaskIndicator: {
-    width: 4,
-    height: '100%',
-    borderRadius: 2,
-  },
-  listTaskContent: {
-    flex: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-  },
-  listTaskHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  listTaskTitle: {
-    fontSize: 16,
-    fontWeight: '600' as const,
-    color: '#111827',
-    flex: 1,
-    marginRight: 8,
-  },
-  listTaskStatus: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  listTaskStatusText: {
-    fontSize: 12,
-    fontWeight: '700' as const,
-    color: '#FFFFFF',
-  },
-  listTaskFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  listTaskCategory: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  listTaskEmoji: {
-    fontSize: 14,
-  },
-  listTaskCategoryText: {
-    fontSize: 13,
-    fontWeight: '500' as const,
-  },
-  listTaskStake: {
-    fontSize: 14,
-    fontWeight: '700' as const,
-    color: '#111827',
-  },
-  listEmpty: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 40,
-  },
-  listEmptyText: {
-    fontSize: 18,
-    fontWeight: '600' as const,
-    color: '#9CA3AF',
-    marginTop: 16,
-  },
-});
-
-const agendaStyles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    paddingTop: 60,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700' as const,
-    color: '#111827',
-  },
-  date: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginTop: 4,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  createButtonSmall: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#EFF6FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  closeButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: '#F3F4F6',
-  },
-  closeText: {
-    fontSize: 16,
-    fontWeight: '600' as const,
-    color: '#6B7280',
-  },
-  scroll: {
-    flex: 1,
-  },
-  content: {
-    padding: 20,
-    gap: 12,
-  },
-  task: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  taskIndicator: {
-    width: 4,
-  },
-  taskContent: {
-    flex: 1,
-    padding: 16,
   },
   taskHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
+  },
+  taskHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  categoryEmoji: {
+    fontSize: 18,
+  },
+  categoryLabel: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+  },
+  taskHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   taskTime: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600' as const,
-    color: '#6B7280',
   },
-  taskStatus: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+  taskTitle: {
+    fontSize: 17,
+    fontWeight: '600' as const,
+    color: '#0F172A',
+    marginBottom: 8,
+    lineHeight: 24,
+  },
+  taskDescription: {
+    fontSize: 14,
+    color: '#64748B',
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  taskFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 8,
   },
-  taskStatusText: {
-    fontSize: 11,
+  statusText: {
+    fontSize: 12,
     fontWeight: '600' as const,
     color: '#FFFFFF',
   },
-  taskTitle: {
+  stake: {
     fontSize: 16,
-    fontWeight: '600' as const,
-    color: '#111827',
-    marginBottom: 8,
-  },
-  taskMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  taskEmoji: {
-    fontSize: 16,
-  },
-  taskCategory: {
-    fontSize: 14,
-    color: '#6B7280',
-    flex: 1,
-  },
-  taskStake: {
-    fontSize: 14,
     fontWeight: '700' as const,
-    color: '#111827',
+    color: '#0F172A',
   },
-  empty: {
+  detailsButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyState: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 40,
+    paddingVertical: 80,
+    paddingHorizontal: 32,
   },
-  emptyText: {
-    fontSize: 16,
-    color: '#9CA3AF',
-    marginTop: 12,
+  emptyIconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 24,
   },
-  createTaskButton: {
+  emptyTitle: {
+    fontSize: 22,
+    fontWeight: '700' as const,
+    color: '#0F172A',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    fontSize: 15,
+    color: '#64748B',
+    marginBottom: 32,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  emptyButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingVertical: 14,
     paddingHorizontal: 24,
+    paddingVertical: 14,
     backgroundColor: '#3B82F6',
     borderRadius: 12,
     shadowColor: '#3B82F6',
@@ -1545,7 +522,7 @@ const agendaStyles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  createTaskButtonText: {
+  emptyButtonText: {
     fontSize: 16,
     fontWeight: '600' as const,
     color: '#FFFFFF',
