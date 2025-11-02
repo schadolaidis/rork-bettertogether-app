@@ -1,8 +1,11 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet } from 'react-native';
 import { ModalSheet } from '@/components/interactive/modals/ModalSheet';
 import { Button } from '@/components/design-system/Button';
 import { useTheme } from '@/contexts/ThemeContext';
+import { TextField } from '@/components/form/TextField';
+import { Select, SelectOption } from '@/components/form/Select';
+import { DateTimeInput, DateTimeValue } from '@/components/form/DateTimeInput';
 
 export type TaskEditSheetProps = {
   visible: boolean;
@@ -16,8 +19,27 @@ export const TaskEditSheet: React.FC<TaskEditSheetProps> = ({
   onSave,
 }) => {
   const { theme } = useTheme();
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [focusGoal, setFocusGoal] = useState<string | undefined>(undefined);
+  const [dueDate, setDueDate] = useState<DateTimeValue | undefined>(undefined);
+  const [nameError, setNameError] = useState<string | undefined>(undefined);
+
+  const focusGoalOptions: SelectOption[] = [
+    { label: 'Health & Fitness', value: 'health' },
+    { label: 'Career & Work', value: 'career' },
+    { label: 'Finance & Savings', value: 'finance' },
+    { label: 'Learning & Education', value: 'learning' },
+    { label: 'Relationships', value: 'relationships' },
+    { label: 'Personal Growth', value: 'personal' },
+  ];
 
   const handleSave = () => {
+    if (!name.trim()) {
+      setNameError('Name is required');
+      return;
+    }
+    setNameError(undefined);
     onSave?.();
     onClose();
   };
@@ -53,10 +75,45 @@ export const TaskEditSheet: React.FC<TaskEditSheetProps> = ({
       footer={footer}
       testID="task-edit-sheet"
     >
-      <View style={[styles.contentPlaceholder, { backgroundColor: theme.colors.surfaceAlt }]}>
-        <Text style={[theme.typography.Body, { color: theme.colors.textLow }]}>
-          Task fields will be injected here
-        </Text>
+      <View style={[styles.content, { gap: theme.spacing.md }]}>
+        <TextField
+          label="Name"
+          value={name}
+          onChangeText={(text) => {
+            setName(text);
+            if (nameError) setNameError(undefined);
+          }}
+          placeholder="Enter task name"
+          errorText={nameError}
+          testID="task-name-field"
+        />
+
+        <TextField
+          label="Description"
+          value={description}
+          onChangeText={setDescription}
+          placeholder="Enter task description (optional)"
+          multiline
+          numberOfLines={3}
+          testID="task-description-field"
+        />
+
+        <Select
+          label="Focus Goal"
+          value={focusGoal}
+          onChange={setFocusGoal}
+          options={focusGoalOptions}
+          placeholder="Select a focus goal"
+          testID="task-focus-goal-field"
+        />
+
+        <DateTimeInput
+          label="Due Date & Time"
+          value={dueDate}
+          onChange={setDueDate}
+          placeholder="Select due date & time"
+          testID="task-due-date-field"
+        />
       </View>
     </ModalSheet>
   );
@@ -67,11 +124,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  contentPlaceholder: {
-    padding: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 200,
+  content: {
+    flexDirection: 'column',
   },
 });
