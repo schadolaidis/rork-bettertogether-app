@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, ViewProps } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@/contexts/ThemeContext';
 
 export type CardProps = ViewProps & {
@@ -15,33 +16,35 @@ export const Card: React.FC<CardProps> = ({ style, padded = true, header, conten
   const hasSlots = header || content || footer;
 
   return (
-    <View
+    <LinearGradient
+      colors={['#FFFFFF', '#EDF2F9']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
       {...rest}
       style={[
         styles.base,
         {
-          backgroundColor: theme.colors.surface,
-          borderRadius: theme.radius,
+          borderRadius: 16,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 1 },
           shadowOpacity: 0.05,
           shadowRadius: 2,
-          elevation: theme.elevation.card,
+          elevation: 1,
         },
-        padded && !hasSlots ? { padding: theme.spacing.md } : undefined,
+        padded && !hasSlots ? { padding: 16 } : undefined,
         style,
       ]}
     >
       {hasSlots ? (
         <>
-          {header && <View style={{ padding: theme.spacing.md }}>{header}</View>}
-          {content && <View style={{ padding: theme.spacing.md }}>{content}</View>}
-          {footer && <View style={{ padding: theme.spacing.md, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.colors.border }}>{footer}</View>}
+          {header && <View style={{ padding: 16 }}>{header}</View>}
+          {content && <View style={{ padding: 16 }}>{content}</View>}
+          {footer && <View style={{ padding: 16, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.colors.border }}>{footer}</View>}
         </>
       ) : (
         children
       )}
-    </View>
+    </LinearGradient>
   );
 };
 
