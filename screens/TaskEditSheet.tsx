@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Text, Pressable } from 'react-native';
 import { ModalSheet } from '@/components/interactive/modals/ModalSheet';
 import { Button } from '@/components/design-system/Button';
 import { useTheme } from '@/contexts/ThemeContext';
 import { TextField } from '@/components/form/TextField';
 import { Select, SelectOption } from '@/components/form/Select';
 import { DateTimeInput, DateTimeValue } from '@/components/form/DateTimeInput';
+import { AmountInput } from '@/components/form/AmountInput';
 
 export type TaskEditSheetProps = {
   visible: boolean;
@@ -23,6 +24,9 @@ export const TaskEditSheet: React.FC<TaskEditSheetProps> = ({
   const [description, setDescription] = useState('');
   const [focusGoal, setFocusGoal] = useState<string | undefined>(undefined);
   const [dueDate, setDueDate] = useState<DateTimeValue | undefined>(undefined);
+  const [stakeAmount, setStakeAmount] = useState('');
+  const [assignee, setAssignee] = useState<string | undefined>(undefined);
+  const [reminderEnabled, setReminderEnabled] = useState(false);
   const [nameError, setNameError] = useState<string | undefined>(undefined);
 
   const focusGoalOptions: SelectOption[] = [
@@ -32,6 +36,13 @@ export const TaskEditSheet: React.FC<TaskEditSheetProps> = ({
     { label: 'Learning & Education', value: 'learning' },
     { label: 'Relationships', value: 'relationships' },
     { label: 'Personal Growth', value: 'personal' },
+  ];
+
+  const assigneeOptions: SelectOption[] = [
+    { label: 'Alex Johnson', value: 'alex' },
+    { label: 'Sam Williams', value: 'sam' },
+    { label: 'Jordan Lee', value: 'jordan' },
+    { label: 'Taylor Brown', value: 'taylor' },
   ];
 
   const handleSave = () => {
@@ -114,6 +125,60 @@ export const TaskEditSheet: React.FC<TaskEditSheetProps> = ({
           placeholder="Select due date & time"
           testID="task-due-date-field"
         />
+
+        <AmountInput
+          label="Stake"
+          value={stakeAmount}
+          onChange={setStakeAmount}
+          currency="$"
+          placeholder="0.00"
+          testID="task-stake-field"
+        />
+
+        <Select
+          label="Assignee"
+          value={assignee}
+          onChange={setAssignee}
+          options={assigneeOptions}
+          placeholder="Select assignee (optional)"
+          testID="task-assignee-field"
+        />
+
+        <Pressable
+          style={[styles.toggleRow, { paddingVertical: theme.spacing.sm }]}
+          onPress={() => setReminderEnabled(!reminderEnabled)}
+          testID="task-reminder-toggle"
+        >
+          <Text
+            style={[
+              theme.typography.Label,
+              { color: theme.colors.textHigh, flex: 1 },
+            ]}
+          >
+            Reminder
+          </Text>
+          <View
+            style={[
+              styles.toggle,
+              {
+                backgroundColor: reminderEnabled
+                  ? theme.colors.primary
+                  : theme.colors.surfaceAlt,
+                borderRadius: 16,
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.toggleThumb,
+                {
+                  backgroundColor: theme.colors.surface,
+                  transform: [{ translateX: reminderEnabled ? 22 : 2 }],
+                },
+              ]}
+            />
+          </View>
+        </Pressable>
       </View>
     </ModalSheet>
   );
@@ -126,5 +191,20 @@ const styles = StyleSheet.create({
   },
   content: {
     flexDirection: 'column',
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  toggle: {
+    width: 48,
+    height: 28,
+    justifyContent: 'center',
+  },
+  toggleThumb: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
   },
 });
