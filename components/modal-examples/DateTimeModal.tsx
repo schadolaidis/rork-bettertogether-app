@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -6,9 +6,11 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
+  Platform,
 } from 'react-native';
-import { Calendar, Clock } from 'lucide-react-native';
+import { Clock } from 'lucide-react-native';
 import { ModalInputWrapper } from '@/components/ModalInputWrapper';
+import * as Haptics from 'expo-haptics';
 
 interface DateTimeModalProps {
   open: boolean;
@@ -33,237 +35,278 @@ export function DateTimeModal({
       minute: '2-digit',
     })
   );
+  const timeInputRef = useRef<TextInput>(null);
 
   const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const nextWeek = new Date(today);
+  nextWeek.setDate(nextWeek.getDate() + 7);
+
   const quickDates = [
     { label: 'Today', date: new Date() },
-    {
-      label: 'Tomorrow',
-      date: new Date(today.getTime() + 24 * 60 * 60 * 1000),
-    },
-    {
-      label: 'In 3 days',
-      date: new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000),
-    },
-    {
-      label: 'Next week',
-      date: new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000),
-    },
+    { label: 'Tomorrow', date: tomorrow },
+    { label: 'Next Week', date: nextWeek },
   ];
 
+  const now = new Date();
+  const nextHour = new Date();
+  nextHour.setHours(now.getHours() + 1, 0, 0, 0);
+  
   const timePresets = [
-    '09:00',
-    '12:00',
-    '14:00',
-    '17:00',
-    '18:00',
-    '20:00',
+    { label: 'Now', hours: now.getHours(), minutes: now.getMinutes() },
+    { label: '09:00', hours: 9, minutes: 0 },
+    { label: '12:00', hours: 12, minutes: 0 },
+    { label: '17:00', hours: 17, minutes: 0 },
+    { label: '20:00', hours: 20, minutes: 0 },
   ];
 
-  const handleTimeInput = (text: string) => {
-    const cleaned = text.replace(/[^0-9:]/g, '');
-    setTimeInput(cleaned);
-
-    const match = cleaned.match(/^(\d{1,2}):(\d{2})$/);
-    if (match) {
-      const hours = parseInt(match[1], 10);
-      const minutes = parseInt(match[2], 10);
-      if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
-        const newDate = new Date(selectedDate);
-        newDate.setHours(hours, minutes, 0, 0);
-        setSelectedDate(newDate);
-      }
+  const handleDateSelect = (date: Date) => {
+    const newDate = new Date(date);
+    newDate.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
+    setSelectedDate(newDate);
+    
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
   };
 
-  const handleTimePreset = (time: string) => {
-    setTimeInput(time);
-    const [hours, minutes] = time.split(':').map(Number);
+  const handleTimeInput = (text: string) => {
+    const cleaned = text.replace(/[^0-9]/g, '');
+    
+    if (cleaned.length === 0) {
+      setTimeInput('');
+      return;
+    }
+    
+    if (cleaned.length <= 2) {
+      setTimeInput(cleaned);
+    } else if (cleaned.length === 3) {
+      setTimeInput(`${cleaned.slice(0, 2)}:${cleaned.slice(2)}`);
+    } else {
+      setTimeInput(`${cleaned.slice(0, 2)}:${cleaned.slice(2, 4)}`);
+    }
+  };
+
+  const applyTimeFromInput = () => {
+    const match = timeInput.match(/^(\d{1,2}):?(\d{0,2})$/);
+    if (!match) return;
+    
+    let hours = parseInt(match[1], 10);
+    let minutes = match[2] ? parseInt(match[2], 10) : 0;
+    
+    if (isNaN(hours) || hours > 23 || isNaN(minutes) || minutes > 59) return;
+    
     const newDate = new Date(selectedDate);
     newDate.setHours(hours, minutes, 0, 0);
     setSelectedDate(newDate);
+    setTimeInput(`${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`);
+  };
+
+  const handleTimePreset = (hours: number, minutes: number) => {
+    const newDate = new Date(selectedDate);
+    newDate.setHours(hours, minutes, 0, 0);
+    setSelectedDate(newDate);
+    setTimeInput(`${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`);
+    
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  };
+
+  const handleAllDayToggle = () => {
+    setAllDay(!allDay);
+    
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
   };
 
   const handleConfirm = () => {
+    if (!allDay) {
+      applyTimeFromInput();
+    }
     onConfirm(selectedDate, allDay);
+    onClose();
+    
+    if (Platform.OS !== 'web') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  };
+
+  const formatSelectedDate = () => {
+    const dateStr = selectedDate.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    });
+    
+    if (allDay) return dateStr;
+    
+    const timeStr = selectedDate.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+    
+    return `${dateStr} • ${timeStr}`;
   };
 
   return (
     <ModalInputWrapper
       open={open}
-      title="Set Due Date & Time"
+      title="Due Date"
+      subtitle={formatSelectedDate()}
       onClose={onClose}
       onConfirm={handleConfirm}
       testID="datetime-modal"
-      maxWidth={480}
+      maxWidth={440}
+      avoidKeyboard={!allDay}
     >
-      <ScrollView style={styles.container}>
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Quick dates</Text>
-          <View style={styles.chipGrid}>
-            {quickDates.map((item) => {
-              const isSelected =
-                item.date.toDateString() === selectedDate.toDateString();
-              return (
-                <TouchableOpacity
-                  key={item.label}
-                  style={[styles.chip, isSelected && styles.chipSelected]}
-                  onPress={() => {
-                    const newDate = new Date(item.date);
-                    newDate.setHours(
-                      selectedDate.getHours(),
-                      selectedDate.getMinutes(),
-                      0,
-                      0
-                    );
-                    setSelectedDate(newDate);
-                  }}
+      <View style={styles.container}>
+        <View style={styles.quickDatesRow}>
+          {quickDates.map((item) => {
+            const isSelected =
+              item.date.toDateString() === selectedDate.toDateString();
+            return (
+              <TouchableOpacity
+                key={item.label}
+                style={[styles.quickDateChip, isSelected && styles.quickDateChipSelected]}
+                onPress={() => handleDateSelect(item.date)}
+              >
+                <Text
+                  style={[
+                    styles.quickDateText,
+                    isSelected && styles.quickDateTextSelected,
+                  ]}
                 >
-                  <Calendar
-                    size={16}
-                    color={isSelected ? '#2F6BFF' : '#6B7280'}
-                  />
-                  <Text
-                    style={[
-                      styles.chipText,
-                      isSelected && styles.chipTextSelected,
-                    ]}
-                  >
-                    {item.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
-        <View style={styles.section}>
-          <View style={styles.allDayRow}>
-            <Text style={styles.sectionLabel}>All day event</Text>
-            <TouchableOpacity
-              style={[styles.toggle, allDay && styles.toggleActive]}
-              onPress={() => setAllDay(!allDay)}
-            >
-              <View
-                style={[
-                  styles.toggleThumb,
-                  allDay && styles.toggleThumbActive,
-                ]}
-              />
-            </TouchableOpacity>
+        <View style={styles.divider} />
+
+        <View style={styles.allDayRow}>
+          <View style={styles.allDayLeft}>
+            <Clock size={20} color={allDay ? '#2F6BFF' : '#6B7280'} />
+            <Text style={[styles.allDayLabel, allDay && styles.allDayLabelActive]}>
+              All Day
+            </Text>
           </View>
+          <TouchableOpacity
+            style={[styles.toggle, allDay && styles.toggleActive]}
+            onPress={handleAllDayToggle}
+          >
+            <View
+              style={[
+                styles.toggleThumb,
+                allDay && styles.toggleThumbActive,
+              ]}
+            />
+          </TouchableOpacity>
         </View>
 
         {!allDay && (
           <>
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Time</Text>
-              <View style={styles.timeInputRow}>
-                <Clock size={18} color="#6B7280" />
-                <TextInput
-                  style={styles.timeInput}
-                  placeholder="HH:MM"
-                  placeholderTextColor="#9CA3AF"
-                  value={timeInput}
-                  onChangeText={handleTimeInput}
-                  keyboardType="numbers-and-punctuation"
-                  maxLength={5}
-                />
-              </View>
-            </View>
+            <View style={styles.divider} />
 
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Time presets</Text>
-              <View style={styles.chipGrid}>
-                {timePresets.map((time) => (
+            <View style={styles.timeSection}>
+              <Text style={styles.timeSectionLabel}>Time</Text>
+              
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.timePresetsScroll}
+                contentContainerStyle={styles.timePresetsContainer}
+              >
+                {timePresets.map((preset) => (
                   <TouchableOpacity
-                    key={time}
-                    style={[
-                      styles.chip,
-                      timeInput === time && styles.chipSelected,
-                    ]}
-                    onPress={() => handleTimePreset(time)}
+                    key={preset.label}
+                    style={styles.timeChip}
+                    onPress={() => handleTimePreset(preset.hours, preset.minutes)}
                   >
-                    <Text
-                      style={[
-                        styles.chipText,
-                        timeInput === time && styles.chipTextSelected,
-                      ]}
-                    >
-                      {time}
-                    </Text>
+                    <Text style={styles.timeChipText}>{preset.label}</Text>
                   </TouchableOpacity>
                 ))}
-              </View>
+              </ScrollView>
+
+              <TextInput
+                ref={timeInputRef}
+                style={styles.timeInput}
+                placeholder="HH:MM"
+                placeholderTextColor="#9CA3AF"
+                value={timeInput}
+                onChangeText={handleTimeInput}
+                onBlur={applyTimeFromInput}
+                keyboardType="number-pad"
+                maxLength={5}
+                selectTextOnFocus
+              />
             </View>
           </>
         )}
-
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>Selected:</Text>
-          <Text style={styles.summaryValue}>
-            {selectedDate.toLocaleDateString('en-US', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-            })}
-            {!allDay && ` at ${timeInput}`}
-          </Text>
-        </View>
-      </ScrollView>
+      </View>
     </ModalInputWrapper>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    maxHeight: 500,
+    gap: 0,
   },
-  section: {
-    marginBottom: 20,
-  },
-  sectionLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#6B7280',
-    marginBottom: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  chipGrid: {
+  quickDatesRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 8,
+    paddingVertical: 4,
   },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 8,
+  quickDateChip: {
+    flex: 1,
+    paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 10,
     backgroundColor: '#F3F4F6',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#E5E7EB',
+    alignItems: 'center',
   },
-  chipSelected: {
+  quickDateChipSelected: {
     backgroundColor: '#EFF6FF',
     borderColor: '#2F6BFF',
   },
-  chipText: {
+  quickDateText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
     color: '#374151',
   },
-  chipTextSelected: {
+  quickDateTextSelected: {
     color: '#2F6BFF',
-    fontWeight: '600',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#E5E7EB',
+    marginVertical: 16,
   },
   allDayRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  allDayLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  allDayLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#374151',
+  },
+  allDayLabelActive: {
+    color: '#2F6BFF',
+    fontWeight: '600',
   },
   toggle: {
     width: 48,
@@ -290,41 +333,46 @@ const styles = StyleSheet.create({
   toggleThumbActive: {
     alignSelf: 'flex-end',
   },
-  timeInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+  timeSection: {
+    gap: 12,
   },
-  timeInput: {
-    flex: 1,
-    fontSize: 16,
+  timeSectionLabel: {
+    fontSize: 13,
     fontWeight: '600',
-    color: '#111827',
-  },
-  summaryCard: {
-    padding: 16,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  summaryLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#9CA3AF',
-    marginBottom: 4,
+    color: '#6B7280',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  summaryValue: {
-    fontSize: 15,
+  timePresetsScroll: {
+    marginHorizontal: -4,
+  },
+  timePresetsContainer: {
+    paddingHorizontal: 4,
+    gap: 8,
+  },
+  timeChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  timeChipText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  timeInput: {
+    fontSize: 32,
     fontWeight: '600',
     color: '#111827',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    textAlign: 'center',
   },
 });
