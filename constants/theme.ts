@@ -7,6 +7,7 @@ export type ThemeColors = {
   primary: string;
   accent: string;
   success: string;
+  warning: string;
   error: string;
   textHigh: string;
   textLow: string;
@@ -28,51 +29,61 @@ export type Theme = {
   typography: Typography;
   radius: number;
   spacing: { xxs: 4; xs: 8; sm: 12; md: 16; lg: 24 };
-  appBar: { height: number };
+  elevation: { card: number; sheet: number };
+  grid: number;
+  appBar: { height: number; minTouchTarget: number };
 };
 
-export const lightTheme: Theme = {
+export const betterTogetherTheme: Theme = {
   colors: {
-    background: '#F9FAFB',
+    background: '#F8FAFC',
     surface: '#FFFFFF',
-    surfaceAlt: '#F3F4F6',
-    primary: '#2C6EF2',
-    accent: '#FFC93D',
-    success: '#34C759',
-    error: '#FF3B30',
-    textHigh: '#111827',
-    textLow: '#6B7280',
-    border: '#E5E7EB',
+    surfaceAlt: '#F1F5F9',
+    primary: '#2563EB',
+    accent: '#8B5CF6',
+    success: '#22C55E',
+    warning: '#F59E0B',
+    error: '#EF4444',
+    textHigh: '#0F172A',
+    textLow: '#64748B',
+    border: '#E2E8F0',
   },
   typography: {
-    H1: { fontSize: 24, fontWeight: '700', lineHeight: 30 },
+    H1: { fontSize: 24, fontWeight: '700', lineHeight: 32 },
     H2: { fontSize: 18, fontWeight: '600', lineHeight: 24 },
-    Body: { fontSize: 16, fontWeight: '400', lineHeight: 22 },
-    Label: { fontSize: 14, fontWeight: '500', lineHeight: 18 },
+    Body: { fontSize: 16, fontWeight: '400', lineHeight: 24 },
+    Label: { fontSize: 14, fontWeight: '500', lineHeight: 20 },
     Caption: { fontSize: 12, fontWeight: '400', lineHeight: 16 },
   },
-  radius: 12,
+  radius: 16,
   spacing: { xxs: 4, xs: 8, sm: 12, md: 16, lg: 24 },
-  appBar: { height: 56 },
+  elevation: { card: 1, sheet: 2 },
+  grid: 8,
+  appBar: { height: 56, minTouchTarget: 44 },
 };
+
+export const lightTheme = betterTogetherTheme;
 
 export const darkTheme: Theme = {
   colors: {
-    background: '#0B0B0C',
-    surface: '#151618',
-    surfaceAlt: '#1C1E21',
-    primary: '#2C6EF2',
-    accent: '#FFC93D',
-    success: '#34C759',
-    error: '#FF3B30',
-    textHigh: '#F3F4F6',
-    textLow: '#9CA3AF',
-    border: '#2A2D31',
+    background: '#0F172A',
+    surface: '#1E293B',
+    surfaceAlt: '#334155',
+    primary: '#3B82F6',
+    accent: '#A78BFA',
+    success: '#34D399',
+    warning: '#FBBF24',
+    error: '#F87171',
+    textHigh: '#F8FAFC',
+    textLow: '#94A3B8',
+    border: '#475569',
   },
-  typography: lightTheme.typography,
-  radius: 12,
-  spacing: lightTheme.spacing,
-  appBar: { height: 56 },
+  typography: betterTogetherTheme.typography,
+  radius: 16,
+  spacing: betterTogetherTheme.spacing,
+  elevation: betterTogetherTheme.elevation,
+  grid: 8,
+  appBar: { height: 56, minTouchTarget: 44 },
 };
 
 export const styles = StyleSheet.create({});
