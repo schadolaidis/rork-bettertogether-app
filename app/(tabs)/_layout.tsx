@@ -2,21 +2,24 @@ import { Tabs } from "expo-router";
 import { LayoutDashboard, Calendar, CheckSquare, Target, Settings } from "lucide-react-native";
 import React from "react";
 import { useApp } from "@/contexts/AppContext";
+import { useTheme } from "@/contexts/ThemeContext";
 
 export default function TabLayout() {
   const { t } = useApp();
+  const { theme } = useTheme();
   
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: "#3B82F6",
-        tabBarInactiveTintColor: "#9CA3AF",
+        tabBarActiveTintColor: theme.colors.primary,
+        tabBarInactiveTintColor: theme.colors.textLow,
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: "#FFFFFF",
-          borderTopColor: "#E5E7EB",
+          backgroundColor: theme.colors.surface,
+          borderTopColor: theme.colors.border,
           borderTopWidth: 1,
         },
+        tabBarLabelStyle: { fontSize: 12 },
       }}
     >
       <Tabs.Screen
