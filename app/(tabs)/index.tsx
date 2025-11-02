@@ -14,7 +14,8 @@ import {
   TrendingUp,
   TrendingDown,
   AlertCircle,
-
+  CheckCircle2,
+  Clock,
   Users,
   X,
   ChevronDown,
@@ -22,15 +23,17 @@ import {
   Plus,
   CheckSquare,
   Target,
+  ChevronRight,
+  Sparkles,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useApp } from '@/contexts/AppContext';
 import { FundHero } from '@/components/FundHero';
 import { SectionHeader } from '@/components/design-system/SectionHeader';
 import { StreaksFundCard } from '@/components/StreaksFundCard';
-import { MOCK_FUND_TARGETS } from '@/mocks/data';
 import { StatCard } from '@/components/design-system/StatCard';
 import { DesignTokens } from '@/constants/design-tokens';
+import { InsightData, DashboardService } from '@/services/DashboardService';
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -46,15 +49,14 @@ export default function DashboardScreen() {
     switchList,
     ledgerEntries,
     currentListId,
+    fundTargets,
   } = useApp();
 
   const [showListSwitcher, setShowListSwitcher] = useState(false);
 
   const activeFundTargets = useMemo(() => {
-    return MOCK_FUND_TARGETS.filter(
-      (ft) => ft.listId === currentListId && ft.isActive
-    );
-  }, [currentListId]);
+    return fundTargets;
+  }, [fundTargets]);
 
   const currencySymbol = currentList?.currencySymbol || '$';
   const totalBalance = dashboardStats?.totalBalance ?? 0;
@@ -62,14 +64,76 @@ export default function DashboardScreen() {
   const balanceSign = totalBalance >= 0 ? '+' : '';
 
   const handleOpenTasksTap = useCallback(() => {
-    router.push('/tasks?filter=open');
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    router.push('/tasks');
   }, [router]);
 
+  const handleOverdueTasksTap = useCallback(() => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    router.push('/tasks');
+  }, [router]);
 
+  const handleCompletedTasksTap = useCallback(() => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    router.push('/tasks');
+  }, [router]);
 
   const handleBalanceTap = useCallback(() => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
     router.push('/balances?month=current');
   }, [router]);
+
+  const handleInsightAction = useCallback(
+    (insight: InsightData) => {
+      if (Platform.OS !== 'web') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+      if (insight.action) {
+        router.push(insight.action.route as any);
+      }
+    },
+    [router]
+  );
+
+  const insights = dashboardStats.insights || [];
+  const hasInsights = insights.length > 0;
+
+  const getInsightColor = (type: InsightData['type']) => {
+    switch (type) {
+      case 'success':
+        return '#10B981';
+      case 'warning':
+        return '#F59E0B';
+      case 'alert':
+        return '#EF4444';
+      case 'info':
+      default:
+        return '#3B82F6';
+    }
+  };
+
+  const getInsightIcon = (icon: InsightData['icon'], color: string) => {
+    switch (icon) {
+      case 'check':
+        return <CheckCircle2 size={18} color={color} />;
+      case 'alert':
+        return <AlertCircle size={18} color={color} />;
+      case 'trending':
+        return <TrendingUp size={18} color={color} />;
+      case 'target':
+        return <Target size={18} color={color} />;
+      default:
+        return <Sparkles size={18} color={color} />;
+    }
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -108,6 +172,49 @@ export default function DashboardScreen() {
           <ChevronDown size={16} color="#3B82F6" />
         </TouchableOpacity>
 
+        {hasInsights && (
+          <View style={styles.insightsSection}>
+            <View style={styles.insightsHeader}>
+              <Sparkles size={16} color="#8B5CF6" />
+              <Text style={styles.insightsSectionTitle}>Smart Insights</Text>
+            </View>
+            <View style={styles.insightsContainer}>
+              {insights.slice(0, 3).map((insight, index) => {
+                const color = getInsightColor(insight.type);
+                return (
+                  <TouchableOpacity
+                    key={index}
+                    style={[
+                      styles.insightCard,
+                      { borderLeftColor: color, backgroundColor: `${color}08` },
+                    ]}
+                    onPress={() => handleInsightAction(insight)}
+                    activeOpacity={insight.action ? 0.7 : 1}
+                    disabled={!insight.action}
+                  >
+                    <View style={styles.insightIconContainer}>
+                      {getInsightIcon(insight.icon, color)}
+                    </View>
+                    <View style={styles.insightContent}>
+                      <Text style={[styles.insightText, { color: DesignTokens.colors.neutral[900] }]}>
+                        {insight.message}
+                      </Text>
+                      {insight.action && (
+                        <Text style={[styles.insightAction, { color }]}>
+                          {insight.action.label}
+                        </Text>
+                      )}
+                    </View>
+                    {insight.action && (
+                      <ChevronRight size={16} color={color} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
         <FundHero
           ledgerEntries={ledgerEntries}
           tasks={tasks}
@@ -117,12 +224,28 @@ export default function DashboardScreen() {
 
         <View style={styles.statsGrid}>
           <StatCard
-            icon={<AlertCircle size={24} color={'#3B82F6'} />}
+            icon={<Clock size={24} color={'#3B82F6'} />}
             label="Open Tasks"
             value={String(dashboardStats.openTasks)}
             color={'#3B82F6'}
             onPress={handleOpenTasksTap}
             testID="stat-open-tasks"
+          />
+          <StatCard
+            icon={<AlertCircle size={24} color={'#F59E0B'} />}
+            label="Overdue"
+            value={String(dashboardStats.overdueTasks)}
+            color={'#F59E0B'}
+            onPress={handleOverdueTasksTap}
+            testID="stat-overdue-tasks"
+          />
+          <StatCard
+            icon={<CheckCircle2 size={24} color={'#10B981'} />}
+            label="Completed"
+            value={String(dashboardStats.completedThisMonth)}
+            color={'#10B981'}
+            onPress={handleCompletedTasksTap}
+            testID="stat-completed-tasks"
           />
           <StatCard
             icon={totalBalance >= 0 ? (
@@ -163,7 +286,7 @@ export default function DashboardScreen() {
             {activeFundTargets.map((target) => {
               const targetAmountDollars = target.targetAmountCents ? target.targetAmountCents / 100 : undefined;
               const collectedAmountDollars = target.totalCollectedCents / 100;
-              const linkedTasksCount = tasks.filter(t => t.fundTargetId === target.id).length;
+              const fundProgress = DashboardService.getFundGoalProgress(target, tasks);
 
               return (
                 <StreaksFundCard
@@ -173,9 +296,12 @@ export default function DashboardScreen() {
                   description={target.description}
                   collectedAmount={collectedAmountDollars}
                   targetAmount={targetAmountDollars}
-                  linkedTasksCount={linkedTasksCount}
+                  linkedTasksCount={fundProgress.linkedTasks}
                   currencySymbol={currencySymbol}
                   onPress={() => {
+                    if (Platform.OS !== 'web') {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }
                     router.push(`/tasks?fundTargetId=${target.id}`);
                   }}
                 />
@@ -366,7 +492,7 @@ const styles = StyleSheet.create({
     paddingVertical: DesignTokens.spacing.md,
     backgroundColor: DesignTokens.colors.primary[50],
     borderRadius: DesignTokens.radius.md,
-    marginBottom: DesignTokens.spacing.xxl,
+    marginBottom: DesignTokens.spacing.lg,
   },
   listName: {
     ...DesignTokens.typography.bodyMedium,
@@ -377,6 +503,53 @@ const styles = StyleSheet.create({
   listMembers: {
     ...DesignTokens.typography.bodySmall,
     color: DesignTokens.colors.neutral[600],
+  },
+  insightsSection: {
+    marginBottom: DesignTokens.spacing.xl,
+  },
+  insightsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DesignTokens.spacing.xs,
+    marginBottom: DesignTokens.spacing.md,
+  },
+  insightsSectionTitle: {
+    ...DesignTokens.typography.bodyMedium,
+    fontWeight: '700',
+    color: DesignTokens.colors.neutral[900],
+  },
+  insightsContainer: {
+    gap: DesignTokens.spacing.sm,
+  },
+  insightCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: DesignTokens.spacing.md,
+    borderRadius: DesignTokens.radius.md,
+    borderLeftWidth: 3,
+    gap: DesignTokens.spacing.sm,
+    ...DesignTokens.shadow.sm,
+  },
+  insightIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  insightContent: {
+    flex: 1,
+    gap: 2,
+  },
+  insightText: {
+    ...DesignTokens.typography.bodyMedium,
+    lineHeight: 18,
+  },
+  insightAction: {
+    ...DesignTokens.typography.labelSmall,
+    fontWeight: '600',
+    marginTop: 2,
   },
   statsGrid: {
     flexDirection: 'row',

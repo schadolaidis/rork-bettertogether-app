@@ -2,7 +2,7 @@ import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { Task, LedgerEntry, User, DashboardStats, List, UndoAction, TaskCategory, CategoryMeta, ListMember, MemberRole, FundTarget } from '@/types';
+import { Task, LedgerEntry, User, List, UndoAction, TaskCategory, CategoryMeta, ListMember, MemberRole, FundTarget } from '@/types';
 import { Language, getTranslations, Translations } from '@/constants/translations';
 import { MOCK_TASKS, MOCK_USERS, MOCK_LISTS, MOCK_LEDGER_ENTRIES, MOCK_FUND_TARGETS } from '@/mocks/data';
 import { ClockService } from '@/services/ClockService';
@@ -14,6 +14,7 @@ import { ListService, ListSettingsPayload } from '@/services/ListService';
 import { CategoryService } from '@/services/CategoryService';
 import { MemberService } from '@/services/MemberService';
 import { TaskLogicService } from '@/services/TaskLogicService';
+import { DashboardService, EnhancedDashboardStats } from '@/services/DashboardService';
 
 export type CalendarViewType = 'day' | 'week' | 'month' | 'list';
 
@@ -573,43 +574,15 @@ export const [AppProvider, useApp] = createContextHook(() => {
     return users.filter((u) => currentList.memberIds.includes(u.id));
   }, [users, currentList]);
 
-  const dashboardStats = useMemo((): DashboardStats => {
-    const openTasks = currentListTasks.filter((t) => t.status === 'pending').length;
-    const overdueTasks = currentListTasks.filter((t) => t.status === 'overdue').length;
-
-    const now = ClockService.getCurrentTime();
-    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const completedThisMonth = currentListTasks.filter(
-      (t) =>
-        t.status === 'completed' &&
-        t.completedAt &&
-        new Date(t.completedAt) >= firstDayOfMonth
-    ).length;
-
-    const currentUserBalance = currentListLedger
-      .filter((e) => e.userId === currentUserId)
-      .reduce((acc, entry) => acc - entry.amount, 0);
-
-    const nextDueTask = currentListTasks
-      .filter((t) => t.status === 'pending' || t.status === 'overdue')
-      .sort((a, b) => {
-        const aMigrated = ClockService.migrateTask(a);
-        const bMigrated = ClockService.migrateTask(b);
-        return new Date(aMigrated.endAt).getTime() - new Date(bMigrated.endAt).getTime();
-      })[0];
-
-    return {
-      openTasks,
-      overdueTasks,
-      completedThisMonth,
-      totalBalance: currentUserBalance,
-      nextDueTask,
-      monthlyComparison: {
-        tasksChange: 0,
-        balanceChange: 0,
-      },
-    };
-  }, [currentListTasks, currentListLedger, currentUserId]);
+  const dashboardStats = useMemo((): EnhancedDashboardStats => {
+    return DashboardService.getEnhancedStats(
+      tasks,
+      ledgerEntries,
+      fundTargets,
+      currentUserId,
+      currentListId
+    );
+  }, [tasks, ledgerEntries, fundTargets, currentUserId, currentListId]);
 
   const getUserBalance = useCallback(
     (userId: string): number => {
