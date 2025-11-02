@@ -18,6 +18,7 @@ import { QuickAddModal, QuickTaskData } from '@/components/QuickAddModal';
 import { MOCK_FUND_TARGETS } from '@/mocks/data';
 import { SectionHeader } from '@/components/design-system/SectionHeader';
 import { TaskCard as SimpleTaskCard } from '@/components/design-system/TaskCard';
+import { TaskLogicService } from '@/services/TaskLogicService';
 
 
 type FilterOption = 'all' | TaskStatus | TaskCategory;
@@ -107,36 +108,7 @@ export default function TasksScreen() {
   }, [tasks, filter, memberIdParam, fundTargetIdParam]);
 
   const groupedTasks = useMemo(() => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const weekEnd = new Date(today);
-    weekEnd.setDate(weekEnd.getDate() + 7);
-
-    const groups = {
-      today: [] as Task[],
-      tomorrow: [] as Task[],
-      thisWeek: [] as Task[],
-      later: [] as Task[],
-    };
-
-    filteredTasks.forEach(task => {
-      const taskDate = new Date(task.endAt);
-      if (taskDate < tomorrow) {
-        groups.today.push(task);
-      } else if (taskDate < weekEnd) {
-        if (taskDate.getDate() === tomorrow.getDate()) {
-          groups.tomorrow.push(task);
-        } else {
-          groups.thisWeek.push(task);
-        }
-      } else {
-        groups.later.push(task);
-      }
-    });
-
-    return groups;
+    return TaskLogicService.groupTasks(filteredTasks);
   }, [filteredTasks]);
 
   const filters: { label: string; value: FilterOption }[] = [
@@ -450,41 +422,35 @@ export default function TasksScreen() {
 
         {filteredTasks.length > 0 ? (
           <ScrollView>
-            {(['today','tomorrow','thisWeek','later'] as const).map((key) => {
-              const list = groupedTasks[key];
+            {(['overdue', 'today','tomorrow','thisWeek','later', 'completed'] as const).map((groupKey) => {
+              const list = groupedTasks[groupKey];
               if (!list || list.length === 0) return null;
-              const titleMap: Record<typeof key, string> = {
-                today: 'TODAY',
-                tomorrow: 'TOMORROW',
-                thisWeek: 'THIS WEEK',
-                later: 'LATER',
-              } as const;
+              
+              if (groupKey === 'completed' && filter !== 'completed') {
+                return null;
+              }
+
+              const title = TaskLogicService.getGroupTitle(groupKey);
+              const groupColor = TaskLogicService.getGroupColor(groupKey);
+              
               return (
-                <View key={key}>
-                  <SectionHeader title={titleMap[key]} subtitle={`${list.length} tasks`} />
+                <View key={groupKey}>
+                  <View style={styles.groupHeader}>
+                    <View style={[styles.groupIndicator, { backgroundColor: groupColor }]} />
+                    <SectionHeader title={title} subtitle={`${list.length} ${list.length === 1 ? 'task' : 'tasks'}`} />
+                  </View>
                   <View style={{ paddingHorizontal: 20, gap: 12, marginBottom: 8 }}>
                     {list.map(task => {
                       const categoryMeta = currentList?.categories?.[task.category];
-                      const due = new Date(task.endAt);
-                      const minutesUntil = Math.floor((due.getTime() - Date.now()) / (60 * 1000));
-                      const hoursUntil = Math.floor(minutesUntil / 60);
-                      let dueText = '';
-                      if (task.status === 'overdue') {
-                        dueText = 'Overdue';
-                      } else if (minutesUntil < 60) {
-                        dueText = `${minutesUntil}m`;
-                      } else if (hoursUntil < 24) {
-                        dueText = `${hoursUntil}h`;
-                      } else {
-                        dueText = due.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-                      }
+                      const timeDisplay = TaskLogicService.getHumanReadableTime(task);
+                      
                       return (
                         <SimpleTaskCard
                           key={task.id}
                           title={task.title}
                           categoryEmoji={categoryMeta?.emoji || '📋'}
                           categoryColor={categoryMeta?.color || '#6B7280'}
-                          dueTime={dueText}
+                          dueTime={timeDisplay.text}
                           status={task.status}
                           onPress={() => {
                             if (Platform.OS !== 'web') {
@@ -999,5 +965,16 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 8,
     elevation: 6,
+  },
+  groupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 20,
+  },
+  groupIndicator: {
+    width: 4,
+    height: 24,
+    borderRadius: 2,
   },
 });

@@ -13,6 +13,7 @@ import { InviteService } from '@/services/InviteService';
 import { ListService, ListSettingsPayload } from '@/services/ListService';
 import { CategoryService } from '@/services/CategoryService';
 import { MemberService } from '@/services/MemberService';
+import { TaskLogicService } from '@/services/TaskLogicService';
 
 export type CalendarViewType = 'day' | 'week' | 'month' | 'list';
 
@@ -269,23 +270,21 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const updateTaskStatuses = useCallback(() => {
     const now = ClockService.getCurrentTime();
     let hasChanges = false;
+    const newLedgerEntries: LedgerEntry[] = [];
     
     const updatedTasks = tasks.map((task) => {
       if (task.status === 'completed' || task.status === 'failed') {
         return task;
       }
 
-      const migrated = ClockService.migrateTask(task);
-      const isOverdue = ClockService.isOverdue(migrated.endAt);
-      const isFailed = ClockService.isFailed(migrated.endAt, task.gracePeriod);
-
-      if (isFailed) {
+      const computedStatus = TaskLogicService.computeTaskState(task);
+      
+      if (computedStatus === 'failed') {
         console.log(`[Scheduler] Task ${task.id} (${task.title}) is now failed`);
         hasChanges = true;
         
         const ledgerEntry = LedgerService.post(task);
-        setLedgerEntries((prev) => [...prev, ledgerEntry]);
-        mutateLedger([...ledgerEntries, ledgerEntry]);
+        newLedgerEntries.push(ledgerEntry);
 
         NotificationService.sendTaskFailedNotification(task, task.stake);
 
@@ -295,7 +294,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
           failedAt: now.toISOString(),
           previousStatus: task.status,
         };
-      } else if (isOverdue && task.status === 'pending') {
+      } else if (computedStatus === 'overdue' && task.status === 'pending') {
         console.log(`[Scheduler] Task ${task.id} (${task.title}) is now overdue`);
         hasChanges = true;
         NotificationService.sendTaskOverdueNotification(task);
@@ -311,6 +310,12 @@ export const [AppProvider, useApp] = createContextHook(() => {
     if (hasChanges) {
       setTasks(updatedTasks);
       mutateTasks(updatedTasks);
+      
+      if (newLedgerEntries.length > 0) {
+        const allEntries = [...ledgerEntries, ...newLedgerEntries];
+        setLedgerEntries(allEntries);
+        mutateLedger(allEntries);
+      }
     }
   }, [tasks, ledgerEntries, mutateTasks, mutateLedger]);
 
