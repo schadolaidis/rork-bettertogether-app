@@ -15,56 +15,21 @@ import {
   Bell,
   Users,
   ChevronRight,
-  List as ListIcon,
   Palette,
-  Settings as SettingsIcon,
   LogOut,
   Languages,
   Target,
   Briefcase,
   Info,
   Menu,
+  User,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useApp } from '@/contexts/AppContext';
-
-interface SettingItemProps {
-  icon: React.ReactNode;
-  title: string;
-  subtitle?: string;
-  onPress: () => void;
-  showChevron?: boolean;
-  rightContent?: React.ReactNode;
-}
-
-function SettingItem({
-  icon,
-  title,
-  subtitle,
-  onPress,
-  showChevron = true,
-  rightContent,
-}: SettingItemProps) {
-  return (
-    <TouchableOpacity
-      style={styles.settingItem}
-      onPress={() => {
-        if (Platform.OS !== 'web') {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        }
-        onPress();
-      }}
-      activeOpacity={0.7}
-    >
-      <View style={styles.settingIconContainer}>{icon}</View>
-      <View style={styles.settingContent}>
-        <Text style={styles.settingTitle}>{title}</Text>
-        {subtitle && <Text style={styles.settingSubtitle}>{subtitle}</Text>}
-      </View>
-      {rightContent || (showChevron && <ChevronRight size={20} color="#9CA3AF" />)}
-    </TouchableOpacity>
-  );
-}
+import { DesignTokens } from '@/constants/design-tokens';
+import { SectionHeader } from '@/components/design-system/SectionHeader';
+import { GroupCard } from '@/components/design-system/GroupCard';
+import { DisclosureRow } from '@/components/design-system/DisclosureRow';
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -80,11 +45,12 @@ export default function SettingsScreen() {
     t,
     changeLanguage,
   } = useApp();
-  const [showListPicker, setShowListPicker] = useState(false);
+
+  const [expandedWorkspace, setExpandedWorkspace] = useState(false);
 
   const handleSwitchList = (listId: string) => {
     if (listId === currentList?.id) {
-      setShowListPicker(false);
+      setExpandedWorkspace(false);
       return;
     }
     
@@ -92,17 +58,18 @@ export default function SettingsScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
     switchList(listId);
-    setShowListPicker(false);
+    setExpandedWorkspace(false);
     Alert.alert(t.alerts.success, t.alerts.listSwitched);
   };
+
+  const activeLists = lists.filter(l => !l.archived);
+  const hasMultipleLists = activeLists.length > 1;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>{t.settings.title}</Text>
-          <Text style={styles.subtitle}>Manage your account and preferences</Text>
-        </View>
+        <Text style={styles.title}>{t.settings.title}</Text>
+        <Text style={styles.subtitle}>Manage your account and preferences</Text>
       </View>
 
       <ScrollView
@@ -112,7 +79,12 @@ export default function SettingsScreen() {
       >
         <TouchableOpacity 
           style={styles.profileCard}
-          onPress={() => router.push('./profile' as any)}
+          onPress={() => {
+            if (Platform.OS !== 'web') {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            }
+            router.push('./profile' as any);
+          }}
           activeOpacity={0.8}
         >
           {currentUser?.avatar || currentUser?.avatarUrl ? (
@@ -121,7 +93,7 @@ export default function SettingsScreen() {
               style={styles.profileAvatar}
             />
           ) : (
-            <View style={[styles.profileAvatar, { backgroundColor: currentUser?.color || '#3B82F6' }]}>
+            <View style={[styles.profileAvatar, { backgroundColor: currentUser?.color || DesignTokens.colors.primary[500] }]}>
               <Text style={styles.profileAvatarText}>
                 {currentUser?.name?.charAt(0).toUpperCase() || 'U'}
               </Text>
@@ -131,149 +103,206 @@ export default function SettingsScreen() {
             <Text style={styles.profileName}>{currentUser?.name || 'User'}</Text>
             <Text style={styles.profileEmail}>{currentUser?.email || 'Tap to set up profile'}</Text>
           </View>
-          <ChevronRight size={20} color="#9CA3AF" />
+          <ChevronRight size={20} color={DesignTokens.colors.neutral[400]} />
         </TouchableOpacity>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>ACCOUNT</Text>
-          <View style={styles.settingsList}>
-            <SettingItem
-              icon={<Languages size={20} color="#10B981" />}
-              title={t.settings.language}
-              subtitle={language === 'en' ? 'English' : 'Deutsch'}
-              onPress={() => {
-                Alert.alert(
-                  t.settings.language,
-                  t.settings.changeLanguage,
-                  [
-                    { text: t.common.cancel, style: 'cancel' },
-                    { text: t.settings.english, onPress: () => changeLanguage('en') },
-                    { text: t.settings.german, onPress: () => changeLanguage('de') },
-                  ]
-                );
-              }}
-            />
-            <SettingItem
-              icon={<Bell size={20} color="#F59E0B" />}
-              title={t.settings.notifications}
-              subtitle={t.settings.manageNotifications}
-              onPress={() => router.push('/(tabs)/settings/notifications')}
-            />
-            <SettingItem
-              icon={<SettingsIcon size={20} color="#6B7280" />}
-              title="Preferences"
-              subtitle="Theme and app settings"
-              onPress={() => Alert.alert(t.alerts.comingSoon, t.alerts.featureComingSoon)}
-            />
-          </View>
-        </View>
+        <SectionHeader 
+          title="ACCOUNT" 
+          testID="section-account"
+        />
+        <GroupCard style={{ marginHorizontal: DesignTokens.spacing.xl, marginBottom: DesignTokens.spacing.xl }}>
+          <DisclosureRow
+            icon={<User size={20} color={DesignTokens.colors.primary[500]} />}
+            label="Profile"
+            subtitle="Name, email, and avatar"
+            onPress={() => router.push('./profile' as any)}
+            isFirst
+            testID="row-profile"
+          />
+          <DisclosureRow
+            icon={<Languages size={20} color={DesignTokens.colors.success[500]} />}
+            label={t.settings.language}
+            value={language === 'en' ? 'English' : 'Deutsch'}
+            onPress={() => {
+              if (Platform.OS !== 'web') {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+              Alert.alert(
+                t.settings.language,
+                t.settings.changeLanguage,
+                [
+                  { text: t.common.cancel, style: 'cancel' },
+                  { text: t.settings.english, onPress: () => changeLanguage('en') },
+                  { text: t.settings.german, onPress: () => changeLanguage('de') },
+                ]
+              );
+            }}
+            testID="row-language"
+          />
+          <DisclosureRow
+            icon={<Bell size={20} color={DesignTokens.colors.warning[500]} />}
+            label={t.settings.notifications}
+            subtitle={t.settings.manageNotifications}
+            onPress={() => {
+              if (Platform.OS !== 'web') {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+              router.push('/(tabs)/settings/notifications');
+            }}
+            isLast
+            testID="row-notifications"
+          />
+        </GroupCard>
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>CURRENT WORKSPACE</Text>
-            <TouchableOpacity onPress={() => setShowListPicker(!showListPicker)}>
-              <Text style={styles.changeButton}>Change</Text>
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.workspaceCard}>
-            <View style={styles.workspaceIconContainer}>
-              <Briefcase size={24} color="#3B82F6" />
-            </View>
-            <View style={styles.workspaceInfo}>
-              <Text style={styles.workspaceName}>{currentList?.name || 'No workspace'}</Text>
-              <Text style={styles.workspaceDetails}>
-                {currentListMembers.length} {currentListMembers.length === 1 ? 'member' : 'members'} • {currentList?.currencySymbol}{currentList?.currency}
-              </Text>
-              <View style={styles.roleBadge}>
-                <Text style={styles.roleBadgeText}>{currentUserRole}</Text>
-              </View>
-            </View>
-          </View>
+        <SectionHeader 
+          title="WORKSPACE" 
+          subtitle={currentList?.name || 'No workspace'}
+          action={hasMultipleLists ? {
+            label: expandedWorkspace ? 'Collapse' : 'Switch',
+            onPress: () => {
+              if (Platform.OS !== 'web') {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+              setExpandedWorkspace(!expandedWorkspace);
+            }
+          } : undefined}
+          testID="section-workspace"
+        />
 
-          {showListPicker && lists.filter(l => !l.archived).length > 1 && (
-            <View style={styles.listPicker}>
-              {lists.filter(l => !l.archived).map((list) => {
-                const isActive = list.id === currentList?.id;
-                return (
-                  <TouchableOpacity
-                    key={list.id}
-                    style={[styles.listOption, isActive && styles.listOptionActive]}
-                    onPress={() => handleSwitchList(list.id)}
-                  >
-                    <ListIcon size={18} color={isActive ? '#3B82F6' : '#6B7280'} />
-                    <Text style={[styles.listOptionText, isActive && styles.listOptionTextActive]}>
+        {expandedWorkspace && hasMultipleLists && (
+          <View style={styles.workspacePicker}>
+            {activeLists.map((list, index) => {
+              const isActive = list.id === currentList?.id;
+              const isFirst = index === 0;
+              const isLast = index === activeLists.length - 1;
+              
+              return (
+                <TouchableOpacity
+                  key={list.id}
+                  style={[
+                    styles.workspaceOption,
+                    isActive && styles.workspaceOptionActive,
+                    isFirst && styles.workspaceOptionFirst,
+                    isLast && styles.workspaceOptionLast,
+                  ]}
+                  onPress={() => handleSwitchList(list.id)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.workspaceOptionIcon}>
+                    <Briefcase size={20} color={isActive ? DesignTokens.colors.primary[500] : DesignTokens.colors.neutral[500]} />
+                  </View>
+                  <View style={styles.workspaceOptionContent}>
+                    <Text style={[styles.workspaceOptionName, isActive && styles.workspaceOptionNameActive]}>
                       {list.name}
                     </Text>
-                    {isActive && <Text style={styles.checkmark}>✓</Text>}
-                  </TouchableOpacity>
+                    <Text style={styles.workspaceOptionMeta}>
+                      {list.memberIds.length} {list.memberIds.length === 1 ? 'member' : 'members'} • {list.currencySymbol}{list.currency}
+                    </Text>
+                  </View>
+                  {isActive && (
+                    <View style={styles.workspaceActiveIndicator}>
+                      <Text style={styles.workspaceActiveText}>✓</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+
+        <GroupCard style={{ marginHorizontal: DesignTokens.spacing.xl, marginBottom: DesignTokens.spacing.xl }}>
+          <DisclosureRow
+            icon={<Menu size={20} color={DesignTokens.colors.primary[500]} />}
+            label="Workspace Settings"
+            subtitle="Currency, defaults, and permissions"
+            onPress={() => {
+              if (Platform.OS !== 'web') {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+              router.push('/(tabs)/settings/list-settings');
+            }}
+            isFirst
+            testID="row-workspace-settings"
+          />
+          <DisclosureRow
+            icon={<Palette size={20} color={DesignTokens.colors.purple[500]} />}
+            label={t.settings.categories}
+            subtitle={t.settings.manageCategories}
+            onPress={() => {
+              if (Platform.OS !== 'web') {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+              if (currentUserRole !== 'Owner' && !currentList?.allowMemberCategoryManage) {
+                Alert.alert(
+                  t.settings.permissionRequired,
+                  t.settings.ownerOnly,
+                  [{ text: t.common.ok }]
                 );
-              })}
-            </View>
-          )}
+              } else {
+                router.push('/(tabs)/settings/categories');
+              }
+            }}
+            testID="row-categories"
+          />
+          <DisclosureRow
+            icon={<Users size={20} color={DesignTokens.colors.warning[500]} />}
+            label={t.settings.teamMembers}
+            value={`${currentListMembers.length}`}
+            onPress={() => {
+              if (Platform.OS !== 'web') {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+              router.push('/(tabs)/settings/teams');
+            }}
+            testID="row-team-members"
+          />
+          <DisclosureRow
+            icon={<Target size={20} color={DesignTokens.colors.success[500]} />}
+            label="Fund Manager"
+            subtitle="Manage fund goals"
+            onPress={() => {
+              if (Platform.OS !== 'web') {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+              router.push('/(tabs)/settings/funds');
+            }}
+            isLast
+            testID="row-fund-manager"
+          />
+        </GroupCard>
 
-          <View style={styles.settingsList}>
-            <SettingItem
-              icon={<Menu size={20} color="#3B82F6" />}
-              title="Workspace Settings"
-              subtitle="Currency, defaults, and permissions"
-              onPress={() => router.push('/(tabs)/settings/list-settings')}
-            />
-            <SettingItem
-              icon={<Palette size={20} color="#8B5CF6" />}
-              title={t.settings.categories}
-              subtitle={t.settings.manageCategories}
-              onPress={() => {
-                if (currentUserRole !== 'Owner' && !currentList?.allowMemberCategoryManage) {
-                  Alert.alert(
-                    t.settings.permissionRequired,
-                    t.settings.ownerOnly,
-                    [{ text: t.common.ok }]
-                  );
-                } else {
-                  router.push('/(tabs)/settings/categories');
-                }
-              }}
-            />
-            <SettingItem
-              icon={<Users size={20} color="#F59E0B" />}
-              title={t.settings.teamMembers}
-              subtitle={`${currentListMembers.length} ${currentListMembers.length === 1 ? 'member' : 'members'}`}
-              onPress={() => router.push('/(tabs)/settings/teams')}
-            />
-            <SettingItem
-              icon={<Target size={20} color="#10B981" />}
-              title="Fund Manager"
-              subtitle="Manage fund goals"
-              onPress={() => router.push('/(tabs)/settings/funds')}
-            />
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>ABOUT</Text>
-          <View style={styles.settingsList}>
-            <SettingItem
-              icon={<Info size={20} color="#6B7280" />}
-              title="App Info"
-              subtitle="Version 1.0.0"
-              onPress={() => {}}
-              showChevron={false}
-            />
-            <SettingItem
-              icon={<LogOut size={20} color="#EF4444" />}
-              title={t.settings.signOut}
-              subtitle="Sign out of your account"
-              onPress={() => {
-                Alert.alert(t.settings.signOut, t.alerts.areYouSure, [
-                  { text: t.common.cancel, style: 'cancel' },
-                  { text: t.settings.signOut, style: 'destructive' },
-                ]);
-              }}
-              showChevron={false}
-            />
-          </View>
-        </View>
+        <SectionHeader 
+          title="ABOUT" 
+          testID="section-about"
+        />
+        <GroupCard style={{ marginHorizontal: DesignTokens.spacing.xl, marginBottom: DesignTokens.spacing.xl }}>
+          <DisclosureRow
+            icon={<Info size={20} color={DesignTokens.colors.neutral[500]} />}
+            label="App Info"
+            value="Version 1.0.0"
+            onPress={() => {}}
+            showChevron={false}
+            isFirst
+            testID="row-app-info"
+          />
+          <DisclosureRow
+            icon={<LogOut size={20} color={DesignTokens.colors.error[500]} />}
+            label={t.settings.signOut}
+            subtitle="Sign out of your account"
+            onPress={() => {
+              if (Platform.OS !== 'web') {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+              Alert.alert(t.settings.signOut, t.alerts.areYouSure, [
+                { text: t.common.cancel, style: 'cancel' },
+                { text: t.settings.signOut, style: 'destructive' },
+              ]);
+            }}
+            showChevron={false}
+            isLast
+            testID="row-sign-out"
+          />
+        </GroupCard>
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>Made with ❤️</Text>
@@ -286,56 +315,52 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: DesignTokens.colors.neutral[50],
   },
   header: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
+    paddingHorizontal: DesignTokens.spacing.xl,
+    paddingTop: DesignTokens.spacing.sm,
+    paddingBottom: DesignTokens.spacing.lg,
+    backgroundColor: DesignTokens.colors.neutral[0],
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: DesignTokens.colors.neutral[200],
   },
   title: {
-    fontSize: 32,
-    fontWeight: '800' as const,
-    color: '#111827',
-    marginBottom: 2,
+    ...DesignTokens.typography.displayMedium,
+    color: DesignTokens.colors.neutral[900],
+    marginBottom: DesignTokens.spacing.xs,
   },
   subtitle: {
-    fontSize: 14,
-    color: '#6B7280',
+    ...DesignTokens.typography.bodyMedium,
+    color: DesignTokens.colors.neutral[500],
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
+    paddingTop: DesignTokens.spacing.xl,
+    paddingBottom: DesignTokens.spacing.xxxl,
   },
   profileCard: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    padding: 16,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: DesignTokens.spacing.lg,
+    backgroundColor: DesignTokens.colors.neutral[0],
+    borderRadius: DesignTokens.radius.lg,
+    marginHorizontal: DesignTokens.spacing.xl,
+    marginBottom: DesignTokens.spacing.xl,
+    ...DesignTokens.shadow.sm,
   },
   profileAvatar: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
-    marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: DesignTokens.spacing.md,
   },
   profileAvatarText: {
-    color: '#FFFFFF',
+    color: DesignTokens.colors.neutral[0],
     fontSize: 26,
     fontWeight: '700' as const,
   },
@@ -343,158 +368,86 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   profileName: {
-    fontSize: 18,
-    fontWeight: '700' as const,
-    color: '#111827',
+    ...DesignTokens.typography.headingSmall,
+    color: DesignTokens.colors.neutral[900],
     marginBottom: 2,
   },
   profileEmail: {
-    fontSize: 14,
-    color: '#6B7280',
+    ...DesignTokens.typography.bodySmall,
+    color: DesignTokens.colors.neutral[500],
   },
-  roleBadge: {
-    alignSelf: 'flex-start' as const,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 8,
-  },
-  roleBadgeText: {
-    fontSize: 12,
-    fontWeight: '600' as const,
-    color: '#6B7280',
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionHeader: {
-    flexDirection: 'row' as const,
-    justifyContent: 'space-between' as const,
-    alignItems: 'center' as const,
-    marginBottom: 12,
-    paddingHorizontal: 4,
-  },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: '700' as const,
-    color: '#9CA3AF',
-    textTransform: 'uppercase' as const,
-    letterSpacing: 1.2,
-  },
-  changeButton: {
-    fontSize: 14,
-    fontWeight: '600' as const,
-    color: '#3B82F6',
-  },
-  settingsList: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+  workspacePicker: {
+    marginHorizontal: DesignTokens.spacing.xl,
+    marginBottom: DesignTokens.spacing.xl,
+    backgroundColor: DesignTokens.colors.neutral[0],
+    borderRadius: DesignTokens.radius.lg,
     overflow: 'hidden',
+    ...DesignTokens.shadow.sm,
   },
-  settingItem: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    padding: 16,
+  workspaceOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: DesignTokens.spacing.md,
+    paddingHorizontal: DesignTokens.spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: DesignTokens.colors.neutral[100],
   },
-  settingIconContainer: {
+  workspaceOptionFirst: {
+    borderTopLeftRadius: DesignTokens.radius.lg,
+    borderTopRightRadius: DesignTokens.radius.lg,
+  },
+  workspaceOptionLast: {
+    borderBottomWidth: 0,
+    borderBottomLeftRadius: DesignTokens.radius.lg,
+    borderBottomRightRadius: DesignTokens.radius.lg,
+  },
+  workspaceOptionActive: {
+    backgroundColor: DesignTokens.colors.primary[50],
+  },
+  workspaceOptionIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
-    marginRight: 12,
+    backgroundColor: DesignTokens.colors.neutral[100],
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: DesignTokens.spacing.md,
   },
-  settingContent: {
+  workspaceOptionContent: {
     flex: 1,
   },
-  settingTitle: {
-    fontSize: 16,
-    fontWeight: '600' as const,
-    color: '#111827',
+  workspaceOptionName: {
+    ...DesignTokens.typography.bodyMedium,
+    color: DesignTokens.colors.neutral[900],
+    fontWeight: '600',
     marginBottom: 2,
   },
-  settingSubtitle: {
+  workspaceOptionNameActive: {
+    color: DesignTokens.colors.primary[600],
+  },
+  workspaceOptionMeta: {
+    ...DesignTokens.typography.bodySmall,
+    color: DesignTokens.colors.neutral[500],
+  },
+  workspaceActiveIndicator: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: DesignTokens.colors.primary[500],
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  workspaceActiveText: {
+    color: DesignTokens.colors.neutral[0],
     fontSize: 14,
-    color: '#6B7280',
-  },
-  workspaceCard: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    padding: 16,
-    backgroundColor: '#EFF6FF',
-    borderRadius: 16,
-    marginBottom: 16,
-    borderWidth: 2,
-    borderColor: '#BFDBFE',
-  },
-  workspaceIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
-    marginRight: 12,
-  },
-  workspaceInfo: {
-    flex: 1,
-  },
-  workspaceName: {
-    fontSize: 18,
-    fontWeight: '700' as const,
-    color: '#111827',
-    marginBottom: 4,
-  },
-  workspaceDetails: {
-    fontSize: 13,
-    color: '#6B7280',
-    marginBottom: 6,
-  },
-  listPicker: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 8,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  listOption: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    padding: 12,
-    borderRadius: 8,
-    gap: 10,
-  },
-  listOptionActive: {
-    backgroundColor: '#EFF6FF',
-  },
-  listOptionText: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: '500' as const,
-    color: '#6B7280',
-  },
-  listOptionTextActive: {
-    color: '#3B82F6',
-    fontWeight: '600' as const,
-  },
-  checkmark: {
-    fontSize: 16,
-    color: '#3B82F6',
     fontWeight: '700' as const,
   },
   footer: {
-    alignItems: 'center' as const,
-    paddingVertical: 32,
+    alignItems: 'center',
+    paddingVertical: DesignTokens.spacing.xxxl,
   },
   footerText: {
-    fontSize: 13,
-    color: '#9CA3AF',
+    ...DesignTokens.typography.bodySmall,
+    color: DesignTokens.colors.neutral[400],
   },
 });
