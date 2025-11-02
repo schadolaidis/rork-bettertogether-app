@@ -12,6 +12,7 @@ import { ListRow } from '@/components/design-system/ListRow';
 import { ProgressRing } from '@/components/interactive/basic/ProgressRing';
 import { SegmentedControl, SegmentedControlOption } from '@/components/interactive/basic/SegmentedControl';
 import { StatMiniBar } from '@/components/stats/StatMiniBar';
+import { TaskEditSheet } from '@/screens/TaskEditSheet';
 
 type TaskStatus = 'all' | 'upcoming' | 'failed' | 'completed';
 
@@ -43,6 +44,7 @@ export default function Dashboard() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const [selectedFilter, setSelectedFilter] = useState<TaskStatus>('all');
+  const [taskSheetVisible, setTaskSheetVisible] = useState(false);
 
   const filterOptions: SegmentedControlOption[] = [
     { value: 'all', label: 'All' },
@@ -74,7 +76,7 @@ export default function Dashboard() {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
-    console.log('Add task pressed');
+    setTaskSheetVisible(true);
   };
 
   const handleTaskPress = (task: Task) => {
@@ -163,6 +165,14 @@ export default function Dashboard() {
               <StatMiniBar />
             </View>
           </View>
+
+          <Button
+            title="+ Add Task"
+            onPress={handleAddTask}
+            variant="primary"
+            style={{ marginTop: 16 }}
+            testID="focus-card-add-task-button"
+          />
         </Card>
 
         <Card
@@ -313,6 +323,12 @@ export default function Dashboard() {
       >
         <Plus size={28} color="#FFFFFF" />
       </Pressable>
+
+      <TaskEditSheet
+        visible={taskSheetVisible}
+        onClose={() => setTaskSheetVisible(false)}
+        onSave={() => console.log('Task saved')}
+      />
     </View>
   );
 }
