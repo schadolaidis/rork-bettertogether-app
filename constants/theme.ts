@@ -1,6 +1,4 @@
-import { StyleSheet } from 'react-native';
-
-export type ThemeColors = {
+export type Theme = {
   background: string;
   surface: string;
   surfaceAlt: string;
@@ -12,119 +10,122 @@ export type ThemeColors = {
   textHigh: string;
   textLow: string;
   border: string;
-};
-
-export type Typography = {
-  H1: { fontSize: number; fontWeight: '700'; lineHeight: number };
-  H2: { fontSize: number; fontWeight: '600'; lineHeight: number };
-  Body: { fontSize: number; fontWeight: '400'; lineHeight: number };
-  Label: { fontSize: number; fontWeight: '500'; lineHeight: number };
-  Caption: { fontSize: number; fontWeight: '400'; lineHeight: number };
-};
-
-export type Spacing = 4 | 8 | 12 | 16 | 24;
-
-export type Gradients = {
-  cardGradient: { colors: string[]; start: { x: number; y: number }; end: { x: number; y: number } };
-  appBarGradient: { colors: string[]; start: { x: number; y: number }; end: { x: number; y: number } };
-  buttonPrimaryGradient: { colors: string[]; start: { x: number; y: number }; end: { x: number; y: number } };
-};
-
-export type Theme = {
-  colors: ThemeColors;
-  typography: Typography;
-  gradients: Gradients;
-  radius: number;
-  spacing: { xxs: 4; xs: 8; sm: 12; md: 16; lg: 24 };
-  elevation: { card: number; sheet: number };
-  grid: number;
-  appBar: { height: number; minTouchTarget: number };
-};
-
-export const betterTogetherTheme: Theme = {
-  colors: {
-    background: '#F4F7FB',
-    surface: '#FFFFFF',
-    surfaceAlt: '#E9EEF5',
-    primary: '#2563EB',
-    accent: '#7C3AED',
-    success: '#16A34A',
-    warning: '#FACC15',
-    error: '#DC2626',
-    textHigh: '#1E293B',
-    textLow: '#64748B',
-    border: '#CBD5E1',
-  },
-  typography: {
-    H1: { fontSize: 24, fontWeight: '700', lineHeight: 32 },
-    H2: { fontSize: 18, fontWeight: '600', lineHeight: 24 },
-    Body: { fontSize: 16, fontWeight: '400', lineHeight: 24 },
-    Label: { fontSize: 14, fontWeight: '500', lineHeight: 20 },
-    Caption: { fontSize: 12, fontWeight: '400', lineHeight: 16 },
-  },
+  
   gradients: {
-    cardGradient: {
-      colors: ['#FFFFFF', '#EDF2F9'],
-      start: { x: 0, y: 0 },
-      end: { x: 1, y: 1 },
-    },
-    appBarGradient: {
-      colors: ['#F9FAFB', '#E7EDF7'],
-      start: { x: 0, y: 0 },
-      end: { x: 0, y: 1 },
-    },
-    buttonPrimaryGradient: {
-      colors: ['#2563EB', '#3B82F6'],
-      start: { x: 0, y: 0.5 },
-      end: { x: 1, y: 0.5 },
-    },
-  },
-  radius: 16,
-  spacing: { xxs: 4, xs: 8, sm: 12, md: 16, lg: 24 },
-  elevation: { card: 1, sheet: 2 },
-  grid: 8,
-  appBar: { height: 56, minTouchTarget: 44 },
+    cardGradient: string[];
+    appBarGradient: string[];
+    buttonPrimaryGradient: string[];
+  };
+  
+  typography: {
+    h1: { fontSize: number; fontWeight: string };
+    h2: { fontSize: number; fontWeight: string };
+    body: { fontSize: number; fontWeight: string };
+    label: { fontSize: number; fontWeight: string };
+    caption: { fontSize: number; fontWeight: string };
+  };
+  
+  spacing: {
+    xs: number;
+    sm: number;
+    md: number;
+    lg: number;
+    xl: number;
+  };
+  
+  radius: {
+    card: number;
+    input: number;
+    button: number;
+  };
+  
+  elevation: number;
 };
 
-export const lightTheme = betterTogetherTheme;
+export const lightTheme: Theme = {
+  background: '#F4F7FB',
+  surface: '#FFFFFF',
+  surfaceAlt: '#E9EEF5',
+  primary: '#2563EB',
+  accent: '#7C3AED',
+  success: '#16A34A',
+  warning: '#FACC15',
+  error: '#DC2626',
+  textHigh: '#1E293B',
+  textLow: '#64748B',
+  border: '#CBD5E1',
+  
+  gradients: {
+    cardGradient: ['#FFFFFF', '#EDF2F9'],
+    appBarGradient: ['#F9FAFB', '#E7EDF7'],
+    buttonPrimaryGradient: ['#2563EB', '#3B82F6'],
+  },
+  
+  typography: {
+    h1: { fontSize: 24, fontWeight: '700' },
+    h2: { fontSize: 18, fontWeight: '600' },
+    body: { fontSize: 16, fontWeight: '400' },
+    label: { fontSize: 14, fontWeight: '500' },
+    caption: { fontSize: 12, fontWeight: '400' },
+  },
+  
+  spacing: {
+    xs: 4,
+    sm: 8,
+    md: 12,
+    lg: 16,
+    xl: 24,
+  },
+  
+  radius: {
+    card: 16,
+    input: 10,
+    button: 12,
+  },
+  
+  elevation: 2,
+};
 
 export const darkTheme: Theme = {
-  colors: {
-    background: '#0F172A',
-    surface: '#1E293B',
-    surfaceAlt: '#334155',
-    primary: '#3B82F6',
-    accent: '#A78BFA',
-    success: '#34D399',
-    warning: '#FBBF24',
-    error: '#F87171',
-    textHigh: '#F8FAFC',
-    textLow: '#94A3B8',
-    border: '#475569',
-  },
-  typography: betterTogetherTheme.typography,
+  background: '#0F172A',
+  surface: '#1E293B',
+  surfaceAlt: '#334155',
+  primary: '#3B82F6',
+  accent: '#8B5CF6',
+  success: '#22C55E',
+  warning: '#FCD34D',
+  error: '#EF4444',
+  textHigh: '#F1F5F9',
+  textLow: '#94A3B8',
+  border: '#475569',
+  
   gradients: {
-    cardGradient: {
-      colors: ['#1E293B', '#0F172A'],
-      start: { x: 0, y: 0 },
-      end: { x: 1, y: 1 },
-    },
-    appBarGradient: {
-      colors: ['#1E293B', '#0F172A'],
-      start: { x: 0, y: 0 },
-      end: { x: 0, y: 1 },
-    },
-    buttonPrimaryGradient: {
-      colors: ['#3B82F6', '#60A5FA'],
-      start: { x: 0, y: 0.5 },
-      end: { x: 1, y: 0.5 },
-    },
+    cardGradient: ['#1E293B', '#0F172A'],
+    appBarGradient: ['#1E293B', '#0F172A'],
+    buttonPrimaryGradient: ['#2563EB', '#1D4ED8'],
   },
-  radius: 16,
-  spacing: betterTogetherTheme.spacing,
-  elevation: betterTogetherTheme.elevation,
-  grid: 8,
-  appBar: { height: 56, minTouchTarget: 44 },
+  
+  typography: {
+    h1: { fontSize: 24, fontWeight: '700' },
+    h2: { fontSize: 18, fontWeight: '600' },
+    body: { fontSize: 16, fontWeight: '400' },
+    label: { fontSize: 14, fontWeight: '500' },
+    caption: { fontSize: 12, fontWeight: '400' },
+  },
+  
+  spacing: {
+    xs: 4,
+    sm: 8,
+    md: 12,
+    lg: 16,
+    xl: 24,
+  },
+  
+  radius: {
+    card: 16,
+    input: 10,
+    button: 12,
+  },
+  
+  elevation: 2,
 };
-
-export const styles = StyleSheet.create({});
