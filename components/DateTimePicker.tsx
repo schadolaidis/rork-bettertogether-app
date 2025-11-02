@@ -10,10 +10,12 @@ import {
   TextInput,
   ScrollView,
   KeyboardAvoidingView,
+  Keyboard,
 } from 'react-native';
 
 import { Calendar, Clock, X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import { DesignTokens } from '@/constants/design-tokens';
 
 export interface DueDateTime {
   dateISO: string;
@@ -38,6 +40,7 @@ export function UnifiedDateTimePicker({
   onConfirm,
 }: DateTimePickerProps) {
   const [localDate, setLocalDate] = useState<Date>(new Date());
+  const scrollRef = useRef<ScrollView | null>(null);
   const [isAllDay, setIsAllDay] = useState<boolean>(false);
 
   const [timeInput, setTimeInput] = useState('');
@@ -259,15 +262,19 @@ export function UnifiedDateTimePicker({
   return (
     <Modal visible={visible} transparent animationType="slide" statusBarTranslucent testID="dtp-modal">
       <TouchableOpacity
-        style={styles.backdrop} testID="dtp-backdrop"
+        style={[styles.backdrop, { zIndex: DesignTokens.zIndex.scrim }]}
+        testID="dtp-backdrop"
         activeOpacity={1}
-        onPress={onClose}
+        onPress={() => {
+          Keyboard.dismiss();
+          onClose();
+        }}
       />
       <KeyboardAvoidingView
         style={styles.overlay}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={styles.container}>
+        <View style={[styles.container, { zIndex: DesignTokens.zIndex.sheet }]}>
           <View style={styles.handle} />
           
           <View style={styles.header}>
@@ -322,7 +329,7 @@ export function UnifiedDateTimePicker({
 
             <View style={styles.divider} />
 
-            <ScrollView style={styles.pickerSection} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+            <ScrollView ref={scrollRef} style={styles.pickerSection} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <View style={styles.dateSection}>
                 <View style={styles.dateSectionHeader}>
                   <Calendar size={18} color="#6B7280" />
@@ -377,6 +384,9 @@ export function UnifiedDateTimePicker({
                     value={timeInput}
                     onChangeText={handleTimeInputChange}
                     onBlur={applyTimeFromInput}
+                    onFocus={() => {
+                      scrollRef.current?.scrollToEnd({ animated: true });
+                    }}
                     placeholder="HH:MM"
                     placeholderTextColor="#9CA3AF"
                     keyboardType="number-pad"

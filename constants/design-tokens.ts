@@ -150,6 +150,13 @@ export const DesignTokens = {
     lg: 28,
     xl: 32,
   },
+  
+  zIndex: {
+    scrim: 900,
+    sheet: 910,
+    popover: 920,
+    toast: 930,
+  },
 } as const;
 
 export type ColorName = keyof typeof DesignTokens.colors;

@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Portal } from '@gorhom/portal';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { DesignTokens } from '@/constants/design-tokens';
 
 export type ModalInputWrapperProps = {
   open: boolean;
@@ -44,7 +45,7 @@ export const ModalInputWrapper: React.FC<ModalInputWrapperProps> = ({
 }) => {
   const { height, width } = useWindowDimensions();
   const backdrop = useRef(new Animated.Value(0)).current;
-  const cardY = useRef(new Animated.Value(0)).current;
+  const cardY = useRef(new Animated.Value(20)).current;
   const kbOffset = useRef(new Animated.Value(0)).current;
   const isPortrait = height >= width;
 
@@ -112,7 +113,8 @@ export const ModalInputWrapper: React.FC<ModalInputWrapperProps> = ({
     backgroundColor: 'rgba(0,0,0,0.4)',
     opacity: backdrop,
     ...StyleSheet.absoluteFillObject,
-  };
+    zIndex: DesignTokens.zIndex.scrim,
+  } as const;
 
   const translateY = Animated.add(cardY, Animated.multiply(kbOffset, -1));
   const cardStyle = {
@@ -128,7 +130,8 @@ export const ModalInputWrapper: React.FC<ModalInputWrapperProps> = ({
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 8,
-  };
+    zIndex: DesignTokens.zIndex.sheet,
+  } as const;
 
   return (
     <Portal>
@@ -136,7 +139,10 @@ export const ModalInputWrapper: React.FC<ModalInputWrapperProps> = ({
         <Pressable
           testID={`${testID}-backdrop`}
           style={{ flex: 1 }}
-          onPress={() => dismissOnBackdrop && onClose()}
+          onPress={() => {
+            Keyboard.dismiss();
+            if (dismissOnBackdrop) onClose();
+          }}
         />
       </Animated.View>
 
@@ -162,10 +168,10 @@ export const ModalInputWrapper: React.FC<ModalInputWrapperProps> = ({
           </View>
 
           <View style={styles.footer}>
-            <Pressable onPress={onClose} style={styles.cancelButton}>
+            <Pressable onPress={onClose} style={styles.cancelButton} accessibilityRole="button">
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </Pressable>
-            <Pressable onPress={onConfirm} style={styles.confirmButton}>
+            <Pressable onPress={onConfirm} style={styles.confirmButton} accessibilityRole="button">
               <Text style={styles.confirmButtonText}>{confirmLabel}</Text>
             </Pressable>
           </View>
