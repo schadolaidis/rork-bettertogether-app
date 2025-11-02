@@ -55,7 +55,7 @@ export const TabBar: React.FC<TabBarProps> = ({ items, activeKey, onChange, test
                 theme.typography.Caption,
                 { 
                   color: isActive ? theme.colors.primary : theme.colors.textLow,
-                  fontWeight: isActive ? '500' : '400',
+                  fontWeight: isActive ? '600' : '400',
                 }
               ]}
               numberOfLines={1}
