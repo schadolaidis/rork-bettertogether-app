@@ -11,6 +11,7 @@ import { IconButton } from '@/components/design-system/IconButton';
 import { ListRow } from '@/components/design-system/ListRow';
 import { ProgressRing } from '@/components/interactive/basic/ProgressRing';
 import { SegmentedControl, SegmentedControlOption } from '@/components/interactive/basic/SegmentedControl';
+import { StatMiniBar } from '@/components/stats/StatMiniBar';
 
 type TaskStatus = 'all' | 'upcoming' | 'failed' | 'completed';
 
@@ -144,6 +145,23 @@ export default function Dashboard() {
               progressColor={theme.colors.primary}
               trackColor={theme.colors.surfaceAlt}
             />
+          </View>
+
+          <View style={{ marginTop: 16, gap: 8 }}>
+            <View style={styles.statRow}>
+              <Text style={[theme.typography.Label, { color: theme.colors.textLow }]}>Tasks</Text>
+              <StatMiniBar />
+            </View>
+
+            <View style={styles.statRow}>
+              <Text style={[theme.typography.Label, { color: theme.colors.textLow }]}>Goals</Text>
+              <StatMiniBar />
+            </View>
+
+            <View style={styles.statRow}>
+              <Text style={[theme.typography.Label, { color: theme.colors.textLow }]}>Savings</Text>
+              <StatMiniBar />
+            </View>
           </View>
         </Card>
 
@@ -379,5 +397,8 @@ const styles = StyleSheet.create({
   todayCard: {
     borderRadius: 16,
     padding: 16,
+  },
+  statRow: {
+    gap: 4,
   },
 });
