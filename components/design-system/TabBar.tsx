@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Pressable, Text, StyleSheet, Platform } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
+import { getToken } from '@/constants/token';
 
 export type TabItem = {
   key: string;
@@ -16,7 +17,17 @@ export type TabBarProps = {
 };
 
 export const TabBar: React.FC<TabBarProps> = ({ items, activeKey, onChange, testID }) => {
-  const { theme } = useTheme();
+  const themeContext = useTheme();
+  const theme = themeContext?.theme ?? null;
+  
+  if (!theme) {
+    console.warn('[Theme] Missing ThemeProvider: using fallbacks in TabBar');
+  }
+  
+  const surface = getToken(theme, 'surface', '#FFFFFF');
+  const border = getToken(theme, 'border', '#CBD5E1');
+  const primary = getToken(theme, 'primary', '#2563EB');
+  const textLow = getToken(theme, 'textLow', '#64748B');
   
   if (items.length > 5) {
     console.warn('TabBar supports up to 5 items. Additional items will be hidden.');
@@ -29,8 +40,8 @@ export const TabBar: React.FC<TabBarProps> = ({ items, activeKey, onChange, test
       style={[
         styles.container, 
         { 
-          backgroundColor: theme.colors.surface,
-          borderTopColor: theme.colors.border,
+          backgroundColor: surface,
+          borderTopColor: border,
         }
       ]} 
       testID={testID}
@@ -52,9 +63,9 @@ export const TabBar: React.FC<TabBarProps> = ({ items, activeKey, onChange, test
             )}
             <Text 
               style={[
-                theme.typography.Caption,
+                theme?.typography?.caption ?? { fontSize: 12, fontWeight: '400' },
                 { 
-                  color: isActive ? theme.colors.primary : theme.colors.textLow,
+                  color: isActive ? primary : textLow,
                   fontWeight: isActive ? '600' : '400',
                 }
               ]}

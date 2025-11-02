@@ -3,20 +3,31 @@ import { LayoutDashboard, Calendar, CheckSquare, Target, Settings } from "lucide
 import React from "react";
 import { useApp } from "@/contexts/AppContext";
 import { useTheme } from "@/contexts/ThemeContext";
+import { getToken } from "@/constants/token";
 
 export default function TabLayout() {
   const { t } = useApp();
-  const { theme } = useTheme();
+  const themeContext = useTheme();
+  const theme = themeContext?.theme ?? null;
+  
+  if (!theme) {
+    console.warn('[Theme] Missing ThemeProvider: using fallbacks in TabLayout');
+  }
+  
+  const primary = getToken(theme, 'primary', '#2563EB');
+  const textLow = getToken(theme, 'textLow', '#64748B');
+  const surface = getToken(theme, 'surface', '#FFFFFF');
+  const border = getToken(theme, 'border', '#CBD5E1');
   
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: theme.colors.primary,
-        tabBarInactiveTintColor: theme.colors.textLow,
+        tabBarActiveTintColor: primary,
+        tabBarInactiveTintColor: textLow,
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: theme.colors.surface,
-          borderTopColor: theme.colors.border,
+          backgroundColor: surface,
+          borderTopColor: border,
           borderTopWidth: 1,
         },
         tabBarLabelStyle: { fontSize: 12 },
