@@ -12,6 +12,9 @@ import { TrendingUp, TrendingDown, Users, Calendar, BarChart3, ArrowUpDown, Doll
 import * as Haptics from 'expo-haptics';
 import { useApp } from '@/contexts/AppContext';
 import { StreaksFundCard } from '@/components/StreaksFundCard';
+import { DesignTokens } from '@/constants/design-tokens';
+
+
 
 import { LedgerEntry, User, TaskCategory } from '@/types';
 import { ClockService } from '@/services/ClockService';
@@ -240,7 +243,7 @@ export default function BalancesScreen() {
     ? ((totalExpenses - totalPreviousExpenses) / totalPreviousExpenses) * 100
     : 0;
 
-  const fundGrowthThisMonth = useMemo(() => {
+  const _fundGrowthThisMonth = useMemo(() => {
     return currentMonthEntries.reduce((sum, e) => sum + e.amount, 0);
   }, [currentMonthEntries]);
 
@@ -704,7 +707,7 @@ export default function BalancesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: DesignTokens.colors.neutral[50],
   },
   header: {
     paddingHorizontal: 20,

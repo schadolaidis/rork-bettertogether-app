@@ -14,7 +14,7 @@ import {
   TrendingUp,
   TrendingDown,
   AlertCircle,
-  CheckCircle2,
+
   Users,
   X,
   ChevronDown,
@@ -29,8 +29,8 @@ import { FundHero } from '@/components/FundHero';
 import { SectionHeader } from '@/components/design-system/SectionHeader';
 import { StreaksFundCard } from '@/components/StreaksFundCard';
 import { MOCK_FUND_TARGETS } from '@/mocks/data';
-
 import { StatCard } from '@/components/design-system/StatCard';
+import { DesignTokens } from '@/constants/design-tokens';
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -65,13 +65,7 @@ export default function DashboardScreen() {
     router.push('/tasks?filter=open');
   }, [router]);
 
-  const handleOverdueTap = useCallback(() => {
-    router.push('/tasks?filter=overdue');
-  }, [router]);
 
-  const handleCompletedTap = useCallback(() => {
-    router.push('/tasks?filter=completed');
-  }, [router]);
 
   const handleBalanceTap = useCallback(() => {
     router.push('/balances?month=current');
@@ -328,30 +322,29 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: DesignTokens.colors.neutral[50],
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
+    padding: DesignTokens.spacing.xl,
+    paddingBottom: DesignTokens.spacing.xxxl * 1.25,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: DesignTokens.spacing.lg,
   },
   greeting: {
-    fontSize: 16,
-    color: '#6B7280',
+    ...DesignTokens.typography.bodyMedium,
+    color: DesignTokens.colors.neutral[600],
   },
   userName: {
-    fontSize: 28,
-    fontWeight: '700' as const,
-    color: '#111827',
-    marginTop: 4,
+    ...DesignTokens.typography.displayMedium,
+    color: DesignTokens.colors.neutral[900],
+    marginTop: DesignTokens.spacing.xs,
   },
   avatar: {
     width: 48,
@@ -361,146 +354,135 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatarText: {
-    color: '#FFFFFF',
+    color: DesignTokens.colors.neutral[0],
     fontSize: 20,
     fontWeight: '600' as const,
   },
   listBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#EFF6FF',
-    borderRadius: 12,
-    marginBottom: 24,
+    gap: DesignTokens.spacing.sm,
+    paddingHorizontal: DesignTokens.spacing.lg,
+    paddingVertical: DesignTokens.spacing.md,
+    backgroundColor: DesignTokens.colors.primary[50],
+    borderRadius: DesignTokens.radius.md,
+    marginBottom: DesignTokens.spacing.xxl,
   },
   listName: {
-    fontSize: 16,
-    fontWeight: '600' as const,
-    color: '#1E40AF',
+    ...DesignTokens.typography.bodyMedium,
+    fontWeight: '600',
+    color: DesignTokens.colors.primary[700],
     flex: 1,
   },
   listMembers: {
-    fontSize: 14,
-    color: '#6B7280',
+    ...DesignTokens.typography.bodySmall,
+    color: DesignTokens.colors.neutral[600],
   },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 32,
+    gap: DesignTokens.spacing.md,
+    marginBottom: DesignTokens.spacing.xxxl,
   },
 
   fundGoalsSection: {
-    marginBottom: 24,
+    marginBottom: DesignTokens.spacing.xxl,
   },
   fundGoalsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: DesignTokens.spacing.xl,
   },
   fundGoalsTitle: {
-    fontSize: 24,
-    fontWeight: '800' as const,
-    color: '#111827',
+    ...DesignTokens.typography.headingLarge,
+    color: DesignTokens.colors.neutral[900],
   },
   emptyFundsState: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 60,
-    paddingHorizontal: 40,
+    paddingHorizontal: DesignTokens.spacing.xxxl * 1.25,
   },
   emptyFundsIcon: {
-    marginBottom: 20,
+    marginBottom: DesignTokens.spacing.xl,
     opacity: 0.3,
   },
   emptyFundsTitle: {
-    fontSize: 22,
-    fontWeight: '700' as const,
-    color: '#111827',
-    marginBottom: 8,
+    ...DesignTokens.typography.headingMedium,
+    color: DesignTokens.colors.neutral[900],
+    marginBottom: DesignTokens.spacing.sm,
     textAlign: 'center',
   },
   emptyFundsText: {
-    fontSize: 15,
-    color: '#6B7280',
+    ...DesignTokens.typography.bodyMedium,
+    color: DesignTokens.colors.neutral[600],
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: DesignTokens.spacing.xxl,
     lineHeight: 22,
   },
   createFundButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: DesignTokens.spacing.sm,
     paddingVertical: 14,
-    paddingHorizontal: 24,
-    backgroundColor: '#3B82F6',
-    borderRadius: 12,
-    shadowColor: '#3B82F6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    paddingHorizontal: DesignTokens.spacing.xxl,
+    backgroundColor: DesignTokens.colors.primary[500],
+    borderRadius: DesignTokens.radius.md,
+    ...DesignTokens.shadow.md,
   },
   createFundButtonText: {
-    fontSize: 16,
-    fontWeight: '700' as const,
-    color: '#FFFFFF',
+    ...DesignTokens.typography.bodyLarge,
+    fontWeight: '700',
+    color: DesignTokens.colors.neutral[0],
   },
 });
 
 const listSwitcherStyles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: DesignTokens.colors.neutral[50],
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
+    paddingHorizontal: DesignTokens.spacing.xl,
+    paddingVertical: DesignTokens.spacing.lg,
+    backgroundColor: DesignTokens.colors.neutral[0],
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: DesignTokens.colors.neutral[200],
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700' as const,
-    color: '#111827',
+    ...DesignTokens.typography.headingLarge,
+    color: DesignTokens.colors.neutral[900],
   },
   closeButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: '#F3F4F6',
+    padding: DesignTokens.spacing.sm,
+    borderRadius: DesignTokens.radius.sm,
+    backgroundColor: DesignTokens.colors.neutral[100],
   },
   scroll: {
     flex: 1,
   },
   content: {
-    padding: 20,
-    gap: 12,
+    padding: DesignTokens.spacing.xl,
+    gap: DesignTokens.spacing.md,
   },
   listCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: DesignTokens.colors.neutral[0],
+    borderRadius: DesignTokens.radius.lg,
+    padding: DesignTokens.spacing.lg,
     borderWidth: 2,
-    borderColor: '#F3F4F6',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    borderColor: DesignTokens.colors.neutral[100],
+    ...DesignTokens.shadow.sm,
   },
   listCardActive: {
-    borderColor: '#3B82F6',
-    backgroundColor: '#EFF6FF',
+    borderColor: DesignTokens.colors.primary[500],
+    backgroundColor: DesignTokens.colors.primary[50],
   },
   listCardContent: {
-    gap: 12,
+    gap: DesignTokens.spacing.md,
   },
   listCardHeader: {
     flexDirection: 'row',
@@ -508,59 +490,58 @@ const listSwitcherStyles = StyleSheet.create({
     alignItems: 'center',
   },
   listCardName: {
-    fontSize: 18,
-    fontWeight: '700' as const,
-    color: '#111827',
+    ...DesignTokens.typography.headingSmall,
+    color: DesignTokens.colors.neutral[900],
     flex: 1,
   },
   listCardNameActive: {
-    color: '#1E40AF',
+    color: DesignTokens.colors.primary[700],
   },
   activeIndicator: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#3B82F6',
+    backgroundColor: DesignTokens.colors.primary[500],
     justifyContent: 'center',
     alignItems: 'center',
   },
   listCardMeta: {
     flexDirection: 'row',
-    gap: 16,
+    gap: DesignTokens.spacing.lg,
   },
   listCardMetaItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: DesignTokens.spacing.xs * 1.5,
   },
   listCardMetaText: {
-    fontSize: 14,
-    color: '#6B7280',
+    ...DesignTokens.typography.bodySmall,
+    color: DesignTokens.colors.neutral[600],
   },
   createButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingVertical: 20,
-    paddingHorizontal: 16,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    gap: DesignTokens.spacing.md,
+    paddingVertical: DesignTokens.spacing.xl,
+    paddingHorizontal: DesignTokens.spacing.lg,
+    backgroundColor: DesignTokens.colors.neutral[0],
+    borderRadius: DesignTokens.radius.lg,
     borderWidth: 2,
-    borderColor: '#3B82F6',
+    borderColor: DesignTokens.colors.primary[500],
     borderStyle: 'dashed',
-    marginTop: 8,
+    marginTop: DesignTokens.spacing.sm,
   },
   createIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: DesignTokens.colors.primary[50],
     justifyContent: 'center',
     alignItems: 'center',
   },
   createText: {
-    fontSize: 16,
-    fontWeight: '600' as const,
-    color: '#3B82F6',
+    ...DesignTokens.typography.bodyLarge,
+    fontWeight: '600',
+    color: DesignTokens.colors.primary[500],
   },
 });
