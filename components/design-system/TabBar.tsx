@@ -30,7 +30,7 @@ export const TabBar: React.FC<TabBarProps> = ({ items, activeKey, onChange, test
   const textLow = getToken(theme, 'textLow', '#64748B');
   
   if (items.length > 5) {
-    console.warn('TabBar supports up to 5 items. Additional items will be hidden.');
+    console.warn('TabBar supports 3-5 items. Additional items will be hidden.');
   }
   
   const displayItems = items.slice(0, 5);
@@ -57,7 +57,7 @@ export const TabBar: React.FC<TabBarProps> = ({ items, activeKey, onChange, test
             testID={`${testID}-${item.key}`}
           >
             {item.icon && (
-              <View style={styles.iconContainer}>
+              <View style={[styles.iconContainer, { opacity: isActive ? 1 : 0.6 }]}>
                 {item.icon}
               </View>
             )}
@@ -66,7 +66,7 @@ export const TabBar: React.FC<TabBarProps> = ({ items, activeKey, onChange, test
                 theme?.typography?.caption ?? { fontSize: 12, fontWeight: '400' },
                 { 
                   color: isActive ? primary : textLow,
-                  fontWeight: isActive ? '600' : '400',
+                  fontWeight: isActive ? '600' as const : '400' as const,
                 }
               ]}
               numberOfLines={1}

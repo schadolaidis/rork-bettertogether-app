@@ -17,7 +17,7 @@ export const Card: React.FC<CardProps> = ({ style, padded = true, header, conten
 
   return (
     <LinearGradient
-      colors={['#FFFFFF', '#EDF2F9']}
+      colors={theme.gradients.cardGradient as [string, string, ...string[]]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       {...rest}
@@ -25,9 +25,9 @@ export const Card: React.FC<CardProps> = ({ style, padded = true, header, conten
         styles.base,
         {
           borderRadius: 16,
-          shadowColor: '#000',
+          shadowColor: 'rgba(0,0,0,0.05)',
           shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: 0.05,
+          shadowOpacity: 1,
           shadowRadius: 2,
           elevation: 1,
         },
@@ -39,7 +39,7 @@ export const Card: React.FC<CardProps> = ({ style, padded = true, header, conten
         <>
           {header && <View style={{ padding: 16 }}>{header}</View>}
           {content && <View style={{ padding: 16 }}>{content}</View>}
-          {footer && <View style={{ padding: 16, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.colors.border }}>{footer}</View>}
+          {footer && <View style={{ padding: 16, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.border }}>{footer}</View>}
         </>
       ) : (
         children

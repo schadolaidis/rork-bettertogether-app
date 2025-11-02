@@ -14,22 +14,22 @@ export const AppBar: React.FC<AppBarProps> = ({ title, actions, testID }) => {
   
   return (
     <LinearGradient
-      colors={['#F9FAFB', '#E7EDF7']}
+      colors={theme.gradients.appBarGradient as [string, string, ...string[]]}
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
       style={[
         styles.container, 
         { 
           height: 56,
-          borderBottomColor: theme.colors.border,
+          borderBottomColor: theme.border,
         }
       ]} 
     >
       <View style={styles.content} testID={testID}>
         <Text 
           style={[
-            theme.typography.H2, 
-            { color: theme.colors.textHigh }
+            theme.typography.h2, 
+            { color: theme.textHigh }
           ]} 
           numberOfLines={1}
         >

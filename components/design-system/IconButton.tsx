@@ -1,46 +1,45 @@
 import React from 'react';
-import { Pressable, StyleSheet, ViewStyle, Animated, Platform } from 'react-native';
+import { Pressable, StyleSheet, ViewStyle } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 
 export type IconButtonProps = {
   icon: React.ReactNode;
   onPress: () => void;
   disabled?: boolean;
+  variant?: 'default' | 'primary' | 'ghost';
   testID?: string;
   style?: ViewStyle;
 };
 
-export const IconButton: React.FC<IconButtonProps> = ({ icon, onPress, disabled = false, testID, style }) => {
+export const IconButton: React.FC<IconButtonProps> = ({ 
+  icon, 
+  onPress, 
+  disabled = false, 
+  variant = 'default',
+  testID, 
+  style 
+}) => {
   const { theme } = useTheme();
-  const rippleOpacity = React.useRef(new Animated.Value(0)).current;
 
-  const handlePressIn = () => {
-    Animated.timing(rippleOpacity, {
-      toValue: 1,
-      duration: 150,
-      useNativeDriver: Platform.OS !== 'web',
-    }).start();
-  };
-
-  const handlePressOut = () => {
-    Animated.timing(rippleOpacity, {
-      toValue: 0,
-      duration: 150,
-      useNativeDriver: Platform.OS !== 'web',
-    }).start();
+  const getBackgroundColor = (pressed: boolean) => {
+    if (disabled) return 'transparent';
+    if (pressed) {
+      if (variant === 'primary') return theme.primary + '20';
+      return theme.surfaceAlt;
+    }
+    if (variant === 'primary') return theme.primary + '10';
+    return 'transparent';
   };
 
   return (
     <Pressable
       onPress={onPress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
       disabled={disabled}
       style={({ pressed }) => [
         styles.base,
         {
-          backgroundColor: pressed ? theme.colors.primary + '10' : 'transparent',
-          opacity: disabled ? 0.5 : 1,
+          backgroundColor: getBackgroundColor(pressed),
+          opacity: disabled ? 0.4 : 1,
         },
         style,
       ]}
