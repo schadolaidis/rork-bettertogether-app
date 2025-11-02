@@ -130,7 +130,10 @@ export default function Dashboard() {
             { backgroundColor: theme.colors.surface, marginBottom: theme.spacing.lg },
           ]}
         >
-          <Text style={[theme.typography.Body, { color: theme.colors.textHigh }]}>Today's Focus</Text>
+          <Text style={[theme.typography.H2, { color: theme.colors.textHigh }]}>Today&apos;s Focus</Text>
+          <Text style={[theme.typography.Caption, { color: theme.colors.textLow, marginTop: 8 }]}>
+            Your progress at a glance
+          </Text>
         </Card>
 
         <Card
