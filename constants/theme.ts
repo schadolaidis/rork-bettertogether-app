@@ -24,9 +24,16 @@ export type Typography = {
 
 export type Spacing = 4 | 8 | 12 | 16 | 24;
 
+export type Gradients = {
+  cardGradient: { colors: string[]; start: { x: number; y: number }; end: { x: number; y: number } };
+  appBarGradient: { colors: string[]; start: { x: number; y: number }; end: { x: number; y: number } };
+  buttonPrimaryGradient: { colors: string[]; start: { x: number; y: number }; end: { x: number; y: number } };
+};
+
 export type Theme = {
   colors: ThemeColors;
   typography: Typography;
+  gradients: Gradients;
   radius: number;
   spacing: { xxs: 4; xs: 8; sm: 12; md: 16; lg: 24 };
   elevation: { card: number; sheet: number };
@@ -36,17 +43,17 @@ export type Theme = {
 
 export const betterTogetherTheme: Theme = {
   colors: {
-    background: '#F8FAFC',
+    background: '#F4F7FB',
     surface: '#FFFFFF',
-    surfaceAlt: '#F1F5F9',
+    surfaceAlt: '#E9EEF5',
     primary: '#2563EB',
-    accent: '#8B5CF6',
-    success: '#22C55E',
-    warning: '#F59E0B',
-    error: '#EF4444',
-    textHigh: '#0F172A',
+    accent: '#7C3AED',
+    success: '#16A34A',
+    warning: '#FACC15',
+    error: '#DC2626',
+    textHigh: '#1E293B',
     textLow: '#64748B',
-    border: '#E2E8F0',
+    border: '#CBD5E1',
   },
   typography: {
     H1: { fontSize: 24, fontWeight: '700', lineHeight: 32 },
@@ -54,6 +61,23 @@ export const betterTogetherTheme: Theme = {
     Body: { fontSize: 16, fontWeight: '400', lineHeight: 24 },
     Label: { fontSize: 14, fontWeight: '500', lineHeight: 20 },
     Caption: { fontSize: 12, fontWeight: '400', lineHeight: 16 },
+  },
+  gradients: {
+    cardGradient: {
+      colors: ['#FFFFFF', '#EDF2F9'],
+      start: { x: 0, y: 0 },
+      end: { x: 1, y: 1 },
+    },
+    appBarGradient: {
+      colors: ['#F9FAFB', '#E7EDF7'],
+      start: { x: 0, y: 0 },
+      end: { x: 0, y: 1 },
+    },
+    buttonPrimaryGradient: {
+      colors: ['#2563EB', '#3B82F6'],
+      start: { x: 0, y: 0.5 },
+      end: { x: 1, y: 0.5 },
+    },
   },
   radius: 16,
   spacing: { xxs: 4, xs: 8, sm: 12, md: 16, lg: 24 },
@@ -79,6 +103,23 @@ export const darkTheme: Theme = {
     border: '#475569',
   },
   typography: betterTogetherTheme.typography,
+  gradients: {
+    cardGradient: {
+      colors: ['#1E293B', '#0F172A'],
+      start: { x: 0, y: 0 },
+      end: { x: 1, y: 1 },
+    },
+    appBarGradient: {
+      colors: ['#1E293B', '#0F172A'],
+      start: { x: 0, y: 0 },
+      end: { x: 0, y: 1 },
+    },
+    buttonPrimaryGradient: {
+      colors: ['#3B82F6', '#60A5FA'],
+      start: { x: 0, y: 0.5 },
+      end: { x: 1, y: 0.5 },
+    },
+  },
   radius: 16,
   spacing: betterTogetherTheme.spacing,
   elevation: betterTogetherTheme.elevation,
