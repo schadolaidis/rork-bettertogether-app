@@ -125,6 +125,15 @@ export default function Dashboard() {
         showsVerticalScrollIndicator={false}
       >
         <Card
+          style={[
+            styles.todayCard,
+            { backgroundColor: theme.colors.surface, marginBottom: theme.spacing.lg },
+          ]}
+        >
+          <Text style={[theme.typography.Body, { color: theme.colors.textHigh }]}>Today's Focus</Text>
+        </Card>
+
+        <Card
           style={{ marginBottom: theme.spacing.lg }}
           header={
             <Text style={[theme.typography.H2, { color: theme.colors.textHigh }]}>
@@ -352,5 +361,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+  },
+  todayCard: {
+    borderRadius: 16,
+    padding: 16,
   },
 });
