@@ -1,21 +1,50 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 
 export type AppBarProps = {
   title: string;
-  left?: React.ReactNode;
-  right?: React.ReactNode;
+  actions?: React.ReactNode;
   testID?: string;
 };
 
-export const AppBar: React.FC<AppBarProps> = ({ title, left, right, testID }) => {
+export const AppBar: React.FC<AppBarProps> = ({ title, actions, testID }) => {
   const { theme } = useTheme();
+  
   return (
-    <View style={[styles.container, { height: theme.appBar.height, backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border }]} testID={testID}>
-      <View style={styles.side}>{typeof left === 'string' ? <Text>{left}</Text> : left}</View>
-      <Text style={[styles.title, { color: theme.colors.textHigh }]} numberOfLines={1}>{title}</Text>
-      <View style={styles.side}>{typeof right === 'string' ? <Text>{right}</Text> : right}</View>
+    <View 
+      style={[
+        styles.container, 
+        { 
+          height: 56,
+          backgroundColor: theme.colors.surface,
+          borderBottomColor: theme.colors.border,
+          ...Platform.select({
+            ios: {
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.05,
+              shadowRadius: 2,
+            },
+            android: {
+              elevation: 1,
+            },
+          }),
+        }
+      ]} 
+      testID={testID}
+    >
+      <Text 
+        style={[
+          theme.typography.H2, 
+          { color: theme.colors.textHigh }
+        ]} 
+        numberOfLines={1}
+      >
+        {title}
+      </Text>
+      
+      {actions && <View style={styles.actions}>{actions}</View>}
     </View>
   );
 };
@@ -23,11 +52,15 @@ export const AppBar: React.FC<AppBarProps> = ({ title, left, right, testID }) =>
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    borderBottomWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  side: { width: 64, alignItems: 'flex-start', justifyContent: 'center' },
-  title: { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '600' as const },
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
 });

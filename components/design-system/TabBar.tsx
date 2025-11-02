@@ -1,8 +1,12 @@
 import React from 'react';
-import { View, Pressable, Text, StyleSheet } from 'react-native';
+import { View, Pressable, Text, StyleSheet, Platform } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 
-export type TabItem = { key: string; label: string };
+export type TabItem = {
+  key: string;
+  label: string;
+  icon?: React.ReactNode;
+};
 
 export type TabBarProps = {
   items: TabItem[];
@@ -13,14 +17,51 @@ export type TabBarProps = {
 
 export const TabBar: React.FC<TabBarProps> = ({ items, activeKey, onChange, testID }) => {
   const { theme } = useTheme();
+  
+  if (items.length > 5) {
+    console.warn('TabBar supports up to 5 items. Additional items will be hidden.');
+  }
+  
+  const displayItems = items.slice(0, 5);
+  
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.surface }] } testID={testID}>
-      {items.map((it) => {
-        const active = it.key === activeKey;
+    <View 
+      style={[
+        styles.container, 
+        { 
+          backgroundColor: theme.colors.surface,
+          borderTopColor: theme.colors.border,
+        }
+      ]} 
+      testID={testID}
+    >
+      {displayItems.map((item) => {
+        const isActive = item.key === activeKey;
+        
         return (
-          <Pressable key={it.key} onPress={() => onChange(it.key)} style={styles.tab}>
-            <Text style={{ color: active ? theme.colors.primary : theme.colors.textLow, fontWeight: active ? '600' as const : '500' as const }}>{it.label}</Text>
-            <View style={{ height: 2, marginTop: 6, backgroundColor: active ? theme.colors.primary : 'transparent', borderRadius: 1, width: '100%' }} />
+          <Pressable
+            key={item.key}
+            onPress={() => onChange(item.key)}
+            style={styles.tabItem}
+            testID={`${testID}-${item.key}`}
+          >
+            {item.icon && (
+              <View style={styles.iconContainer}>
+                {item.icon}
+              </View>
+            )}
+            <Text 
+              style={[
+                theme.typography.Caption,
+                { 
+                  color: isActive ? theme.colors.primary : theme.colors.textLow,
+                  fontWeight: isActive ? '500' : '400',
+                }
+              ]}
+              numberOfLines={1}
+            >
+              {item.label}
+            </Text>
           </Pressable>
         );
       })}
@@ -29,6 +70,39 @@ export const TabBar: React.FC<TabBarProps> = ({ items, activeKey, onChange, test
 };
 
 const styles = StyleSheet.create({
-  container: { flexDirection: 'row', gap: 8, paddingHorizontal: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'transparent' },
-  tab: { flex: 1, alignItems: 'center', paddingVertical: 10 },
+  container: {
+    height: 64,
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 1,
+      },
+    }),
+  },
+  tabItem: {
+    flex: 1,
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    minHeight: 44,
+  },
+  iconContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 24,
+    width: 24,
+  },
 });
