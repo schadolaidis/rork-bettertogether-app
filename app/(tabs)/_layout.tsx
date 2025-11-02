@@ -41,10 +41,16 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="balances"
+        name="funds"
         options={{
           title: t.tabs.fundGoals,
           tabBarIcon: ({ color, size }) => <Target color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="balances"
+        options={{
+          href: null,
         }}
       />
       <Tabs.Screen
