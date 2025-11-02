@@ -1,6 +1,7 @@
 export * from './AppBar';
 export * from './Card';
 export * from './Button';
+export * from './IconButton';
 export * from './Input';
 export * from './ListRow';
 export * from './ModalSheet';
