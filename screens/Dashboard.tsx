@@ -134,6 +134,17 @@ export default function Dashboard() {
           <Text style={[theme.typography.Caption, { color: theme.colors.textLow, marginTop: 8 }]}>
             Your progress at a glance
           </Text>
+          <View style={{ alignItems: 'center', marginTop: 12 }}>
+            <ProgressRing
+              size={80}
+              stroke={8}
+              progress={0.42}
+              showLabel
+              labelType="percentage"
+              progressColor={theme.colors.primary}
+              trackColor={theme.colors.surfaceAlt}
+            />
+          </View>
         </Card>
 
         <Card
