@@ -57,7 +57,7 @@ export const lightTheme: Theme = {
   
   gradients: {
     cardGradient: ['#FFFFFF', '#EDF2F9'],
-    appBarGradient: ['#F9FAFB', '#E7EDF7'],
+    appBarGradient: ['#FFFFFF', '#EDF2F9'],
     buttonPrimaryGradient: ['#2563EB', '#3B82F6'],
   },
   
