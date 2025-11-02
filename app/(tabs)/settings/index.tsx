@@ -23,6 +23,7 @@ import {
   Info,
   Menu,
   User,
+  Code2,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useApp } from '@/contexts/AppContext';
@@ -268,6 +269,27 @@ export default function SettingsScreen() {
             }}
             isLast
             testID="row-fund-manager"
+          />
+        </GroupCard>
+
+        <SectionHeader 
+          title="DEVELOPMENT" 
+          testID="section-development"
+        />
+        <GroupCard style={{ marginHorizontal: DesignTokens.spacing.xl, marginBottom: DesignTokens.spacing.xl }}>
+          <DisclosureRow
+            icon={<Code2 size={20} color={DesignTokens.colors.primary[500]} />}
+            label="Modal Input Demo"
+            subtitle="Test new centered modal system"
+            onPress={() => {
+              if (Platform.OS !== 'web') {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+              router.push('/modal-demo' as any);
+            }}
+            isFirst
+            isLast
+            testID="row-modal-demo"
           />
         </GroupCard>
 

@@ -4,6 +4,7 @@ import * as SplashScreen from "expo-splash-screen";
 import * as Notifications from "expo-notifications";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { PortalHost } from "@gorhom/portal";
 import { AppProvider } from "@/contexts/AppContext";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -43,6 +44,13 @@ function RootLayoutNav() {
           headerShown: false 
         }} 
       />
+      <Stack.Screen
+        name="modal-demo"
+        options={{
+          presentation: "modal",
+          headerShown: false
+        }}
+      />
     </Stack>
   );
 }
@@ -57,6 +65,7 @@ export default function RootLayout() {
       <AppProvider>
         <GestureHandlerRootView>
           <RootLayoutNav />
+          <PortalHost name="modal-input-wrapper" />
         </GestureHandlerRootView>
       </AppProvider>
     </QueryClientProvider>
