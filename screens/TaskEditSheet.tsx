@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Text, Pressable } from 'react-native';
+import { View, StyleSheet, Text, Pressable, Animated } from 'react-native';
 import { ModalSheet } from '@/components/interactive/modals/ModalSheet';
 import { Button } from '@/components/design-system/Button';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -28,6 +28,7 @@ export const TaskEditSheet: React.FC<TaskEditSheetProps> = ({
   const [assignee, setAssignee] = useState<string | undefined>(undefined);
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [nameError, setNameError] = useState<string | undefined>(undefined);
+  const toggleAnimation = React.useRef(new Animated.Value(0)).current;
 
   const focusGoalOptions: SelectOption[] = [
     { label: 'Health & Fitness', value: 'health' },
@@ -54,6 +55,20 @@ export const TaskEditSheet: React.FC<TaskEditSheetProps> = ({
     onSave?.();
     onClose();
   };
+
+  const handleToggle = () => {
+    const newValue = !reminderEnabled;
+    setReminderEnabled(newValue);
+    Animated.timing(toggleAnimation, {
+      toValue: newValue ? 1 : 0,
+      duration: 150,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  React.useEffect(() => {
+    toggleAnimation.setValue(reminderEnabled ? 1 : 0);
+  }, [reminderEnabled, toggleAnimation]);
 
   const footer = (
     <View style={styles.footerButtons}>
@@ -147,7 +162,7 @@ export const TaskEditSheet: React.FC<TaskEditSheetProps> = ({
 
         <Pressable
           style={[styles.toggleRow, { paddingVertical: theme.spacing.sm }]}
-          onPress={() => setReminderEnabled(!reminderEnabled)}
+          onPress={handleToggle}
           testID="task-reminder-toggle"
         >
           <Text
@@ -158,7 +173,7 @@ export const TaskEditSheet: React.FC<TaskEditSheetProps> = ({
           >
             Reminder
           </Text>
-          <View
+          <Animated.View
             style={[
               styles.toggle,
               {
@@ -169,16 +184,23 @@ export const TaskEditSheet: React.FC<TaskEditSheetProps> = ({
               },
             ]}
           >
-            <View
+            <Animated.View
               style={[
                 styles.toggleThumb,
                 {
                   backgroundColor: theme.colors.surface,
-                  transform: [{ translateX: reminderEnabled ? 22 : 2 }],
+                  transform: [
+                    {
+                      translateX: toggleAnimation.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [2, 22],
+                      }),
+                    },
+                  ],
                 },
               ]}
             />
-          </View>
+          </Animated.View>
         </Pressable>
       </View>
     </ModalSheet>
