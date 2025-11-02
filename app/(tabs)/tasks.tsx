@@ -6,177 +6,19 @@ import {
   ScrollView,
   TouchableOpacity,
   Platform,
-  Pressable,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { CheckCircle2, XCircle, Filter, Undo2, Clock, Plus, Zap, X, User as UserIcon, Target, DollarSign } from 'lucide-react-native';
+import { Filter, Undo2, Plus, X, Target } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useApp } from '@/contexts/AppContext';
 import { Task, TaskCategory, TaskStatus, User } from '@/types';
 import { TaskFormModal, TaskFormData, FundTargetOption } from '@/components/TaskFormModal';
 import { QuickAddModal, QuickTaskData } from '@/components/QuickAddModal';
 import { MOCK_FUND_TARGETS } from '@/mocks/data';
+import { SectionHeader } from '@/components/design-system/SectionHeader';
+import { TaskCard as SimpleTaskCard } from '@/components/design-system/TaskCard';
 
-interface TaskCardProps {
-  task: Task;
-  assignedUsers: User[];
-  categoryColor: string;
-  categoryEmoji: string;
-  fundTarget?: { id: string; name: string; emoji: string };
-  onComplete: () => void;
-  onFail: () => void;
-  onPress: () => void;
-}
-
-function TaskCard({
-  task,
-  assignedUsers,
-  categoryColor,
-  categoryEmoji,
-  fundTarget,
-  onComplete,
-  onFail,
-  onPress,
-}: TaskCardProps) {
-  const isDisabled = task.status === 'completed' || task.status === 'failed';
-  const isActionable = task.status === 'pending' || task.status === 'overdue';
-  const statusColor = useMemo(() => {
-    switch (task.status) {
-      case 'completed':
-        return '#10B981';
-      case 'overdue':
-        return '#F59E0B';
-      case 'failed':
-        return '#EF4444';
-      default:
-        return '#6B7280';
-    }
-  }, [task.status]);
-
-  const dueDate = task.endAt ? new Date(task.endAt) : new Date();
-  const now = new Date();
-  const isToday = dueDate.toDateString() === now.toDateString();
-  const minutesUntil = Math.floor((dueDate.getTime() - now.getTime()) / (60 * 1000));
-  const hoursUntil = Math.floor(minutesUntil / 60);
-
-  let dateText = '';
-  if (minutesUntil < 0) {
-    dateText = 'Overdue';
-  } else if (minutesUntil < 60) {
-    dateText = `${minutesUntil}m`;
-  } else if (hoursUntil < 24) {
-    dateText = `${hoursUntil}h`;
-  } else if (isToday) {
-    dateText = 'Today';
-  } else {
-    dateText = dueDate.toLocaleDateString();
-  }
-
-  const backgroundColor = useMemo(() => {
-    switch (task.status) {
-      case 'completed':
-        return '#F0FDF4';
-      case 'failed':
-        return '#FEF2F2';
-      default:
-        return '#FFFFFF';
-    }
-  }, [task.status]);
-
-  return (
-    <Pressable onPress={onPress} style={styles.taskCardWrapper}>
-      <View style={[styles.taskCard, { backgroundColor, opacity: isDisabled ? 0.6 : 1 }]}>
-        {fundTarget && (
-          <View style={styles.fundTargetBanner}>
-            <Text style={styles.fundTargetBannerEmoji}>{fundTarget.emoji}</Text>
-            <Text style={styles.fundTargetBannerText}>{fundTarget.name}</Text>
-          </View>
-        )}
-        
-        <View style={styles.taskCardContent}>
-          <View style={styles.taskHeader}>
-            <View style={styles.taskTitleRow}>
-              <View style={[styles.categoryDot, { backgroundColor: categoryColor }]} />
-              <Text style={styles.categoryEmoji}>{categoryEmoji}</Text>
-              <Text
-                style={[
-                  styles.taskTitle,
-                  task.status === 'completed' && styles.taskTitleCompleted,
-                ]}
-                numberOfLines={2}
-              >
-                {task.title}
-              </Text>
-            </View>
-            <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
-              <Text style={styles.statusText}>
-                {task.status.charAt(0).toUpperCase() + task.status.slice(1)}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.taskDetails}>
-            <View style={styles.detailRow}>
-              <Clock size={14} color={statusColor} />
-              <Text style={[styles.detailText, { color: statusColor }]}>{dateText}</Text>
-              {task.gracePeriod > 0 && task.status !== 'completed' && (
-                <Text style={styles.graceText}>+{task.gracePeriod}m</Text>
-              )}
-            </View>
-            
-            <View style={styles.detailRow}>
-              <DollarSign size={14} color="#8B5CF6" />
-              <Text style={[styles.detailText, { color: '#8B5CF6' }]}>${task.stake}</Text>
-            </View>
-
-            {assignedUsers.length > 0 && (
-              <View style={styles.detailRow}>
-                <UserIcon size={14} color="#6B7280" />
-                <Text style={styles.detailText} numberOfLines={1}>
-                  {assignedUsers.length === 1
-                    ? assignedUsers[0].name
-                    : `${assignedUsers.length} members`}
-                </Text>
-              </View>
-            )}
-          </View>
-
-          {isActionable && (
-            <View style={styles.quickActions}>
-              <TouchableOpacity
-                style={[styles.quickActionButton, styles.completeButton]}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  if (Platform.OS !== 'web') {
-                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                  }
-                  onComplete();
-                }}
-              >
-                <CheckCircle2 size={16} color="#10B981" strokeWidth={2.5} />
-                <Text style={styles.actionButtonText}>Complete</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.quickActionButton, styles.failButton]}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  if (Platform.OS !== 'web') {
-                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-                  }
-                  onFail();
-                }}
-              >
-                <XCircle size={16} color="#EF4444" strokeWidth={2.5} />
-                <Text style={styles.actionButtonText}>Fail</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-      </View>
-    </Pressable>
-  );
-}
 
 type FilterOption = 'all' | TaskStatus | TaskCategory;
 
@@ -264,15 +106,38 @@ export default function TasksScreen() {
     });
   }, [tasks, filter, memberIdParam, fundTargetIdParam]);
 
-  const nextDueTask = useMemo(() => {
-    return tasks
-      .filter((t) => t.status === 'pending' || t.status === 'overdue')
-      .sort((a, b) => {
-        const aTime = new Date(a.endAt).getTime();
-        const bTime = new Date(b.endAt).getTime();
-        return aTime - bTime;
-      })[0];
-  }, [tasks]);
+  const groupedTasks = useMemo(() => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const weekEnd = new Date(today);
+    weekEnd.setDate(weekEnd.getDate() + 7);
+
+    const groups = {
+      today: [] as Task[],
+      tomorrow: [] as Task[],
+      thisWeek: [] as Task[],
+      later: [] as Task[],
+    };
+
+    filteredTasks.forEach(task => {
+      const taskDate = new Date(task.endAt);
+      if (taskDate < tomorrow) {
+        groups.today.push(task);
+      } else if (taskDate < weekEnd) {
+        if (taskDate.getDate() === tomorrow.getDate()) {
+          groups.tomorrow.push(task);
+        } else {
+          groups.thisWeek.push(task);
+        }
+      } else {
+        groups.later.push(task);
+      }
+    });
+
+    return groups;
+  }, [filteredTasks]);
 
   const filters: { label: string; value: FilterOption }[] = [
     { label: 'All', value: 'all' },
@@ -485,14 +350,6 @@ export default function TasksScreen() {
           </View>
         </TouchableOpacity>
 
-        {nextDueTask && (
-          <View style={styles.nextDueBar}>
-            <Clock size={16} color="#3B82F6" />
-            <Text style={styles.nextDueText}>
-              Next due: <Text style={styles.nextDueTask}>{nextDueTask.title}</Text>
-            </Text>
-          </View>
-        )}
 
         {(filter !== 'all' || memberIdParam) && (
           <View style={styles.activeFiltersBar}>
@@ -592,33 +449,57 @@ export default function TasksScreen() {
         )}
 
         {filteredTasks.length > 0 ? (
-          <View style={styles.taskList}>
-            {filteredTasks.map((task) => {
-              const categoryMeta = currentList?.categories?.[task.category];
-              const assignedUserIds = Array.isArray(task.assignedTo) ? task.assignedTo : [task.assignedTo];
-              const assignedUsers = currentListMembers.filter((u) => assignedUserIds.includes(u.id));
-              const fundTarget = task.fundTargetId ? fundTargets.find((f) => f.id === task.fundTargetId) : undefined;
-              
+          <ScrollView>
+            {(['today','tomorrow','thisWeek','later'] as const).map((key) => {
+              const list = groupedTasks[key];
+              if (!list || list.length === 0) return null;
+              const titleMap: Record<typeof key, string> = {
+                today: 'TODAY',
+                tomorrow: 'TOMORROW',
+                thisWeek: 'THIS WEEK',
+                later: 'LATER',
+              } as const;
               return (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  assignedUsers={assignedUsers}
-                  categoryColor={categoryMeta?.color || '#6B7280'}
-                  categoryEmoji={categoryMeta?.emoji || '📋'}
-                  fundTarget={fundTarget}
-                  onComplete={() => completeTask(task.id)}
-                  onFail={() => failTask(task.id)}
-                  onPress={() => {
-                    if (Platform.OS !== 'web') {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    }
-                    router.push(`/task-detail?id=${task.id}`);
-                  }}
-                />
+                <View key={key}>
+                  <SectionHeader title={titleMap[key]} subtitle={`${list.length} tasks`} />
+                  <View style={{ paddingHorizontal: 20, gap: 12, marginBottom: 8 }}>
+                    {list.map(task => {
+                      const categoryMeta = currentList?.categories?.[task.category];
+                      const due = new Date(task.endAt);
+                      const minutesUntil = Math.floor((due.getTime() - Date.now()) / (60 * 1000));
+                      const hoursUntil = Math.floor(minutesUntil / 60);
+                      let dueText = '';
+                      if (task.status === 'overdue') {
+                        dueText = 'Overdue';
+                      } else if (minutesUntil < 60) {
+                        dueText = `${minutesUntil}m`;
+                      } else if (hoursUntil < 24) {
+                        dueText = `${hoursUntil}h`;
+                      } else {
+                        dueText = due.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+                      }
+                      return (
+                        <SimpleTaskCard
+                          key={task.id}
+                          title={task.title}
+                          categoryEmoji={categoryMeta?.emoji || '📋'}
+                          categoryColor={categoryMeta?.color || '#6B7280'}
+                          dueTime={dueText}
+                          status={task.status}
+                          onPress={() => {
+                            if (Platform.OS !== 'web') {
+                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            }
+                            router.push(`/task-detail?id=${task.id}`);
+                          }}
+                        />
+                      );
+                    })}
+                  </View>
+                </View>
               );
             })}
-          </View>
+          </ScrollView>
         ) : (
           <View style={styles.emptyState}>
             <Target size={64} color="#D1D5DB" />
@@ -630,17 +511,6 @@ export default function TasksScreen() {
         )}
       </ScrollView>
 
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => {
-          if (Platform.OS !== 'web') {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          }
-          setShowQuickAdd(true);
-        }}
-      >
-        <Zap size={28} color="#FFFFFF" fill="#FFFFFF" />
-      </TouchableOpacity>
 
       {currentList && (
         <>

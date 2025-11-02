@@ -26,40 +26,11 @@ import {
 import * as Haptics from 'expo-haptics';
 import { useApp } from '@/contexts/AppContext';
 import { FundHero } from '@/components/FundHero';
+import { SectionHeader } from '@/components/design-system/SectionHeader';
 import { StreaksFundCard } from '@/components/StreaksFundCard';
 import { MOCK_FUND_TARGETS } from '@/mocks/data';
 
-interface StatCardProps {
-  title: string;
-  value: string | number;
-  subtitle?: string;
-  icon: React.ReactNode;
-  color: string;
-  backgroundColor: string;
-  onPress?: () => void;
-}
-
-function StatCard({ title, value, subtitle, icon, color, backgroundColor, onPress }: StatCardProps) {
-  const handlePress = () => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    onPress?.();
-  };
-
-  return (
-    <TouchableOpacity
-      style={[styles.statCard, { backgroundColor }]}
-      onPress={handlePress}
-      activeOpacity={0.7}
-    >
-      <View style={styles.statIcon}>{icon}</View>
-      <Text style={[styles.statValue, { color }]}>{value}</Text>
-      <Text style={styles.statTitle}>{title}</Text>
-      {subtitle && <Text style={styles.statSubtitle}>{subtitle}</Text>}
-    </TouchableOpacity>
-  );
-}
+import { StatCard } from '@/components/design-system/StatCard';
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -152,45 +123,32 @@ export default function DashboardScreen() {
 
         <View style={styles.statsGrid}>
           <StatCard
-            title="Open Tasks"
-            value={dashboardStats.openTasks}
-            icon={<AlertCircle size={24} color="#3B82F6" />}
-            color="#3B82F6"
-            backgroundColor="#EFF6FF"
+            icon={<AlertCircle size={24} color={'#3B82F6'} />}
+            label="Open Tasks"
+            value={String(dashboardStats.openTasks)}
+            color={'#3B82F6'}
             onPress={handleOpenTasksTap}
+            testID="stat-open-tasks"
           />
           <StatCard
-            title="Overdue"
-            value={dashboardStats.overdueTasks}
-            icon={<AlertCircle size={24} color="#F59E0B" />}
-            color="#F59E0B"
-            backgroundColor="#FEF3C7"
-            onPress={handleOverdueTap}
-          />
-          <StatCard
-            title="Completed"
-            value={dashboardStats.completedThisMonth}
-            subtitle="This month"
-            icon={<CheckCircle2 size={24} color="#10B981" />}
-            color="#10B981"
-            backgroundColor="#D1FAE5"
-            onPress={handleCompletedTap}
-          />
-          <StatCard
-            title="Balance"
+            icon={totalBalance >= 0 ? (
+              <TrendingUp size={24} color={balanceColor} />
+            ) : (
+              <TrendingDown size={24} color={balanceColor} />
+            )}
+            label="Balance"
             value={`${balanceSign}${currencySymbol}${Math.abs(totalBalance).toFixed(2)}`}
-            icon={
-              totalBalance >= 0 ? (
-                <TrendingUp size={24} color={balanceColor} />
-              ) : (
-                <TrendingDown size={24} color={balanceColor} />
-              )
-            }
             color={balanceColor}
-            backgroundColor={totalBalance >= 0 ? '#D1FAE5' : '#FEE2E2'}
             onPress={handleBalanceTap}
+            testID="stat-balance"
           />
         </View>
+
+        <SectionHeader 
+          title="FUND GOALS" 
+          subtitle={`${activeFundTargets.length} active`}
+          action={{ label: 'Manage', onPress: () => router.push('/settings/funds') }}
+        />
 
         {activeFundTargets.length > 0 && (
           <View style={styles.fundGoalsSection}>
@@ -433,30 +391,7 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 32,
   },
-  statCard: {
-    width: '48%',
-    padding: 20,
-    borderRadius: 16,
-    minHeight: 140,
-  },
-  statIcon: {
-    marginBottom: 12,
-  },
-  statValue: {
-    fontSize: 32,
-    fontWeight: '700' as const,
-    marginBottom: 4,
-  },
-  statTitle: {
-    fontSize: 14,
-    color: '#6B7280',
-    fontWeight: '500' as const,
-  },
-  statSubtitle: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    marginTop: 2,
-  },
+
   fundGoalsSection: {
     marginBottom: 24,
   },
