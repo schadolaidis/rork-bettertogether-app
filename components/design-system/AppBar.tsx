@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@/contexts/ThemeContext';
 
 export type AppBarProps = {
@@ -12,51 +13,47 @@ export const AppBar: React.FC<AppBarProps> = ({ title, actions, testID }) => {
   const { theme } = useTheme();
   
   return (
-    <View 
+    <LinearGradient
+      colors={['#F9FAFB', '#E7EDF7']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
       style={[
         styles.container, 
         { 
           height: 56,
-          backgroundColor: theme.colors.surface,
           borderBottomColor: theme.colors.border,
-          ...Platform.select({
-            ios: {
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.05,
-              shadowRadius: 2,
-            },
-            android: {
-              elevation: 1,
-            },
-          }),
         }
       ]} 
-      testID={testID}
     >
-      <Text 
-        style={[
-          theme.typography.H2, 
-          { color: theme.colors.textHigh }
-        ]} 
-        numberOfLines={1}
-      >
-        {title}
-      </Text>
-      
-      {actions && <View style={styles.actions}>{actions}</View>}
-    </View>
+      <View style={styles.content} testID={testID}>
+        <Text 
+          style={[
+            theme.typography.H2, 
+            { color: theme.colors.textHigh }
+          ]} 
+          numberOfLines={1}
+        >
+          {title}
+        </Text>
+        
+        {actions && <View style={styles.actions}>{actions}</View>}
+      </View>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     width: '100%',
+    borderBottomWidth: 1,
+  },
+  content: {
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    height: 56,
   },
   actions: {
     flexDirection: 'row',
