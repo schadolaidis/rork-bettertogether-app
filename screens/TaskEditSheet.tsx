@@ -71,6 +71,7 @@ export const TaskEditSheet: React.FC<TaskEditSheetProps> = ({
           title="Save"
           onPress={handleSave}
           variant="primary"
+          disabled={!name.trim()}
           testID="task-edit-save"
         />
       </View>
