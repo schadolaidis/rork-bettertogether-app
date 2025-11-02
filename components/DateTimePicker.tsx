@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -42,6 +42,7 @@ export function UnifiedDateTimePicker({
 
   const [timeInput, setTimeInput] = useState('');
   const [savedTime, setSavedTime] = useState<{ hours: number; minutes: number } | null>(null);
+  const confirmGuardRef = useRef<{ lastCall: number; timer: ReturnType<typeof setTimeout> | null }>({ lastCall: 0, timer: null });
 
   useEffect(() => {
     if (visible) {
@@ -186,6 +187,12 @@ export function UnifiedDateTimePicker({
   }, [localDate, savedTime]);
 
   const handleConfirm = useCallback(() => {
+    const nowTs = Date.now();
+    if (nowTs - confirmGuardRef.current.lastCall < 200) {
+      return;
+    }
+    confirmGuardRef.current.lastCall = nowTs;
+
     if (!isAllDay) {
       const isValid = applyTimeFromInput();
       if (!isValid) {
@@ -208,7 +215,12 @@ export function UnifiedDateTimePicker({
 
     console.log('[DateTimePicker] Confirming:', result);
     onConfirm(result);
-    onClose();
+    if (confirmGuardRef.current.timer) {
+      clearTimeout(confirmGuardRef.current.timer);
+    }
+    confirmGuardRef.current.timer = setTimeout(() => {
+      onClose();
+    }, 10);
     
     if (Platform.OS !== 'web') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -245,9 +257,9 @@ export function UnifiedDateTimePicker({
   if (!visible) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="slide">
+    <Modal visible={visible} transparent animationType="slide" statusBarTranslucent testID="dtp-modal">
       <TouchableOpacity
-        style={styles.backdrop}
+        style={styles.backdrop} testID="dtp-backdrop"
         activeOpacity={1}
         onPress={onClose}
       />
@@ -260,7 +272,7 @@ export function UnifiedDateTimePicker({
           
           <View style={styles.header}>
             <Text style={styles.title}>Set Due Date & Time</Text>
-            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+            <TouchableOpacity style={styles.closeButton} testID="dtp-close" onPress={onClose}>
               <X size={24} color="#6B7280" />
             </TouchableOpacity>
           </View>
@@ -287,6 +299,7 @@ export function UnifiedDateTimePicker({
               style={[styles.allDaySection, isAllDay && styles.allDaySectionActive]}
               onPress={() => handleAllDayToggle(!isAllDay)}
               activeOpacity={0.7}
+              testID="dtp-allday-row"
             >
               <View style={styles.allDayLeft}>
                 <View style={[styles.allDayIconContainer, isAllDay && styles.allDayIconContainerActive]}>
@@ -303,6 +316,7 @@ export function UnifiedDateTimePicker({
                 trackColor={{ false: '#E5E7EB', true: '#3B82F6' }}
                 thumbColor='#FFFFFF'
                 ios_backgroundColor="#E5E7EB"
+                testID="dtp-allday-switch"
               />
             </TouchableOpacity>
 
@@ -316,13 +330,13 @@ export function UnifiedDateTimePicker({
                 </View>
                 
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.quickChipsScroll}>
-                  <TouchableOpacity style={styles.quickChip} onPress={() => setQuickDate(0)}>
+                  <TouchableOpacity style={styles.quickChip} testID="dtp-chip-today" onPress={() => setQuickDate(0)}>
                     <Text style={styles.quickChipText}>Today</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.quickChip} onPress={() => setQuickDate(1)}>
+                  <TouchableOpacity style={styles.quickChip} testID="dtp-chip-tomorrow" onPress={() => setQuickDate(1)}>
                     <Text style={styles.quickChipText}>Tomorrow</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.quickChip} onPress={() => setQuickDate(7)}>
+                  <TouchableOpacity style={styles.quickChip} testID="dtp-chip-nextweek" onPress={() => setQuickDate(7)}>
                     <Text style={styles.quickChipText}>Next Week</Text>
                   </TouchableOpacity>
                 </ScrollView>
@@ -338,24 +352,24 @@ export function UnifiedDateTimePicker({
                   </View>
                   
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.quickChipsScroll}>
-                    <TouchableOpacity style={styles.quickChip} onPress={setTimeNow}>
+                    <TouchableOpacity style={styles.quickChip} testID="dtp-chip-now" onPress={setTimeNow}>
                       <Text style={styles.quickChipText}>Now</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.quickChip} onPress={() => setQuickTime(8, 0)}>
+                    <TouchableOpacity style={styles.quickChip} testID="dtp-chip-0800" onPress={() => setQuickTime(8, 0)}>
                       <Text style={styles.quickChipText}>08:00</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.quickChip} onPress={() => setQuickTime(12, 0)}>
+                    <TouchableOpacity style={styles.quickChip} testID="dtp-chip-1200" onPress={() => setQuickTime(12, 0)}>
                       <Text style={styles.quickChipText}>12:00</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.quickChip} onPress={() => setQuickTime(17, 0)}>
+                    <TouchableOpacity style={styles.quickChip} testID="dtp-chip-1700" onPress={() => setQuickTime(17, 0)}>
                       <Text style={styles.quickChipText}>17:00</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.quickChip} onPress={() => setQuickTime(19, 0)}>
+                    <TouchableOpacity style={styles.quickChip} testID="dtp-chip-1900" onPress={() => setQuickTime(19, 0)}>
                       <Text style={styles.quickChipText}>19:00</Text>
                     </TouchableOpacity>
                   </ScrollView>
 
-                  <TextInput
+                  <TextInput testID="dtp-time-input"
                     style={[
                       styles.timeInput,
                       !isTimeValid && timeInput.length > 0 && styles.timeInputError
@@ -378,10 +392,10 @@ export function UnifiedDateTimePicker({
           </View>
 
           <View style={styles.footer}>
-            <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+            <TouchableOpacity style={styles.cancelButton} testID="dtp-cancel" onPress={onClose}>
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm}>
+            <TouchableOpacity style={styles.confirmButton} testID="dtp-done" onPress={handleConfirm}>
               <Text style={styles.confirmButtonText}>Done</Text>
             </TouchableOpacity>
           </View>
