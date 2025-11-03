@@ -1,12 +1,19 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, Platform } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
+import {
+  useFormStyles,
+  getFieldContainerStyle,
+  getLabelStyle,
+  getValueTextStyle,
+  getHelperTextStyle,
+} from './base';
 
 export type AmountInputProps = {
   label?: string;
   value: string;
   onChange: (value: string) => void;
-  currency?: string;
+  prefix?: string;
   helperText?: string;
   errorText?: string;
   placeholder?: string;
@@ -17,13 +24,14 @@ export const AmountInput: React.FC<AmountInputProps> = ({
   label,
   value,
   onChange,
-  currency = '$',
+  prefix = '$',
   helperText,
   errorText,
   placeholder = '0.00',
   testID,
 }) => {
   const { theme } = useTheme();
+  const formStyles = useFormStyles(theme);
   const [isFocused, setIsFocused] = useState(false);
   const hasError = !!errorText;
 
@@ -39,73 +47,40 @@ export const AmountInput: React.FC<AmountInputProps> = ({
     onChange(cleaned);
   };
 
-  const borderColor = hasError
-    ? theme.colors.error
-    : isFocused
-    ? theme.colors.primary
-    : theme.colors.border;
+  const state = hasError ? 'error' : isFocused ? 'focus' : 'default';
+  const containerStyle = getFieldContainerStyle(state, formStyles);
+  const labelStyle = getLabelStyle(theme);
+  const valueStyle = getValueTextStyle(theme);
+  const helperStyle = getHelperTextStyle(hasError ? 'error' : 'default', theme);
+  const prefixStyle = {
+    fontSize: theme.typography.label.fontSize,
+    fontWeight: theme.typography.label.fontWeight as any,
+    color: formStyles.textMuted,
+  };
 
   return (
     <View style={styles.container} testID={testID}>
       {label && (
-        <Text
-          style={[
-            theme.typography.Label,
-            { color: theme.colors.textHigh, marginBottom: theme.spacing.xs },
-          ]}
-        >
+        <Text style={[labelStyle, styles.label]}>
           {label}
         </Text>
       )}
-      <View
-        style={[
-          styles.inputWrapper,
-          {
-            backgroundColor: theme.colors.surface,
-            borderColor,
-            borderRadius: theme.radius - 4,
-            paddingHorizontal: theme.spacing.md,
-          },
-        ]}
-      >
-        <Text
-          style={[
-            theme.typography.Body,
-            { color: theme.colors.textHigh, fontWeight: '600' as const },
-          ]}
-        >
-          {currency}
-        </Text>
+      <View style={[containerStyle, styles.inputWrapper]}>
+        <Text style={prefixStyle}>{prefix}</Text>
         <TextInput
           value={value}
           onChangeText={handleChange}
           placeholder={placeholder}
-          placeholderTextColor={theme.colors.textLow}
+          placeholderTextColor={formStyles.textMuted}
           keyboardType={Platform.OS === 'ios' ? 'decimal-pad' : 'numeric'}
-          style={[
-            styles.input,
-            theme.typography.Body,
-            {
-              color: theme.colors.textHigh,
-              paddingHorizontal: theme.spacing.xs,
-            },
-          ]}
+          style={[valueStyle, styles.input]}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           testID={testID ? `${testID}-input` : undefined}
         />
       </View>
       {(helperText || errorText) && (
-        <Text
-          style={[
-            theme.typography.Caption,
-            {
-              color: hasError ? theme.colors.error : theme.colors.textLow,
-              marginTop: theme.spacing.xxs,
-            },
-          ]}
-          testID={testID ? `${testID}-helper` : undefined}
-        >
+        <Text style={[helperStyle, styles.helper]} testID={testID ? `${testID}-helper` : undefined}>
           {errorText || helperText}
         </Text>
       )}
@@ -117,14 +92,18 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
   },
+  label: {
+    marginBottom: 8,
+  },
   inputWrapper: {
-    minHeight: 48,
-    borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
   },
   input: {
     flex: 1,
-    minHeight: 48,
+    paddingLeft: 8,
+  },
+  helper: {
+    marginTop: 4,
   },
 });

@@ -1,6 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, TextInputProps } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
+import {
+  useFormStyles,
+  getFieldContainerStyle,
+  getLabelStyle,
+  getValueTextStyle,
+  getHelperTextStyle,
+} from './base';
 
 export type TextFieldProps = TextInputProps & {
   label?: string;
@@ -20,6 +27,7 @@ export const TextField: React.FC<TextFieldProps> = ({
   ...rest
 }) => {
   const { theme } = useTheme();
+  const formStyles = useFormStyles(theme);
   const [isFocused, setIsFocused] = useState(false);
   const hasError = !!errorText;
 
@@ -33,55 +41,34 @@ export const TextField: React.FC<TextFieldProps> = ({
     onBlur?.(e);
   };
 
-  const borderColor = hasError
-    ? theme.colors.error
-    : isFocused
-    ? theme.colors.primary
-    : theme.colors.border;
+  const state = hasError ? 'error' : isFocused ? 'focus' : 'default';
+  const containerStyle = getFieldContainerStyle(state, formStyles);
+  const labelStyle = getLabelStyle(theme);
+  const valueStyle = getValueTextStyle(theme);
+  const helperStyle = getHelperTextStyle(hasError ? 'error' : 'default', theme);
 
   return (
     <View style={styles.container} testID={testID}>
       {label && (
-        <Text
-          style={[
-            theme.typography.Label,
-            { color: theme.colors.textHigh, marginBottom: theme.spacing.xs },
-          ]}
-        >
+        <Text style={[labelStyle, styles.label]}>
           {label}
         </Text>
       )}
       <TextInput
         {...rest}
         style={[
+          containerStyle,
+          valueStyle,
           styles.input,
-          theme.typography.Body,
-          {
-            color: theme.colors.textHigh,
-            backgroundColor: theme.colors.surface,
-            borderColor,
-            borderRadius: theme.radius - 4,
-            paddingHorizontal: theme.spacing.md,
-            paddingVertical: theme.spacing.sm,
-          },
           style,
         ]}
-        placeholderTextColor={theme.colors.textLow}
+        placeholderTextColor={formStyles.textMuted}
         onFocus={handleFocus}
         onBlur={handleBlur}
         testID={testID ? `${testID}-input` : undefined}
       />
       {(helperText || errorText) && (
-        <Text
-          style={[
-            theme.typography.Caption,
-            {
-              color: hasError ? theme.colors.error : theme.colors.textLow,
-              marginTop: theme.spacing.xxs,
-            },
-          ]}
-          testID={testID ? `${testID}-helper` : undefined}
-        >
+        <Text style={[helperStyle, styles.helper]} testID={testID ? `${testID}-helper` : undefined}>
           {errorText || helperText}
         </Text>
       )}
@@ -93,8 +80,13 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
   },
+  label: {
+    marginBottom: 8,
+  },
   input: {
-    minHeight: 48,
-    borderWidth: 1,
+    textAlignVertical: 'center',
+  },
+  helper: {
+    marginTop: 4,
   },
 });
