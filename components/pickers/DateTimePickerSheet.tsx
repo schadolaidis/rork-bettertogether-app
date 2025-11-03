@@ -110,7 +110,7 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
   const calendarWidth = Math.min(screenWidth - 32, 400);
   const dayCellSize = Math.floor((calendarWidth - 24) / 7);
 
-  const handleQuickChip = (type: 'today' | 'tomorrow' | 'nextWeek') => {
+  const handleQuickChip = (type: 'today' | 'tomorrow' | 'nextWeek' | 'thisWeekend' | 'nextMonth') => {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
@@ -126,9 +126,18 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
         newDate = new Date(now);
         newDate.setDate(now.getDate() + 1);
         break;
+      case 'thisWeekend':
+        newDate = new Date(now);
+        const daysUntilSaturday = (6 - now.getDay() + 7) % 7;
+        newDate.setDate(now.getDate() + (daysUntilSaturday === 0 ? 7 : daysUntilSaturday));
+        break;
       case 'nextWeek':
         newDate = new Date(now);
         newDate.setDate(now.getDate() + 7);
+        break;
+      case 'nextMonth':
+        newDate = new Date(now);
+        newDate.setMonth(now.getMonth() + 1);
         break;
     }
 
@@ -138,15 +147,24 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
     console.log('[DatePicker] Quick chip selected:', type, dateStr);
   };
 
-  const handleTimeChip = (time: string) => {
+  const handleTimeChip = (time: string | 'now') => {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-    setSelectedTime(time);
+
+    let finalTime = time;
+    if (time === 'now') {
+      const now = new Date();
+      const hours = now.getHours().toString().padStart(2, '0');
+      const minutes = now.getMinutes().toString().padStart(2, '0');
+      finalTime = `${hours}:${minutes}`;
+    }
+
+    setSelectedTime(finalTime);
     setIsAllDay(false);
     setKeyboardTimeInput('');
     setKeyboardTimeError('');
-    console.log('[TimePicker] Time chip selected:', time);
+    console.log('[TimePicker] Time chip selected:', time, '→', finalTime);
   };
 
   const handleDateSelect = (dateStr: string) => {
@@ -209,7 +227,10 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
     } else if (selectedTime) {
       isoString = `${selectedDate}T${selectedTime}:00`;
     } else {
-      isoString = `${selectedDate}T00:00:00`;
+      const now = new Date();
+      const hours = now.getHours().toString().padStart(2, '0');
+      const minutes = now.getMinutes().toString().padStart(2, '0');
+      isoString = `${selectedDate}T${hours}:${minutes}:00`;
     }
 
     console.log('[DatePicker] Done pressed:', {
@@ -377,7 +398,11 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
               Date
             </Text>
 
-            <View style={styles.quickChips}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.quickChipsScroll}
+            >
               <Pressable
                 onPress={() => handleQuickChip('today')}
                 style={({ pressed }) => [
@@ -407,6 +432,20 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
                 <Text style={[styles.chipText, { color: theme.textHigh }]}>Tomorrow</Text>
               </Pressable>
               <Pressable
+                onPress={() => handleQuickChip('thisWeekend')}
+                style={({ pressed }) => [
+                  styles.chip,
+                  {
+                    backgroundColor: theme.surfaceAlt,
+                    borderColor: theme.border,
+                    opacity: pressed ? 0.7 : 1,
+                  },
+                ]}
+                testID={testID ? `${testID}-weekend-chip` : undefined}
+              >
+                <Text style={[styles.chipText, { color: theme.textHigh }]}>This Weekend</Text>
+              </Pressable>
+              <Pressable
                 onPress={() => handleQuickChip('nextWeek')}
                 style={({ pressed }) => [
                   styles.chip,
@@ -420,7 +459,21 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
               >
                 <Text style={[styles.chipText, { color: theme.textHigh }]}>Next Week</Text>
               </Pressable>
-            </View>
+              <Pressable
+                onPress={() => handleQuickChip('nextMonth')}
+                style={({ pressed }) => [
+                  styles.chip,
+                  {
+                    backgroundColor: theme.surfaceAlt,
+                    borderColor: theme.border,
+                    opacity: pressed ? 0.7 : 1,
+                  },
+                ]}
+                testID={testID ? `${testID}-next-month-chip` : undefined}
+              >
+                <Text style={[styles.chipText, { color: theme.textHigh }]}>Next Month</Text>
+              </Pressable>
+            </ScrollView>
 
             <View style={[styles.calendarContainer, { marginTop: theme.spacing.md }]}>
               <View style={styles.calendarHeader}>
@@ -543,8 +596,26 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
 
             {!isAllDay && (
               <>
-                <View style={[styles.quickChips, { marginTop: theme.spacing.md }]}>
-                  {['08:00', '12:00', '17:00', '19:00'].map((time) => (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={[styles.quickChipsScroll, { marginTop: theme.spacing.md }]}
+                >
+                  <Pressable
+                    onPress={() => handleTimeChip('now')}
+                    style={({ pressed }) => [
+                      styles.chip,
+                      {
+                        backgroundColor: theme.surfaceAlt,
+                        borderColor: theme.border,
+                        opacity: pressed ? 0.7 : 1,
+                      },
+                    ]}
+                    testID={testID ? `${testID}-time-chip-now` : undefined}
+                  >
+                    <Text style={[styles.chipText, { color: theme.textHigh }]}>Now</Text>
+                  </Pressable>
+                  {['08:00', '09:00', '12:00', '14:00', '17:00', '19:00', '21:00'].map((time) => (
                     <Pressable
                       key={time}
                       onPress={() => handleTimeChip(time)}
@@ -568,7 +639,7 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
                       </Text>
                     </Pressable>
                   ))}
-                </View>
+                </ScrollView>
 
                 {timePickerMode === 'keyboard' ? (
                   <View style={[styles.keyboardTimeContainer, { marginTop: theme.spacing.md }]}>
@@ -617,7 +688,7 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
                     )}
                   </View>
                 ) : (
-                  <View style={[styles.dialContainer, { marginTop: theme.spacing.md }]}>
+                  <View style={[styles.dialContainer, { marginTop: theme.spacing.md, backgroundColor: theme.surfaceAlt, borderRadius: theme.radius.input }]}>
                     <ScrollView
                       style={styles.dialScroll}
                       showsVerticalScrollIndicator={true}
@@ -706,13 +777,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
+  quickChipsScroll: {
+    gap: 8,
+    paddingHorizontal: 2,
+  },
   chip: {
-    flex: 1,
     paddingVertical: 10,
-    paddingHorizontal: 8,
+    paddingHorizontal: 16,
     borderRadius: 8,
     borderWidth: 1,
     alignItems: 'center',
+    minWidth: 90,
   },
   chipText: {
     fontSize: 13,
