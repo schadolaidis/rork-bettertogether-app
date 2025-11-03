@@ -28,7 +28,8 @@ import { FundTargetOption } from '@/components/TaskFormModal';
 import { MOCK_FUND_TARGETS } from '@/mocks/data';
 import { TaskCategory, TaskPriority, ReminderType, RecurrenceType } from '@/types';
 import { EUDateFormatter } from '@/utils/EULocale';
-import { UnifiedDateTimePicker, DueDateTime } from '@/components/DateTimePicker';
+import { DateTimePickerSheet } from '@/components/pickers/DateTimePickerSheet';
+
 
 export default function TaskDetailScreen() {
   const router = useRouter();
@@ -91,22 +92,13 @@ export default function TaskDetailScreen() {
     router.back();
   }, [task, completeTask, router]);
 
-  const handleDateTimeConfirm = useCallback((newDueDateTime: DueDateTime) => {
+  const handleDateTimeConfirm = useCallback((isoString: string) => {
     if (!task) return;
     
-    console.log('[TaskDetail] Confirming date/time:', newDueDateTime);
+    console.log('[TaskDetail] Confirming date/time:', isoString);
     
-    const dateBase = new Date(newDueDateTime.dateISO);
-    let startDateTime: Date;
-    
-    if (newDueDateTime.allDay || !newDueDateTime.timeISO) {
-      startDateTime = new Date(dateBase);
-      startDateTime.setHours(0, 0, 0, 0);
-    } else {
-      const timeDate = new Date(newDueDateTime.timeISO);
-      startDateTime = new Date(dateBase);
-      startDateTime.setHours(timeDate.getHours(), timeDate.getMinutes(), 0, 0);
-    }
+    const startDateTime = new Date(isoString);
+    const isAllDay = startDateTime.getHours() === 0 && startDateTime.getMinutes() === 0;
     
     const currentStart = new Date(task.startAt);
     const currentEnd = new Date(task.endAt);
@@ -116,7 +108,7 @@ export default function TaskDetailScreen() {
     updateTask(task.id, {
       startAt: startDateTime.toISOString(),
       endAt: endDateTime.toISOString(),
-      allDay: newDueDateTime.allDay
+      allDay: isAllDay
     });
     
     console.log('[TaskDetail] Applied - Start:', startDateTime.toISOString(), 'End:', endDateTime.toISOString());
@@ -564,16 +556,17 @@ export default function TaskDetailScreen() {
         }}
       />
 
-      <UnifiedDateTimePicker
+      <DateTimePickerSheet
         visible={showDateTimePicker}
-        value={{
-          dateISO: new Date(task.startAt).toISOString(),
-          timeISO: task.allDay ? null : new Date(task.startAt).toISOString(),
-          allDay: task.allDay || false,
-          timezone: 'Europe/Vienna',
+        value={task.startAt}
+        onChange={(value) => {
+          if (value) {
+            handleDateTimeConfirm(value);
+          }
+          setShowDateTimePicker(false);
         }}
         onClose={() => setShowDateTimePicker(false)}
-        onConfirm={handleDateTimeConfirm}
+        testID="task-detail-datetime-picker"
       />
       </View>
     </KeyboardAvoidingView>
