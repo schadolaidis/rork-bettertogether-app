@@ -76,11 +76,13 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
   };
 
   const handleDateSelect = (date: Date) => {
+    console.log('Date cell pressed:', date.toLocaleDateString());
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
     setSelectedDate(date);
-    console.log('Date selected:', date.toLocaleDateString());
+    setCurrentMonth(date);
+    console.log('Date selected and state updated:', date.toLocaleDateString());
   };
 
   const handleTimeSelect = (time: string) => {
@@ -316,7 +318,10 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
             return (
               <Pressable
                 key={index}
-                onPress={() => handleDateSelect(date)}
+                onPress={() => {
+                  console.log('Day cell onPress triggered:', date.getDate());
+                  handleDateSelect(date);
+                }}
                 style={({ pressed }) => [
                   styles.dayCell,
                   {
@@ -331,8 +336,12 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
                     borderWidth: 1,
                     borderColor: theme.primary,
                   },
-                  { opacity: pressed ? 0.7 : 1 },
+                  pressed && {
+                    backgroundColor: pressed ? theme.surfaceAlt : undefined,
+                    opacity: 0.7,
+                  },
                 ]}
+                hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
               >
                 <Text
                   style={[
