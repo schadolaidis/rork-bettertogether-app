@@ -77,9 +77,10 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
 
   const handleDateSelect = (date: Date) => {
     if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
     setSelectedDate(date);
+    console.log('Date selected:', date.toLocaleDateString());
   };
 
   const handleTimeSelect = (time: string) => {
