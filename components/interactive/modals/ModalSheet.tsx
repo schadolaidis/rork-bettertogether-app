@@ -233,6 +233,8 @@ export const ModalSheet: React.FC<ModalSheetProps> = ({
               }}
               showsVerticalScrollIndicator={true}
               keyboardShouldPersistTaps="handled"
+              nestedScrollEnabled={true}
+              scrollEnabled={true}
             >
               {children}
             </ScrollView>

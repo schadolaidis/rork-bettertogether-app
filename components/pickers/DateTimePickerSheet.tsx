@@ -322,6 +322,7 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
                   console.log('Day cell onPress triggered:', date.getDate());
                   handleDateSelect(date);
                 }}
+                hitSlop={4}
                 style={({ pressed }) => [
                   styles.dayCell,
                   {
