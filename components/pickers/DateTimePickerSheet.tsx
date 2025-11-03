@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,8 +7,12 @@ import {
   ScrollView,
   Platform,
   useWindowDimensions,
+  TextInput,
+  Keyboard,
+  KeyboardAvoidingView,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { ChevronLeft, ChevronRight, Keyboard as KeyboardIcon } from 'lucide-react-native';
 import { ModalSheet } from '@/components/interactive/modals/ModalSheet';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -18,7 +22,13 @@ interface DateTimePickerSheetProps {
   value: string | null;
   onChange: (value: string | null) => void;
   testID?: string;
+  disablePast?: boolean;
+  initialFocus?: 'date' | 'time';
 }
+
+type TimePickerMode = 'dial' | 'keyboard';
+
+const WEEKDAYS_SHORT = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
 export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
   visible,
@@ -26,28 +36,80 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
   value,
   onChange,
   testID,
+  disablePast = false,
+  initialFocus = 'date',
 }) => {
   const { theme } = useTheme();
   const { width: screenWidth } = useWindowDimensions();
-  
+
+  const getDeviceTimezone = () => {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone;
+    } catch {
+      return 'UTC';
+    }
+  };
+
+  const parseInitialValue = (isoString: string | null) => {
+    if (!isoString) {
+      const now = new Date();
+      return {
+        date: now.toISOString().split('T')[0],
+        time: null as string | null,
+        allDay: false,
+        timezone: getDeviceTimezone(),
+      };
+    }
+
+    try {
+      const d = new Date(isoString);
+      const dateStr = d.toISOString().split('T')[0];
+      const hours = d.getHours();
+      const minutes = d.getMinutes();
+      const isAllDay = hours === 0 && minutes === 0;
+      const timeStr = isAllDay ? null : `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+
+      return {
+        date: dateStr,
+        time: timeStr,
+        allDay: isAllDay,
+        timezone: getDeviceTimezone(),
+      };
+    } catch {
+      const now = new Date();
+      return {
+        date: now.toISOString().split('T')[0],
+        time: null,
+        allDay: false,
+        timezone: getDeviceTimezone(),
+      };
+    }
+  };
+
+  const initialState = parseInitialValue(value);
+  const [selectedDate, setSelectedDate] = useState<string>(initialState.date);
+  const [selectedTime, setSelectedTime] = useState<string | null>(initialState.time);
+  const [isAllDay, setIsAllDay] = useState(initialState.allDay);
+  const [timezone] = useState(initialState.timezone);
+  const [currentMonth, setCurrentMonth] = useState(() => new Date(initialState.date));
+  const [timePickerMode, setTimePickerMode] = useState<TimePickerMode>('dial');
+  const [keyboardTimeInput, setKeyboardTimeInput] = useState('');
+  const [keyboardTimeError, setKeyboardTimeError] = useState('');
+
+  useEffect(() => {
+    if (visible) {
+      const state = parseInitialValue(value);
+      setSelectedDate(state.date);
+      setSelectedTime(state.time);
+      setIsAllDay(state.allDay);
+      setCurrentMonth(new Date(state.date));
+      setKeyboardTimeInput('');
+      setKeyboardTimeError('');
+    }
+  }, [visible, value]);
+
   const calendarWidth = Math.min(screenWidth - 32, 400);
   const dayCellSize = Math.floor((calendarWidth - 24) / 7);
-  
-  const [selectedDate, setSelectedDate] = useState<Date>(() => {
-    return value ? new Date(value) : new Date();
-  });
-  const [selectedTime, setSelectedTime] = useState<string | null>(() => {
-    if (!value) return null;
-    const d = new Date(value);
-    return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
-  });
-  const [isAllDay, setIsAllDay] = useState(() => {
-    if (!value) return false;
-    const d = new Date(value);
-    return d.getHours() === 0 && d.getMinutes() === 0;
-  });
-
-  const [currentMonth, setCurrentMonth] = useState(() => selectedDate);
 
   const handleQuickChip = (type: 'today' | 'tomorrow' | 'nextWeek') => {
     if (Platform.OS !== 'web') {
@@ -71,35 +133,68 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
         break;
     }
 
-    setSelectedDate(newDate);
+    const dateStr = newDate.toISOString().split('T')[0];
+    setSelectedDate(dateStr);
     setCurrentMonth(newDate);
+    console.log('[DatePicker] Quick chip selected:', type, dateStr);
   };
 
-  const handleDateSelect = (date: Date) => {
-    console.log('Date cell pressed:', date.toLocaleDateString());
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    }
-    setSelectedDate(date);
-    setCurrentMonth(date);
-    console.log('Date selected and state updated:', date.toLocaleDateString());
-  };
-
-  const handleTimeSelect = (time: string) => {
+  const handleTimeChip = (time: string) => {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     setSelectedTime(time);
     setIsAllDay(false);
+    setKeyboardTimeInput('');
+    setKeyboardTimeError('');
+    console.log('[TimePicker] Time chip selected:', time);
+  };
+
+  const handleDateSelect = (dateStr: string) => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+    setSelectedDate(dateStr);
+    const newDate = new Date(dateStr);
+    setCurrentMonth(newDate);
+    console.log('[DatePicker] Date selected:', dateStr);
   };
 
   const handleAllDayToggle = () => {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-    setIsAllDay(!isAllDay);
-    if (!isAllDay) {
+    const newAllDay = !isAllDay;
+    setIsAllDay(newAllDay);
+    if (newAllDay) {
       setSelectedTime(null);
+    }
+    console.log('[DatePicker] All-day toggled:', newAllDay);
+  };
+
+  const validateTimeInput = (input: string): { valid: boolean; time?: string; error?: string } => {
+    const timeRegex = /^([0-1]?[0-9]|2[0-3]):([0-5][0-9])$/;
+    const match = input.match(timeRegex);
+
+    if (!match) {
+      return { valid: false, error: 'Enter valid time (HH:MM)' };
+    }
+
+    const hours = match[1].padStart(2, '0');
+    const minutes = match[2];
+    return { valid: true, time: `${hours}:${minutes}` };
+  };
+
+  const handleKeyboardTimeConfirm = () => {
+    const result = validateTimeInput(keyboardTimeInput);
+    if (result.valid && result.time) {
+      setSelectedTime(result.time);
+      setIsAllDay(false);
+      setKeyboardTimeError('');
+      Keyboard.dismiss();
+      console.log('[TimePicker] Keyboard time confirmed:', result.time);
+    } else {
+      setKeyboardTimeError(result.error || 'Invalid time');
     }
   };
 
@@ -108,18 +203,25 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
 
-    const finalDate = new Date(selectedDate);
-    
+    let isoString: string;
+
     if (isAllDay) {
-      finalDate.setHours(0, 0, 0, 0);
+      isoString = `${selectedDate}T00:00:00`;
     } else if (selectedTime) {
-      const [hours, minutes] = selectedTime.split(':').map(Number);
-      finalDate.setHours(hours, minutes, 0, 0);
+      isoString = `${selectedDate}T${selectedTime}:00`;
     } else {
-      finalDate.setHours(23, 59, 0, 0);
+      isoString = `${selectedDate}T00:00:00`;
     }
 
-    onChange(finalDate.toISOString());
+    console.log('[DatePicker] Done pressed:', {
+      date: selectedDate,
+      time: selectedTime,
+      allDay: isAllDay,
+      timezone,
+      isoString,
+    });
+
+    onChange(isoString);
     onClose();
   };
 
@@ -133,42 +235,55 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
   const monthDays = useMemo(() => {
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
-    
+
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
-    
+
     const startDayOfWeek = firstDay.getDay();
     const daysInMonth = lastDay.getDate();
-    
+
     const prevMonthLastDay = new Date(year, month, 0).getDate();
-    
-    const days: Date[] = [];
-    
+
+    const days: { date: string; isCurrentMonth: boolean }[] = [];
+
     for (let i = startDayOfWeek - 1; i >= 0; i--) {
-      days.push(new Date(year, month - 1, prevMonthLastDay - i));
+      const d = new Date(year, month - 1, prevMonthLastDay - i);
+      days.push({
+        date: d.toISOString().split('T')[0],
+        isCurrentMonth: false,
+      });
     }
-    
+
     for (let i = 1; i <= daysInMonth; i++) {
-      days.push(new Date(year, month, i));
+      const d = new Date(year, month, i);
+      days.push({
+        date: d.toISOString().split('T')[0],
+        isCurrentMonth: true,
+      });
     }
-    
+
     const remainingDays = 42 - days.length;
     for (let i = 1; i <= remainingDays; i++) {
-      days.push(new Date(year, month + 1, i));
+      const d = new Date(year, month + 1, i);
+      days.push({
+        date: d.toISOString().split('T')[0],
+        isCurrentMonth: false,
+      });
     }
-    
+
     return days;
   }, [currentMonth]);
 
-  const timeSlots = useMemo(() => {
-    const slots: string[] = [];
-    for (let h = 0; h < 24; h++) {
-      for (let m = 0; m < 60; m += 15) {
-        slots.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`);
-      }
-    }
-    return slots;
-  }, []);
+  const isToday = (dateStr: string) => {
+    const today = new Date().toISOString().split('T')[0];
+    return dateStr === today;
+  };
+
+  const isPastDate = (dateStr: string) => {
+    if (!disablePast) return false;
+    const today = new Date().toISOString().split('T')[0];
+    return dateStr < today;
+  };
 
   const monthName = currentMonth.toLocaleString('en-US', { month: 'long', year: 'numeric' });
 
@@ -186,16 +301,12 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1));
   };
 
-  const isSameDay = (d1: Date, d2: Date) => {
-    return (
-      d1.getFullYear() === d2.getFullYear() &&
-      d1.getMonth() === d2.getMonth() &&
-      d1.getDate() === d2.getDate()
-    );
-  };
-
-  const isToday = (date: Date) => {
-    return isSameDay(date, new Date());
+  const toggleTimePickerMode = () => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    setTimePickerMode((prev) => (prev === 'dial' ? 'keyboard' : 'dial'));
+    setKeyboardTimeError('');
   };
 
   const footer = (
@@ -229,204 +340,374 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
       visible={visible}
       onClose={onClose}
       title="Set Due Date & Time"
-      showCloseButton={false}
+      showCloseButton={true}
       footer={footer}
       maxHeight={Platform.OS === 'web' ? 700 : undefined}
       testID={testID}
     >
-      <View style={styles.quickChips}>
-        <Pressable
-          onPress={() => handleQuickChip('today')}
-          style={({ pressed }) => [
-            styles.chip,
-            {
-              backgroundColor: theme.surfaceAlt,
-              borderColor: theme.border,
-              opacity: pressed ? 0.7 : 1,
-            },
-          ]}
-        >
-          <Text style={[styles.chipText, { color: theme.textHigh }]}>Today</Text>
-        </Pressable>
-        <Pressable
-          onPress={() => handleQuickChip('tomorrow')}
-          style={({ pressed }) => [
-            styles.chip,
-            {
-              backgroundColor: theme.surfaceAlt,
-              borderColor: theme.border,
-              opacity: pressed ? 0.7 : 1,
-            },
-          ]}
-        >
-          <Text style={[styles.chipText, { color: theme.textHigh }]}>Tomorrow</Text>
-        </Pressable>
-        <Pressable
-          onPress={() => handleQuickChip('nextWeek')}
-          style={({ pressed }) => [
-            styles.chip,
-            {
-              backgroundColor: theme.surfaceAlt,
-              borderColor: theme.border,
-              opacity: pressed ? 0.7 : 1,
-            },
-          ]}
-        >
-          <Text style={[styles.chipText, { color: theme.textHigh }]}>Next Week</Text>
-        </Pressable>
-      </View>
-
-      <View style={[styles.calendarSection, { marginTop: theme.spacing.lg }]}>
-        <View style={styles.calendarHeader}>
-          <Pressable
-            onPress={handlePrevMonth}
-            style={({ pressed }) => [
-              styles.navButton,
-              { opacity: pressed ? 0.6 : 1 },
-            ]}
-            hitSlop={8}
-          >
-            <Text style={[styles.navButtonText, { color: theme.primary }]}>‹</Text>
-          </Pressable>
-          <Text style={[styles.monthName, { color: theme.textHigh }]}>{monthName}</Text>
-          <Pressable
-            onPress={handleNextMonth}
-            style={({ pressed }) => [
-              styles.navButton,
-              { opacity: pressed ? 0.6 : 1 },
-            ]}
-            hitSlop={8}
-          >
-            <Text style={[styles.navButtonText, { color: theme.primary }]}>›</Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.weekDayHeaders}>
-          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
-            <View key={i} style={[styles.weekDayHeader, { width: dayCellSize }]}>
-              <Text style={[styles.weekDayText, { color: theme.textLow }]}>{day}</Text>
-            </View>
-          ))}
-        </View>
-
-        <View style={styles.calendarGrid}>
-          {monthDays.map((date, index) => {
-            const isCurrentMonth = date.getMonth() === currentMonth.getMonth();
-            const isSelected = isSameDay(date, selectedDate);
-            const isTodayDate = isToday(date);
-
-            return (
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
+      >
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: theme.textHigh }]}>All Day</Text>
               <Pressable
-                key={index}
-                onPress={() => {
-                  console.log('Day cell onPress triggered:', date.getDate());
-                  handleDateSelect(date);
-                }}
-                hitSlop={4}
+                onPress={handleAllDayToggle}
                 style={({ pressed }) => [
-                  styles.dayCell,
+                  styles.toggleButton,
                   {
-                    width: dayCellSize,
-                    height: dayCellSize,
-                    borderRadius: dayCellSize / 2,
-                  },
-                  isSelected && {
-                    backgroundColor: theme.primary,
-                  },
-                  isTodayDate && !isSelected && {
-                    borderWidth: 1,
-                    borderColor: theme.primary,
-                  },
-                  pressed && !isSelected && {
-                    backgroundColor: theme.surfaceAlt,
-                    opacity: 0.7,
+                    backgroundColor: isAllDay ? theme.primary : theme.surfaceAlt,
+                    opacity: pressed ? 0.7 : 1,
                   },
                 ]}
+                testID={testID ? `${testID}-all-day-toggle` : undefined}
               >
-                <Text
+                <View
                   style={[
-                    styles.dayText,
+                    styles.toggleThumb,
                     {
-                      color: isSelected
-                        ? '#FFFFFF'
-                        : isCurrentMonth
-                        ? theme.textHigh
-                        : theme.textLow,
+                      backgroundColor: theme.surface,
+                      transform: [{ translateX: isAllDay ? 20 : 2 }],
                     },
-                    !isCurrentMonth && { opacity: 0.4 },
                   ]}
+                />
+              </Pressable>
+            </View>
+          </View>
+
+          <View style={[styles.section, { marginTop: theme.spacing.lg }]}>
+            <Text style={[styles.sectionTitle, { color: theme.textHigh, marginBottom: theme.spacing.md }]}>
+              Date
+            </Text>
+
+            <View style={styles.quickChips}>
+              <Pressable
+                onPress={() => handleQuickChip('today')}
+                style={({ pressed }) => [
+                  styles.chip,
+                  {
+                    backgroundColor: theme.surfaceAlt,
+                    borderColor: theme.border,
+                    opacity: pressed ? 0.7 : 1,
+                  },
+                ]}
+                testID={testID ? `${testID}-today-chip` : undefined}
+              >
+                <Text style={[styles.chipText, { color: theme.textHigh }]}>Today</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => handleQuickChip('tomorrow')}
+                style={({ pressed }) => [
+                  styles.chip,
+                  {
+                    backgroundColor: theme.surfaceAlt,
+                    borderColor: theme.border,
+                    opacity: pressed ? 0.7 : 1,
+                  },
+                ]}
+                testID={testID ? `${testID}-tomorrow-chip` : undefined}
+              >
+                <Text style={[styles.chipText, { color: theme.textHigh }]}>Tomorrow</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => handleQuickChip('nextWeek')}
+                style={({ pressed }) => [
+                  styles.chip,
+                  {
+                    backgroundColor: theme.surfaceAlt,
+                    borderColor: theme.border,
+                    opacity: pressed ? 0.7 : 1,
+                  },
+                ]}
+                testID={testID ? `${testID}-next-week-chip` : undefined}
+              >
+                <Text style={[styles.chipText, { color: theme.textHigh }]}>Next Week</Text>
+              </Pressable>
+            </View>
+
+            <View style={[styles.calendarContainer, { marginTop: theme.spacing.md }]}>
+              <View style={styles.calendarHeader}>
+                <Pressable
+                  onPress={handlePrevMonth}
+                  style={({ pressed }) => [
+                    styles.navButton,
+                    { opacity: pressed ? 0.6 : 1 },
+                  ]}
+                  hitSlop={8}
+                  testID={testID ? `${testID}-prev-month` : undefined}
                 >
-                  {date.getDate()}
+                  <ChevronLeft size={24} color={theme.primary} />
+                </Pressable>
+                <Text style={[styles.monthName, { color: theme.textHigh }]}>{monthName}</Text>
+                <Pressable
+                  onPress={handleNextMonth}
+                  style={({ pressed }) => [
+                    styles.navButton,
+                    { opacity: pressed ? 0.6 : 1 },
+                  ]}
+                  hitSlop={8}
+                  testID={testID ? `${testID}-next-month` : undefined}
+                >
+                  <ChevronRight size={24} color={theme.primary} />
+                </Pressable>
+              </View>
+
+              <View style={styles.weekDayHeaders}>
+                {WEEKDAYS_SHORT.map((day, i) => (
+                  <View key={i} style={[styles.weekDayHeader, { width: dayCellSize }]}>
+                    <Text style={[styles.weekDayText, { color: theme.textLow }]}>{day}</Text>
+                  </View>
+                ))}
+              </View>
+
+              <View style={styles.calendarGrid}>
+                {monthDays.map((item, index) => {
+                  const isSelected = item.date === selectedDate;
+                  const isTodayDate = isToday(item.date);
+                  const isPast = isPastDate(item.date);
+                  const date = new Date(item.date);
+                  const dayNum = date.getDate();
+
+                  return (
+                    <Pressable
+                      key={index}
+                      onPress={() => {
+                        if (!isPast) {
+                          handleDateSelect(item.date);
+                        }
+                      }}
+                      disabled={isPast}
+                      hitSlop={4}
+                      style={({ pressed }) => [
+                        styles.dayCell,
+                        {
+                          width: dayCellSize,
+                          height: dayCellSize,
+                          borderRadius: dayCellSize / 2,
+                        },
+                        isSelected && {
+                          backgroundColor: theme.primary,
+                        },
+                        isTodayDate && !isSelected && {
+                          borderWidth: 2,
+                          borderColor: theme.primary,
+                        },
+                        pressed && !isSelected && !isPast && {
+                          backgroundColor: theme.surfaceAlt,
+                        },
+                        isPast && {
+                          opacity: 0.3,
+                        },
+                      ]}
+                      testID={testID ? `${testID}-day-${item.date}` : undefined}
+                    >
+                      <Text
+                        style={[
+                          styles.dayText,
+                          {
+                            color: isSelected
+                              ? '#FFFFFF'
+                              : item.isCurrentMonth
+                              ? theme.textHigh
+                              : theme.textLow,
+                          },
+                          !item.isCurrentMonth && { opacity: 0.4 },
+                        ]}
+                      >
+                        {dayNum}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
+
+          <View style={[styles.section, { marginTop: theme.spacing.lg }]}>
+            <View style={styles.timeSectionHeader}>
+              <Text style={[styles.sectionTitle, { color: theme.textHigh }]}>Time</Text>
+              <Pressable
+                onPress={toggleTimePickerMode}
+                style={({ pressed }) => [
+                  styles.modeToggle,
+                  {
+                    backgroundColor: theme.surfaceAlt,
+                    opacity: pressed ? 0.7 : 1,
+                  },
+                ]}
+                testID={testID ? `${testID}-time-mode-toggle` : undefined}
+              >
+                <KeyboardIcon size={16} color={theme.textHigh} />
+                <Text style={[styles.modeToggleText, { color: theme.textHigh }]}>
+                  {timePickerMode === 'dial' ? 'Keyboard' : 'Dial'}
                 </Text>
               </Pressable>
-            );
-          })}
-        </View>
-      </View>
+            </View>
 
-      <View style={[styles.timeSection, { marginTop: theme.spacing.lg }]}>
-        <View style={styles.timeSectionHeader}>
-          <Text style={[styles.sectionTitle, { color: theme.textHigh }]}>Time</Text>
-          <Pressable
-            onPress={handleAllDayToggle}
-            style={({ pressed }) => [
-              styles.allDayToggle,
-              {
-                borderColor: theme.border,
-                backgroundColor: isAllDay ? theme.primary : 'transparent',
-                opacity: pressed ? 0.7 : 1,
-              },
-            ]}
-          >
-            <Text
-              style={[
-                styles.allDayText,
-                { color: isAllDay ? '#FFFFFF' : theme.textLow },
-              ]}
-            >
-              All-day
-            </Text>
-          </Pressable>
-        </View>
+            {!isAllDay && (
+              <>
+                <View style={[styles.quickChips, { marginTop: theme.spacing.md }]}>
+                  {['08:00', '12:00', '17:00', '19:00'].map((time) => (
+                    <Pressable
+                      key={time}
+                      onPress={() => handleTimeChip(time)}
+                      style={({ pressed }) => [
+                        styles.chip,
+                        {
+                          backgroundColor: selectedTime === time ? theme.primary : theme.surfaceAlt,
+                          borderColor: theme.border,
+                          opacity: pressed ? 0.7 : 1,
+                        },
+                      ]}
+                      testID={testID ? `${testID}-time-chip-${time}` : undefined}
+                    >
+                      <Text
+                        style={[
+                          styles.chipText,
+                          { color: selectedTime === time ? '#FFFFFF' : theme.textHigh },
+                        ]}
+                      >
+                        {time}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
 
-        {!isAllDay && (
-          <ScrollView
-            style={[styles.timeList, { maxHeight: 200 }]}
-            showsVerticalScrollIndicator={true}
-          >
-            {timeSlots.map((time) => {
-              const isSelected = selectedTime === time;
-              return (
-                <Pressable
-                  key={time}
-                  onPress={() => handleTimeSelect(time)}
-                  style={({ pressed }) => [
-                    styles.timeSlot,
-                    {
-                      backgroundColor: isSelected ? theme.primary : 'transparent',
-                      opacity: pressed ? 0.7 : 1,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.timeText,
-                      { color: isSelected ? '#FFFFFF' : theme.textHigh },
-                    ]}
-                  >
-                    {time}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        )}
-      </View>
+                {timePickerMode === 'keyboard' ? (
+                  <View style={[styles.keyboardTimeContainer, { marginTop: theme.spacing.md }]}>
+                    <TextInput
+                      style={[
+                        styles.keyboardTimeInput,
+                        {
+                          backgroundColor: theme.surfaceAlt,
+                          color: theme.textHigh,
+                          borderColor: keyboardTimeError ? theme.error : theme.border,
+                        },
+                      ]}
+                      value={keyboardTimeInput}
+                      onChangeText={(text) => {
+                        setKeyboardTimeInput(text);
+                        setKeyboardTimeError('');
+                      }}
+                      placeholder="HH:MM (e.g., 14:30)"
+                      placeholderTextColor={theme.textLow}
+                      keyboardType="numbers-and-punctuation"
+                      onSubmitEditing={handleKeyboardTimeConfirm}
+                      testID={testID ? `${testID}-keyboard-input` : undefined}
+                    />
+                    <Pressable
+                      onPress={handleKeyboardTimeConfirm}
+                      style={({ pressed }) => [
+                        styles.keyboardTimeButton,
+                        {
+                          backgroundColor: theme.primary,
+                          opacity: pressed ? 0.8 : 1,
+                        },
+                      ]}
+                      testID={testID ? `${testID}-keyboard-confirm` : undefined}
+                    >
+                      <Text style={[styles.keyboardTimeButtonText, { color: '#FFFFFF' }]}>
+                        Set
+                      </Text>
+                    </Pressable>
+                    {keyboardTimeError && (
+                      <Text
+                        style={[styles.keyboardTimeError, { color: theme.error }]}
+                        testID={testID ? `${testID}-keyboard-error` : undefined}
+                      >
+                        {keyboardTimeError}
+                      </Text>
+                    )}
+                  </View>
+                ) : (
+                  <View style={[styles.dialContainer, { marginTop: theme.spacing.md }]}>
+                    <ScrollView
+                      style={styles.dialScroll}
+                      showsVerticalScrollIndicator={true}
+                      contentContainerStyle={styles.dialContent}
+                    >
+                      {Array.from({ length: 24 }, (_, h) => {
+                        return Array.from({ length: 4 }, (_, m) => {
+                          const hours = h.toString().padStart(2, '0');
+                          const minutes = (m * 15).toString().padStart(2, '0');
+                          const time = `${hours}:${minutes}`;
+                          const isSelected = selectedTime === time;
+
+                          return (
+                            <Pressable
+                              key={time}
+                              onPress={() => handleTimeChip(time)}
+                              style={({ pressed }) => [
+                                styles.dialTimeSlot,
+                                {
+                                  backgroundColor: isSelected ? theme.primary : 'transparent',
+                                  opacity: pressed ? 0.7 : 1,
+                                },
+                              ]}
+                              testID={testID ? `${testID}-dial-time-${time}` : undefined}
+                            >
+                              <Text
+                                style={[
+                                  styles.dialTimeText,
+                                  { color: isSelected ? '#FFFFFF' : theme.textHigh },
+                                ]}
+                              >
+                                {time}
+                              </Text>
+                            </Pressable>
+                          );
+                        });
+                      })}
+                    </ScrollView>
+                  </View>
+                )}
+              </>
+            )}
+
+            {isAllDay && (
+              <View style={[styles.allDayPlaceholder, { marginTop: theme.spacing.md }]}>
+                <Text style={[styles.allDayPlaceholderText, { color: theme.textLow }]}>
+                  Time is disabled when All Day is on
+                </Text>
+              </View>
+            )}
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </ModalSheet>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  section: {
+    gap: 8,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+  },
+  toggleButton: {
+    width: 48,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+  },
+  toggleThumb: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    position: 'absolute' as const,
+  },
   quickChips: {
     flexDirection: 'row',
     gap: 8,
@@ -434,16 +715,16 @@ const styles = StyleSheet.create({
   chip: {
     flex: 1,
     paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
     borderRadius: 8,
     borderWidth: 1,
     alignItems: 'center',
   },
   chipText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500' as const,
   },
-  calendarSection: {
+  calendarContainer: {
     gap: 12,
   },
   calendarHeader: {
@@ -453,14 +734,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   navButton: {
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  navButtonText: {
-    fontSize: 28,
-    fontWeight: '300' as const,
   },
   monthName: {
     fontSize: 16,
@@ -489,40 +766,72 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500' as const,
   },
-  timeSection: {
-    gap: 12,
-  },
   timeSectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600' as const,
-  },
-  allDayToggle: {
+  modeToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 8,
-    borderWidth: 1,
   },
-  allDayText: {
-    fontSize: 14,
+  modeToggleText: {
+    fontSize: 13,
     fontWeight: '500' as const,
   },
-  timeList: {
-    borderRadius: 8,
+  keyboardTimeContainer: {
+    gap: 12,
   },
-  timeSlot: {
+  keyboardTimeInput: {
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
-    marginBottom: 4,
+    fontSize: 16,
+    fontWeight: '500' as const,
+    borderWidth: 1,
   },
-  timeText: {
+  keyboardTimeButton: {
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  keyboardTimeButtonText: {
+    fontSize: 15,
+    fontWeight: '600' as const,
+  },
+  keyboardTimeError: {
+    fontSize: 13,
+    fontWeight: '400' as const,
+  },
+  dialContainer: {
+    maxHeight: 240,
+  },
+  dialScroll: {
+    borderRadius: 8,
+  },
+  dialContent: {
+    gap: 4,
+  },
+  dialTimeSlot: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  dialTimeText: {
     fontSize: 15,
     fontWeight: '500' as const,
+  },
+  allDayPlaceholder: {
+    paddingVertical: 24,
+    alignItems: 'center',
+  },
+  allDayPlaceholderText: {
+    fontSize: 14,
+    fontWeight: '400' as const,
   },
   footerContainer: {
     flexDirection: 'row',
