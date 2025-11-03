@@ -12,7 +12,7 @@ import {
   KeyboardAvoidingView,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { ChevronLeft, ChevronRight, Keyboard as KeyboardIconLucide } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Keyboard as KeyboardIcon } from 'lucide-react-native';
 import { ModalSheet } from '@/components/interactive/modals/ModalSheet';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -539,7 +539,7 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
                 ]}
                 testID={testID ? `${testID}-time-mode-toggle` : undefined}
               >
-                <KeyboardIconLucide size={16} color={theme.textHigh} />
+                <KeyboardIcon size={16} color={theme.textHigh} />
                 <Text style={[styles.modeToggleText, { color: theme.textHigh }]}>
                   {timePickerMode === 'dial' ? 'Keyboard' : 'Dial'}
                 </Text>
@@ -628,8 +628,8 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
                       showsVerticalScrollIndicator={true}
                       contentContainerStyle={styles.dialContent}
                     >
-                      {Array.from({ length: 24 }, (_, h) => {
-                        return Array.from({ length: 4 }, (_, m) => {
+                      {Array.from({ length: 24 }).map((_, h) => 
+                        Array.from({ length: 4 }).map((_, m) => {
                           const hours = h.toString().padStart(2, '0');
                           const minutes = (m * 15).toString().padStart(2, '0');
                           const time = `${hours}:${minutes}`;
@@ -658,8 +658,8 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
                               </Text>
                             </Pressable>
                           );
-                        });
-                      })}
+                        })
+                      ).flat()}
                     </ScrollView>
                   </View>
                 )}
