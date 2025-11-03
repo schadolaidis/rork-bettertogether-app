@@ -10,6 +10,7 @@ import {
   Platform,
   Switch,
   KeyboardAvoidingView,
+  Pressable,
 } from 'react-native';
 
 import {
@@ -999,7 +1000,11 @@ export function TaskFormModal({
       </Modal>
 
       <Modal visible={showCustomReminderInput} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <Pressable style={{ flex: 1 }} onPress={() => setShowCustomReminderInput(false)} />
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Custom Reminder</Text>
@@ -1022,6 +1027,7 @@ export function TaskFormModal({
                   setCustomReminderMinutes(num);
                 }}
                 keyboardType="number-pad"
+                autoFocus
               />
               <View style={styles.quickReminderChips}>
                 {[
@@ -1059,11 +1065,15 @@ export function TaskFormModal({
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       <Modal visible={showStakePicker} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <Pressable style={{ flex: 1 }} onPress={() => setShowStakePicker(false)} />
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Set Stake Amount</Text>
@@ -1091,6 +1101,7 @@ export function TaskFormModal({
                   }
                 }}
                 keyboardType="decimal-pad"
+                autoFocus
               />
               <TouchableOpacity
                 style={styles.doneButton}
@@ -1100,7 +1111,7 @@ export function TaskFormModal({
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </Modal>
   );
