@@ -1,8 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
-import { ChevronDown, Check } from 'lucide-react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { ChevronDown } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
-import { ModalSheet } from '@/components/design-system/ModalSheet';
+import {
+  useFormStyles,
+  getFieldContainerStyle,
+  getLabelStyle,
+  getValueTextStyle,
+  getHelperTextStyle,
+} from './base';
 
 export type SelectOption<T = string> = {
   label: string;
@@ -14,7 +20,8 @@ export type SelectProps<T = string> = {
   placeholder?: string;
   value?: T;
   options: SelectOption<T>[];
-  onChange: (value: T) => void;
+  onOpen: () => void;
+  onChange?: (value: T) => void;
   helperText?: string;
   errorText?: string;
   testID?: string;
@@ -25,128 +32,62 @@ export function Select<T = string>({
   placeholder = 'Select an option',
   value,
   options,
+  onOpen,
   onChange,
   helperText,
   errorText,
   testID,
 }: SelectProps<T>) {
   const { theme } = useTheme();
-  const [isOpen, setIsOpen] = useState(false);
+  const formStyles = useFormStyles(theme);
+  const [isFocused, setIsFocused] = useState(false);
   const hasError = !!errorText;
 
   const selectedOption = options.find((opt) => opt.value === value);
   const displayValue = selectedOption?.label || placeholder;
 
-  const handleSelect = (optionValue: T) => {
-    onChange(optionValue);
-    setIsOpen(false);
+  const state = hasError ? 'error' : isFocused ? 'focus' : 'default';
+  const containerStyle = getFieldContainerStyle(state, formStyles);
+  const labelStyle = getLabelStyle(theme);
+  const valueStyle = getValueTextStyle(theme);
+  const helperStyle = getHelperTextStyle(hasError ? 'error' : 'default', theme);
+
+  const handlePress = () => {
+    setIsFocused(true);
+    onOpen();
   };
 
   return (
     <View style={styles.container} testID={testID}>
       {label && (
-        <Text
-          style={[
-            theme.typography.Label,
-            { color: theme.colors.textHigh, marginBottom: theme.spacing.xs },
-          ]}
-        >
+        <Text style={[labelStyle, styles.label]}>
           {label}
         </Text>
       )}
       <Pressable
-        style={[
-          styles.selectButton,
-          {
-            backgroundColor: theme.colors.surface,
-            borderColor: hasError ? theme.colors.error : theme.colors.border,
-            borderRadius: theme.radius - 4,
-            paddingHorizontal: theme.spacing.md,
-            paddingVertical: theme.spacing.sm,
-          },
-        ]}
-        onPress={() => setIsOpen(true)}
+        style={[containerStyle, styles.selectButton]}
+        onPress={handlePress}
+        onPressOut={() => setIsFocused(false)}
         testID={testID ? `${testID}-trigger` : undefined}
       >
         <Text
           style={[
-            theme.typography.Body,
+            valueStyle,
             {
-              color: selectedOption ? theme.colors.textHigh : theme.colors.textLow,
+              color: selectedOption ? formStyles.text : formStyles.textMuted,
               flex: 1,
             },
           ]}
         >
           {displayValue}
         </Text>
-        <ChevronDown size={20} color={theme.colors.textLow} />
+        <ChevronDown size={20} color={formStyles.textMuted} />
       </Pressable>
       {(helperText || errorText) && (
-        <Text
-          style={[
-            theme.typography.Caption,
-            {
-              color: hasError ? theme.colors.error : theme.colors.textLow,
-              marginTop: theme.spacing.xxs,
-            },
-          ]}
-        >
+        <Text style={[helperStyle, styles.helper]} testID={testID ? `${testID}-helper` : undefined}>
           {errorText || helperText}
         </Text>
       )}
-
-      <ModalSheet
-        open={isOpen}
-        onClose={() => setIsOpen(false)}
-        maxHeight={480}
-        testID={testID ? `${testID}-modal` : undefined}
-      >
-        <View style={{ paddingHorizontal: theme.spacing.md }}>
-          {label && (
-            <Text
-              style={[
-                theme.typography.H2,
-                { color: theme.colors.textHigh, marginBottom: theme.spacing.md },
-              ]}
-            >
-              {label}
-            </Text>
-          )}
-          <ScrollView style={{ maxHeight: 400 }}>
-            {options.map((option, index) => {
-              const isSelected = option.value === value;
-              return (
-                <Pressable
-                  key={index}
-                  style={[
-                    styles.option,
-                    {
-                      paddingVertical: theme.spacing.md,
-                      borderBottomWidth: index < options.length - 1 ? 1 : 0,
-                      borderBottomColor: theme.colors.border,
-                    },
-                  ]}
-                  onPress={() => handleSelect(option.value)}
-                  testID={testID ? `${testID}-option-${index}` : undefined}
-                >
-                  <Text
-                    style={[
-                      theme.typography.Body,
-                      {
-                        color: isSelected ? theme.colors.primary : theme.colors.textHigh,
-                        flex: 1,
-                      },
-                    ]}
-                  >
-                    {option.label}
-                  </Text>
-                  {isSelected && <Check size={20} color={theme.colors.primary} />}
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        </View>
-      </ModalSheet>
     </View>
   );
 }
@@ -155,14 +96,14 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
   },
+  label: {
+    marginBottom: 8,
+  },
   selectButton: {
-    minHeight: 48,
-    borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
   },
-  option: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  helper: {
+    marginTop: 4,
   },
 });
