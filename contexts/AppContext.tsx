@@ -49,32 +49,52 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const tasksQuery = useQuery({
     queryKey: ['tasks'],
     queryFn: async () => {
-      const stored = await AsyncStorage.getItem(STORAGE_KEYS.TASKS);
-      return stored ? JSON.parse(stored) : MOCK_TASKS;
+      try {
+        const stored = await AsyncStorage.getItem(STORAGE_KEYS.TASKS);
+        return stored ? JSON.parse(stored) : MOCK_TASKS;
+      } catch (error) {
+        console.error('[Storage] Error loading tasks:', error);
+        return MOCK_TASKS;
+      }
     },
   });
 
   const ledgerQuery = useQuery({
     queryKey: ['ledger-entries'],
     queryFn: async () => {
-      const stored = await AsyncStorage.getItem(STORAGE_KEYS.LEDGER_ENTRIES);
-      return stored ? JSON.parse(stored) : MOCK_LEDGER_ENTRIES;
+      try {
+        const stored = await AsyncStorage.getItem(STORAGE_KEYS.LEDGER_ENTRIES);
+        return stored ? JSON.parse(stored) : MOCK_LEDGER_ENTRIES;
+      } catch (error) {
+        console.error('[Storage] Error loading ledger entries:', error);
+        return MOCK_LEDGER_ENTRIES;
+      }
     },
   });
 
   const usersQuery = useQuery({
     queryKey: ['users'],
     queryFn: async () => {
-      const stored = await AsyncStorage.getItem(STORAGE_KEYS.USERS);
-      return stored ? JSON.parse(stored) : MOCK_USERS;
+      try {
+        const stored = await AsyncStorage.getItem(STORAGE_KEYS.USERS);
+        return stored ? JSON.parse(stored) : MOCK_USERS;
+      } catch (error) {
+        console.error('[Storage] Error loading users:', error);
+        return MOCK_USERS;
+      }
     },
   });
 
   const listsQuery = useQuery({
     queryKey: ['lists'],
     queryFn: async () => {
-      const stored = await AsyncStorage.getItem(STORAGE_KEYS.LISTS);
-      return stored ? JSON.parse(stored) : MOCK_LISTS;
+      try {
+        const stored = await AsyncStorage.getItem(STORAGE_KEYS.LISTS);
+        return stored ? JSON.parse(stored) : MOCK_LISTS;
+      } catch (error) {
+        console.error('[Storage] Error loading lists:', error);
+        return MOCK_LISTS;
+      }
     },
   });
 
@@ -105,8 +125,13 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const calendarDateQuery = useQuery({
     queryKey: ['calendar-date'],
     queryFn: async () => {
-      const stored = await AsyncStorage.getItem(STORAGE_KEYS.CALENDAR_SELECTED_DATE);
-      return stored ? new Date(stored) : new Date();
+      try {
+        const stored = await AsyncStorage.getItem(STORAGE_KEYS.CALENDAR_SELECTED_DATE);
+        return stored ? new Date(stored) : new Date();
+      } catch (error) {
+        console.error('[Storage] Error loading calendar date:', error);
+        return new Date();
+      }
     },
   });
 
@@ -121,8 +146,13 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const fundTargetsQuery = useQuery({
     queryKey: ['fund-targets'],
     queryFn: async () => {
-      const stored = await AsyncStorage.getItem(STORAGE_KEYS.FUND_TARGETS);
-      return stored ? JSON.parse(stored) : MOCK_FUND_TARGETS;
+      try {
+        const stored = await AsyncStorage.getItem(STORAGE_KEYS.FUND_TARGETS);
+        return stored ? JSON.parse(stored) : MOCK_FUND_TARGETS;
+      } catch (error) {
+        console.error('[Storage] Error loading fund targets:', error);
+        return MOCK_FUND_TARGETS;
+      }
     },
   });
 
