@@ -102,15 +102,15 @@ const SwipeableTaskItem: React.FC<SwipeableTaskItemProps> = ({
   const getStatusColor = (status: Task['status']) => {
     switch (status) {
       case 'completed':
-        return theme.colors.success;
+        return theme.success;
       case 'failed':
-        return theme.colors.error;
+        return theme.error;
       case 'overdue':
-        return theme.colors.error;
+        return theme.error;
       case 'pending':
-        return theme.colors.warning;
+        return theme.warning;
       default:
-        return theme.colors.textLow;
+        return theme.textLow;
     }
   };
 
@@ -158,8 +158,8 @@ const SwipeableTaskItem: React.FC<SwipeableTaskItemProps> = ({
   const canSwipe = task.status !== 'completed' && task.status !== 'failed';
 
   const categoryMeta = useMemo(() => {
-    return { emoji: '📌', color: theme.colors.primary };
-  }, [theme.colors.primary]);
+    return { emoji: '📌', color: theme.primary };
+  }, [theme.primary]);
 
   return (
     <View style={styles.swipeContainer}>
@@ -167,7 +167,7 @@ const SwipeableTaskItem: React.FC<SwipeableTaskItemProps> = ({
         <View
           style={[
             styles.actionButton,
-            { backgroundColor: theme.colors.success },
+            { backgroundColor: theme.success },
           ]}
         >
           <Check size={24} color="#FFFFFF" />
@@ -178,7 +178,7 @@ const SwipeableTaskItem: React.FC<SwipeableTaskItemProps> = ({
         <View
           style={[
             styles.actionButton,
-            { backgroundColor: theme.colors.error },
+            { backgroundColor: theme.error },
           ]}
         >
           <X size={24} color="#FFFFFF" />
@@ -202,7 +202,7 @@ const SwipeableTaskItem: React.FC<SwipeableTaskItemProps> = ({
           subtitle={formatDueDate(task)}
           right={
             <View style={styles.taskRight}>
-              <Text style={[theme.typography.Label, { color: theme.colors.textHigh }]}>
+              <Text style={[theme.typography.label, { color: theme.textHigh }]}>
                 {currencySymbol}{task.stake}
               </Text>
               <View
@@ -211,7 +211,7 @@ const SwipeableTaskItem: React.FC<SwipeableTaskItemProps> = ({
                   { backgroundColor: getStatusColor(task.status) },
                 ]}
               >
-                <Text style={[styles.statusText, theme.typography.Caption]}>
+                <Text style={[styles.statusText, theme.typography.caption]}>
                   {getStatusLabel(task.status)}
                 </Text>
               </View>
@@ -307,7 +307,7 @@ export default function Tasks() {
   const currencySymbol = currentList?.currencySymbol || '$';
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <AppBar title="Tasks" testID="tasks-appbar" />
 
       <View style={[styles.filterContainer, { paddingHorizontal: theme.spacing.md }]}>
@@ -337,10 +337,10 @@ export default function Tasks() {
         ]}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Text style={[theme.typography.H2, { color: theme.colors.textLow, marginBottom: 8 }]}>
+            <Text style={[theme.typography.h2, { color: theme.textLow, marginBottom: 8 }]}>
               No tasks found
             </Text>
-            <Text style={[theme.typography.Body, { color: theme.colors.textLow, textAlign: 'center' }]}>
+            <Text style={[theme.typography.body, { color: theme.textLow, textAlign: 'center' }]}>
               {selectedFilter === 'all' 
                 ? 'Create your first task to get started'
                 : `No ${selectedFilter} tasks`}
@@ -355,9 +355,9 @@ export default function Tasks() {
         style={({ pressed }) => [
           styles.fab,
           {
-            backgroundColor: theme.colors.primary,
+            backgroundColor: theme.primary,
             bottom: insets.bottom + 16,
-            shadowColor: theme.colors.primary,
+            shadowColor: theme.primary,
           },
           pressed && { opacity: 0.8, transform: [{ scale: 0.95 }] },
         ]}
