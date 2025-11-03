@@ -12,7 +12,7 @@ import {
   KeyboardAvoidingView,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { ChevronLeft, ChevronRight, Keyboard as KeyboardIcon } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Keyboard as KeyboardIconLucide } from 'lucide-react-native';
 import { ModalSheet } from '@/components/interactive/modals/ModalSheet';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -539,7 +539,7 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
                 ]}
                 testID={testID ? `${testID}-time-mode-toggle` : undefined}
               >
-                <KeyboardIcon size={16} color={theme.textHigh} />
+                <KeyboardIconLucide size={16} color={theme.textHigh} />
                 <Text style={[styles.modeToggleText, { color: theme.textHigh }]}>
                   {timePickerMode === 'dial' ? 'Keyboard' : 'Dial'}
                 </Text>
