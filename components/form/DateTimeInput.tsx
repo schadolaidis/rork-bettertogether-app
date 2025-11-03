@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import { Clock } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import { DateTimePickerSheet } from '@/components/pickers/DateTimePickerSheet';
 import { useTheme } from '@/contexts/ThemeContext';
 import {
   useFormStyles,
@@ -21,8 +22,8 @@ export type DateTimeValue = {
 export type DateTimeInputProps = {
   label?: string;
   value?: string | null;
-  onOpen: () => void;
-  onChange?: (value: string) => void;
+  onOpen?: () => void;
+  onChange?: (value: string | null) => void;
   helperText?: string;
   errorText?: string;
   testID?: string;
@@ -33,6 +34,7 @@ export const DateTimeInput: React.FC<DateTimeInputProps> = ({
   label,
   value,
   onOpen,
+  onChange,
   helperText,
   errorText,
   testID,
@@ -41,6 +43,7 @@ export const DateTimeInput: React.FC<DateTimeInputProps> = ({
   const { theme } = useTheme();
   const formStyles = useFormStyles(theme);
   const [isFocused, setIsFocused] = useState(false);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
   const hasError = !!errorText;
 
   const formatDisplayValue = (isoString: string): string => {
@@ -63,7 +66,17 @@ export const DateTimeInput: React.FC<DateTimeInputProps> = ({
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     setIsFocused(true);
-    onOpen();
+    setIsSheetOpen(true);
+    onOpen?.();
+  };
+
+  const handleDateTimeChange = (newValue: string | null) => {
+    onChange?.(newValue);
+    setIsSheetOpen(false);
+  };
+
+  const handleClose = () => {
+    setIsSheetOpen(false);
   };
 
   const state = hasError ? 'error' : isFocused ? 'focus' : 'default';
@@ -73,40 +86,50 @@ export const DateTimeInput: React.FC<DateTimeInputProps> = ({
   const helperStyle = getHelperTextStyle(hasError ? 'error' : 'default', theme);
 
   return (
-    <View style={styles.container} testID={testID}>
-      {label && (
-        <Text style={[labelStyle, styles.label]}>
-          {label}
-        </Text>
-      )}
-      <Pressable
-        onPress={handlePress}
-        onPressOut={() => setIsFocused(false)}
-        style={[containerStyle, styles.field]}
-        testID={testID ? `${testID}-button` : undefined}
-      >
-        <Clock size={20} color={value ? formStyles.focusBorder : formStyles.textMuted} />
-        <Text
-          style={[
-            valueStyle,
-            {
-              color: value ? formStyles.text : formStyles.textMuted,
-              flex: 1,
-            },
-          ]}
+    <>
+      <View style={styles.container} testID={testID}>
+        {label && (
+          <Text style={[labelStyle, styles.label]}>
+            {label}
+          </Text>
+        )}
+        <Pressable
+          onPress={handlePress}
+          onPressOut={() => setIsFocused(false)}
+          style={[containerStyle, styles.field]}
+          testID={testID ? `${testID}-button` : undefined}
         >
-          {value ? formatDisplayValue(value) : placeholder}
-        </Text>
-      </Pressable>
-      {(helperText || errorText) && (
-        <Text
-          style={[helperStyle, styles.helper]}
-          testID={testID ? `${testID}-helper` : undefined}
-        >
-          {errorText || helperText}
-        </Text>
-      )}
-    </View>
+          <Clock size={20} color={value ? formStyles.focusBorder : formStyles.textMuted} />
+          <Text
+            style={[
+              valueStyle,
+              {
+                color: value ? formStyles.text : formStyles.textMuted,
+                flex: 1,
+              },
+            ]}
+          >
+            {value ? formatDisplayValue(value) : placeholder}
+          </Text>
+        </Pressable>
+        {(helperText || errorText) && (
+          <Text
+            style={[helperStyle, styles.helper]}
+            testID={testID ? `${testID}-helper` : undefined}
+          >
+            {errorText || helperText}
+          </Text>
+        )}
+      </View>
+
+      <DateTimePickerSheet
+        visible={isSheetOpen}
+        onClose={handleClose}
+        value={value ?? null}
+        onChange={handleDateTimeChange}
+        testID={testID ? `${testID}-picker` : undefined}
+      />
+    </>
   );
 };
 
