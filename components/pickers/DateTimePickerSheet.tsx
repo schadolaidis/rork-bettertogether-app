@@ -9,7 +9,6 @@ import {
   useWindowDimensions,
   TextInput,
   Keyboard,
-  KeyboardAvoidingView,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { ChevronLeft, ChevronRight, Keyboard as KeyboardIcon } from 'lucide-react-native';
@@ -345,11 +344,7 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
       maxHeight={Platform.OS === 'web' ? 700 : undefined}
       testID={testID}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
-      >
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <ScrollView showsVerticalScrollIndicator={false} style={styles.container}>
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { color: theme.textHigh }]}>All Day</Text>
@@ -675,7 +670,6 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
             )}
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
     </ModalSheet>
   );
 };
