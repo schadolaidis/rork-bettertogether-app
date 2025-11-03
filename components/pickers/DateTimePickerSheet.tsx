@@ -336,12 +336,11 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
                     borderWidth: 1,
                     borderColor: theme.primary,
                   },
-                  pressed && {
-                    backgroundColor: pressed ? theme.surfaceAlt : undefined,
+                  pressed && !isSelected && {
+                    backgroundColor: theme.surfaceAlt,
                     opacity: 0.7,
                   },
                 ]}
-                hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
               >
                 <Text
                   style={[

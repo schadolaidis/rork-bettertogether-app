@@ -153,30 +153,30 @@ export const ModalSheet: React.FC<ModalSheetProps> = ({
           ]}
         >
           <View
-            {...panResponder.panHandlers}
             style={[
               styles.sheet,
               {
-                backgroundColor: theme.colors.surface,
-                borderTopLeftRadius: theme.radius,
-                borderTopRightRadius: theme.radius,
+                backgroundColor: theme.surface,
+                borderTopLeftRadius: theme.radius.card,
+                borderTopRightRadius: theme.radius.card,
                 maxHeight: computedMaxHeight,
                 paddingBottom: insets.bottom || theme.spacing.md,
                 shadowColor: '#000',
                 shadowOffset: { width: 0, height: -2 },
                 shadowOpacity: 0.1,
                 shadowRadius: 8,
-                elevation: theme.elevation.sheet,
+                elevation: theme.elevation,
               },
             ]}
             testID={testID}
           >
             <View
+              {...panResponder.panHandlers}
               style={[
                 styles.handle,
                 {
-                  backgroundColor: theme.colors.border,
-                  borderRadius: theme.spacing.xxs / 2,
+                  backgroundColor: theme.border,
+                  borderRadius: 2,
                 },
               ]}
             />
@@ -187,7 +187,7 @@ export const ModalSheet: React.FC<ModalSheetProps> = ({
                   styles.header,
                   {
                     borderBottomWidth: 1,
-                    borderBottomColor: theme.colors.border,
+                    borderBottomColor: theme.border,
                     paddingHorizontal: theme.spacing.md,
                     paddingVertical: theme.spacing.sm,
                   },
@@ -198,8 +198,8 @@ export const ModalSheet: React.FC<ModalSheetProps> = ({
                     {title && (
                       <Text
                         style={[
-                          theme.typography.H2,
-                          { color: theme.colors.textHigh },
+                          theme.typography.h2,
+                          { color: theme.textHigh },
                         ]}
                       >
                         {title}
@@ -217,7 +217,7 @@ export const ModalSheet: React.FC<ModalSheetProps> = ({
                         hitSlop={theme.spacing.xs}
                         testID={`${testID}-close`}
                       >
-                        <X size={24} color={theme.colors.textLow} />
+                        <X size={24} color={theme.textLow} />
                       </Pressable>
                     )}
                   </View>
@@ -243,7 +243,7 @@ export const ModalSheet: React.FC<ModalSheetProps> = ({
                   styles.footer,
                   {
                     borderTopWidth: 1,
-                    borderTopColor: theme.colors.border,
+                    borderTopColor: theme.border,
                     paddingHorizontal: theme.spacing.md,
                     paddingVertical: theme.spacing.sm,
                   },

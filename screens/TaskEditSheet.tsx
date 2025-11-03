@@ -5,7 +5,7 @@ import { Button } from '@/components/design-system/Button';
 import { useTheme } from '@/contexts/ThemeContext';
 import { TextField } from '@/components/form/TextField';
 import { Select, SelectOption } from '@/components/form/Select';
-import { DateTimeInput, DateTimeValue } from '@/components/form/DateTimeInput';
+import { DateTimeInput } from '@/components/form/DateTimeInput';
 import { AmountInput } from '@/components/form/AmountInput';
 
 export type TaskEditSheetProps = {
@@ -23,7 +23,7 @@ export const TaskEditSheet: React.FC<TaskEditSheetProps> = ({
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [focusGoal, setFocusGoal] = useState<string | undefined>(undefined);
-  const [dueDate, setDueDate] = useState<DateTimeValue | undefined>(undefined);
+  const [dueDate, setDueDate] = useState<string | null>(null);
   const [stakeAmount, setStakeAmount] = useState('');
   const [assignee, setAssignee] = useState<string | undefined>(undefined);
   const [reminderEnabled, setReminderEnabled] = useState(false);
@@ -137,7 +137,10 @@ export const TaskEditSheet: React.FC<TaskEditSheetProps> = ({
         <DateTimeInput
           label="Due Date & Time"
           value={dueDate}
-          onChange={setDueDate}
+          onChange={(value) => {
+            console.log('Date changed:', value);
+            setDueDate(value);
+          }}
           placeholder="Select due date & time"
           testID="task-due-date-field"
         />
@@ -146,7 +149,7 @@ export const TaskEditSheet: React.FC<TaskEditSheetProps> = ({
           label="Stake"
           value={stakeAmount}
           onChange={setStakeAmount}
-          currency="$"
+          prefix="$"
           placeholder="0.00"
           testID="task-stake-field"
         />
@@ -167,8 +170,8 @@ export const TaskEditSheet: React.FC<TaskEditSheetProps> = ({
         >
           <Text
             style={[
-              theme.typography.Label,
-              { color: theme.colors.textHigh, flex: 1 },
+              theme.typography.label,
+              { color: theme.textHigh, flex: 1 },
             ]}
           >
             Reminder
@@ -178,8 +181,8 @@ export const TaskEditSheet: React.FC<TaskEditSheetProps> = ({
               styles.toggle,
               {
                 backgroundColor: reminderEnabled
-                  ? theme.colors.primary
-                  : theme.colors.surfaceAlt,
+                  ? theme.primary
+                  : theme.surfaceAlt,
                 borderRadius: 16,
               },
             ]}
@@ -188,7 +191,7 @@ export const TaskEditSheet: React.FC<TaskEditSheetProps> = ({
               style={[
                 styles.toggleThumb,
                 {
-                  backgroundColor: theme.colors.surface,
+                  backgroundColor: theme.surface,
                   transform: [
                     {
                       translateX: toggleAnimation.interpolate({
