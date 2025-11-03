@@ -6,6 +6,7 @@ import {
   Pressable,
   ScrollView,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { ModalSheet } from '@/components/interactive/modals/ModalSheet';
@@ -27,6 +28,10 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
   testID,
 }) => {
   const { theme } = useTheme();
+  const { width: screenWidth } = useWindowDimensions();
+  
+  const calendarWidth = Math.min(screenWidth - 32, 400);
+  const dayCellSize = Math.floor((calendarWidth - 24) / 7);
   
   const [selectedDate, setSelectedDate] = useState<Date>(() => {
     return value ? new Date(value) : new Date();
@@ -295,7 +300,7 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
 
         <View style={styles.weekDayHeaders}>
           {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
-            <View key={i} style={styles.weekDayHeader}>
+            <View key={i} style={[styles.weekDayHeader, { width: dayCellSize }]}>
               <Text style={[styles.weekDayText, { color: theme.textLow }]}>{day}</Text>
             </View>
           ))}
@@ -313,6 +318,11 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
                 onPress={() => handleDateSelect(date)}
                 style={({ pressed }) => [
                   styles.dayCell,
+                  {
+                    width: dayCellSize,
+                    height: dayCellSize,
+                    borderRadius: dayCellSize / 2,
+                  },
                   isSelected && {
                     backgroundColor: theme.primary,
                   },
@@ -451,7 +461,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
   },
   weekDayHeader: {
-    width: 40,
     alignItems: 'center',
   },
   weekDayText: {
@@ -461,14 +470,10 @@ const styles = StyleSheet.create({
   calendarGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 4,
   },
   dayCell: {
-    width: 40,
-    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 20,
   },
   dayText: {
     fontSize: 14,
