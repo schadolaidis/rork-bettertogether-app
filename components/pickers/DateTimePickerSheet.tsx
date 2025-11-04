@@ -110,7 +110,7 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
   const calendarWidth = Math.min(screenWidth - 32, 400);
   const dayCellSize = Math.floor((calendarWidth - 24) / 7);
 
-  const handleQuickChip = (type: 'today' | 'tomorrow' | 'nextWeek' | 'thisWeekend' | 'nextMonth') => {
+  const handleQuickChip = (type: 'today' | 'tomorrow' | 'thisWeekend' | 'nextWeek' | 'nextMonth') => {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
@@ -615,7 +615,7 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
                   >
                     <Text style={[styles.chipText, { color: theme.textHigh }]}>Now</Text>
                   </Pressable>
-                  {['08:00', '09:00', '12:00', '14:00', '17:00', '19:00', '21:00'].map((time) => (
+                  {['06:00', '09:00', '12:00', '15:00', '18:00', '21:00'].map((time) => (
                     <Pressable
                       key={time}
                       onPress={() => handleTimeChip(time)}
@@ -632,7 +632,10 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
                       <Text
                         style={[
                           styles.chipText,
-                          { color: selectedTime === time ? '#FFFFFF' : theme.textHigh },
+                          { 
+                            color: selectedTime === time ? '#FFFFFF' : theme.textHigh,
+                            fontWeight: selectedTime === time ? '600' : '500',
+                          },
                         ]}
                       >
                         {time}
@@ -784,10 +787,10 @@ const styles = StyleSheet.create({
   chip: {
     paddingVertical: 10,
     paddingHorizontal: 16,
-    borderRadius: 8,
-    borderWidth: 1,
+    borderRadius: 20,
+    borderWidth: 1.5,
     alignItems: 'center',
-    minWidth: 90,
+    minWidth: 80,
   },
   chipText: {
     fontSize: 13,
