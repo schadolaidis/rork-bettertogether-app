@@ -34,24 +34,24 @@ export class TaskLogicService {
         const daysAgo = Math.floor(hoursAgo / 24);
 
         if (minutesAgo < 1) {
-          return { text: 'Just now', color: '#10B981', isUrgent: false };
+          return { text: 'Gerade eben', color: '#10B981', isUrgent: false };
         } else if (minutesAgo < 60) {
-          return { text: `${minutesAgo}m ago`, color: '#10B981', isUrgent: false };
+          return { text: `vor ${minutesAgo}m`, color: '#10B981', isUrgent: false };
         } else if (hoursAgo < 24) {
-          return { text: `${hoursAgo}h ago`, color: '#10B981', isUrgent: false };
+          return { text: `vor ${hoursAgo}h`, color: '#10B981', isUrgent: false };
         } else if (daysAgo === 1) {
-          return { text: 'Yesterday', color: '#10B981', isUrgent: false };
+          return { text: 'Gestern', color: '#10B981', isUrgent: false };
         } else if (daysAgo < 7) {
-          return { text: `${daysAgo}d ago`, color: '#10B981', isUrgent: false };
+          return { text: `vor ${daysAgo}T`, color: '#10B981', isUrgent: false };
         } else {
-          return { text: completedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), color: '#10B981', isUrgent: false };
+          return { text: completedDate.toLocaleDateString('de-DE', { month: 'short', day: 'numeric' }), color: '#10B981', isUrgent: false };
         }
       }
-      return { text: 'Completed', color: '#10B981', isUrgent: false };
+      return { text: 'Erledigt', color: '#10B981', isUrgent: false };
     }
 
     if (task.status === 'failed') {
-      return { text: 'Failed', color: '#EF4444', isUrgent: false };
+      return { text: 'Fehlgeschlagen', color: '#EF4444', isUrgent: false };
     }
 
     if (task.status === 'overdue') {
@@ -60,13 +60,13 @@ export class TaskLogicService {
       const daysOverdue = Math.floor(hoursOverdue / 24);
 
       if (minutesOverdue < 60) {
-        return { text: `Overdue ${minutesOverdue}m`, color: '#EF4444', isUrgent: true };
+        return { text: `Überfällig ${minutesOverdue}m`, color: '#EF4444', isUrgent: true };
       } else if (hoursOverdue < 24) {
-        return { text: `Overdue ${hoursOverdue}h`, color: '#EF4444', isUrgent: true };
+        return { text: `Überfällig ${hoursOverdue}h`, color: '#EF4444', isUrgent: true };
       } else if (daysOverdue === 1) {
-        return { text: 'Overdue 1d', color: '#EF4444', isUrgent: true };
+        return { text: 'Überfällig 1T', color: '#EF4444', isUrgent: true };
       } else {
-        return { text: `Overdue ${daysOverdue}d`, color: '#EF4444', isUrgent: true };
+        return { text: `Überfällig ${daysOverdue}T`, color: '#EF4444', isUrgent: true };
       }
     }
 
@@ -74,7 +74,7 @@ export class TaskLogicService {
       const minutesOverdue = Math.abs(minutesUntil);
       const hoursOverdue = Math.floor(minutesOverdue / 60);
       return { 
-        text: hoursOverdue < 1 ? `Overdue ${minutesOverdue}m` : `Overdue ${hoursOverdue}h`, 
+        text: hoursOverdue < 1 ? `Überfällig ${minutesOverdue}m` : `Überfällig ${hoursOverdue}h`, 
         color: '#EF4444', 
         isUrgent: true 
       };
@@ -88,22 +88,22 @@ export class TaskLogicService {
       return { text: `${hoursUntil}h`, color: '#3B82F6', isUrgent: false };
     } else if (daysUntil === 0) {
       return { 
-        text: endDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }), 
+        text: endDate.toLocaleTimeString('de-DE', { hour: 'numeric', minute: '2-digit' }), 
         color: '#3B82F6', 
         isUrgent: false 
       };
     } else if (daysUntil === 1) {
       return { 
-        text: `Tomorrow ${endDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`, 
+        text: `Morgen ${endDate.toLocaleTimeString('de-DE', { hour: 'numeric', minute: '2-digit' })}`, 
         color: '#6B7280', 
         isUrgent: false 
       };
     } else if (daysUntil < 7) {
-      const dayName = endDate.toLocaleDateString('en-US', { weekday: 'short' });
-      const time = endDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      const dayName = endDate.toLocaleDateString('de-DE', { weekday: 'short' });
+      const time = endDate.toLocaleTimeString('de-DE', { hour: 'numeric', minute: '2-digit' });
       return { text: `${dayName} ${time}`, color: '#6B7280', isUrgent: false };
     } else {
-      const dateStr = endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const dateStr = endDate.toLocaleDateString('de-DE', { month: 'short', day: 'numeric' });
       return { text: dateStr, color: '#9CA3AF', isUrgent: false };
     }
   }
@@ -185,17 +185,17 @@ export class TaskLogicService {
   static getGroupTitle(group: TaskGroup): string {
     switch (group) {
       case 'overdue':
-        return 'OVERDUE';
+        return 'ÜBERFÄLLIG';
       case 'today':
-        return 'TODAY';
+        return 'HEUTE';
       case 'tomorrow':
-        return 'TOMORROW';
+        return 'MORGEN';
       case 'thisWeek':
-        return 'THIS WEEK';
+        return 'DIESE WOCHE';
       case 'later':
-        return 'LATER';
+        return 'SPÄTER';
       case 'completed':
-        return 'COMPLETED';
+        return 'ERLEDIGT';
     }
   }
 

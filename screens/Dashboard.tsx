@@ -7,51 +7,69 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useApp } from '@/contexts/AppContext';
 import { AppBar } from '@/components/design-system/AppBar';
 import { Card } from '@/components/design-system/Card';
-import { Button } from '@/components/design-system/Button';
 import { IconButton } from '@/components/design-system/IconButton';
-import { ProgressRing } from '@/components/interactive/basic/ProgressRing';
-import { SegmentedControl, SegmentedControlOption } from '@/components/interactive/basic/SegmentedControl';
-import { StatMiniBar } from '@/components/stats/StatMiniBar';
 import { TaskEditSheet } from '@/screens/TaskEditSheet';
 import { SwipeableTaskCard } from '@/components/interactive/SwipeableTaskCard';
 
-type TaskStatus = 'all' | 'upcoming' | 'failed' | 'completed';
 
 
 
-const mockStats = {
-  completionRate: 0.72,
-  tasksCompleted: 18,
-  goalsAchieved: 3,
-  savingsTotal: 245,
-};
 
 export default function Dashboard() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
-  const { tasks, completeTask, failTask, currentList } = useApp();
-  const [selectedFilter, setSelectedFilter] = useState<TaskStatus>('all');
+  const { tasks, completeTask, failTask, currentList, currentUser } = useApp();
   const [taskSheetVisible, setTaskSheetVisible] = useState(false);
 
-  const filterOptions: SegmentedControlOption[] = [
-    { value: 'all', label: 'Alle' },
-    { value: 'upcoming', label: 'Anstehend' },
-    { value: 'failed', label: 'Fehlgeschlagen' },
-    { value: 'completed', label: 'Erledigt' },
-  ];
+  const getCurrentDateString = (): string => {
+    const today = new Date();
+    const options: Intl.DateTimeFormatOptions = { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    };
+    return today.toLocaleDateString('de-DE', options);
+  };
 
-  const filteredTasks = useMemo(() => {
-    if (selectedFilter === 'all') return tasks;
-    return tasks.filter(task => {
-      if (selectedFilter === 'upcoming') {
-        return task.status === 'pending';
+  const { overdueTasks, todayTasks, upcomingTasks } = useMemo(() => {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayEnd = new Date(todayStart);
+    todayEnd.setDate(todayEnd.getDate() + 1);
+    const tomorrowEnd = new Date(todayEnd);
+    tomorrowEnd.setDate(tomorrowEnd.getDate() + 1);
+
+    const overdue: typeof tasks = [];
+    const today: typeof tasks = [];
+    const upcoming: typeof tasks = [];
+
+    tasks.forEach(task => {
+      if (task.status !== 'pending' && task.status !== 'overdue') return;
+      
+      if (task.status === 'overdue') {
+        overdue.push(task);
+        return;
       }
-      if (selectedFilter === 'failed') {
-        return task.status === 'failed' || task.status === 'failed_stake_paid' || task.status === 'failed_joker_used';
+
+      if (!task.endAt) return;
+      const endDate = new Date(task.endAt);
+
+      if (endDate < todayStart) {
+        overdue.push(task);
+      } else if (endDate >= todayStart && endDate < todayEnd) {
+        today.push(task);
+      } else if (endDate >= todayEnd && endDate < tomorrowEnd) {
+        upcoming.push(task);
       }
-      return task.status === selectedFilter;
     });
-  }, [selectedFilter, tasks]);
+
+    return {
+      overdueTasks: overdue,
+      todayTasks: today,
+      upcomingTasks: upcoming,
+    };
+  }, [tasks]);
 
   const handleNotificationPress = () => {
     if (Platform.OS !== 'web') {
@@ -117,169 +135,102 @@ export default function Dashboard() {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 90 }]}
         showsVerticalScrollIndicator={false}
       >
-        <Card
-          style={[
-            styles.todayCard,
-            { backgroundColor: theme.surface, marginBottom: theme.spacing.lg },
-          ]}
-        >
-          <Text style={[theme.typography.h2, { color: theme.textHigh }]}>Heutiger Fokus</Text>
-          <Text style={[theme.typography.caption, { color: theme.textLow, marginTop: 8 }]}>
-            Dein Fortschritt auf einen Blick
+        <View style={[styles.headerSection, { paddingHorizontal: theme.spacing.md }]}>
+          <Text style={[theme.typography.h1, { color: theme.textHigh, fontSize: 28 }]}>
+            Heute
           </Text>
-          <View style={{ alignItems: 'center', marginTop: 12 }}>
-            <ProgressRing
-              size={80}
-              stroke={8}
-              progress={0.42}
-              showLabel
-              labelType="percentage"
-              progressColor={theme.primary}
-              trackColor={theme.surfaceAlt}
-            />
-          </View>
-
-          <View style={{ marginTop: 16, gap: 8 }}>
-            <View style={styles.statRow}>
-              <Text style={[theme.typography.label, { color: theme.textLow }]}>Aufgaben</Text>
-              <StatMiniBar />
-            </View>
-
-            <View style={styles.statRow}>
-              <Text style={[theme.typography.label, { color: theme.textLow }]}>Ziele</Text>
-              <StatMiniBar />
-            </View>
-
-            <View style={styles.statRow}>
-              <Text style={[theme.typography.label, { color: theme.textLow }]}>Ersparnis</Text>
-              <StatMiniBar />
-            </View>
-          </View>
-
-          <Button
-            title="+ Aufgabe hinzufügen"
-            onPress={handleAddTask}
-            variant="primary"
-            style={{ marginTop: 16 }}
-            testID="focus-card-add-task-button"
-          />
-        </Card>
-
-        <Card
-          style={{ marginBottom: theme.spacing.lg }}
-          header={
-            <Text style={[theme.typography.h2, { color: theme.textHigh }]}>
-              Heutiger Fokus
-            </Text>
-          }
-          content={
-            <View style={styles.focusContent}>
-              <View style={styles.progressSection}>
-                <ProgressRing
-                  size={80}
-                  stroke={8}
-                  progress={mockStats.completionRate}
-                  showLabel
-                  labelType="percentage"
-                  progressColor={theme.primary}
-                  trackColor={theme.surfaceAlt}
-                />
-              </View>
-
-              <View style={styles.statsRow}>
-                <View style={styles.statItem}>
-                  <View style={[styles.statBar, { backgroundColor: theme.primary }]}>
-                    <View
-                      style={[
-                        styles.statBarFill,
-                        { backgroundColor: theme.primary, width: '75%', opacity: 0.7 },
-                      ]}
-                    />
-                  </View>
-                  <Text style={[theme.typography.label, { color: theme.textLow }]}>
-                    Aufgaben
-                  </Text>
-                  <Text style={[theme.typography.body, { color: theme.textHigh, fontWeight: '600' }]}>
-                    {mockStats.tasksCompleted}
-                  </Text>
-                </View>
-
-                <View style={styles.statItem}>
-                  <View style={[styles.statBar, { backgroundColor: theme.accent }]}>
-                    <View
-                      style={[
-                        styles.statBarFill,
-                        { backgroundColor: theme.accent, width: '60%', opacity: 0.7 },
-                      ]}
-                    />
-                  </View>
-                  <Text style={[theme.typography.label, { color: theme.textLow }]}>
-                    Ziele
-                  </Text>
-                  <Text style={[theme.typography.body, { color: theme.textHigh, fontWeight: '600' }]}>
-                    {mockStats.goalsAchieved}
-                  </Text>
-                </View>
-
-                <View style={styles.statItem}>
-                  <View style={[styles.statBar, { backgroundColor: theme.success }]}>
-                    <View
-                      style={[
-                        styles.statBarFill,
-                        { backgroundColor: theme.success, width: '85%', opacity: 0.7 },
-                      ]}
-                    />
-                  </View>
-                  <Text style={[theme.typography.label, { color: theme.textLow }]}>
-                    Ersparnis
-                  </Text>
-                  <Text style={[theme.typography.body, { color: theme.textHigh, fontWeight: '600' }]}>
-                    €{mockStats.savingsTotal}
-                  </Text>
-                </View>
-              </View>
-            </View>
-          }
-          footer={
-            <Button
-              title="+ Aufgabe hinzufügen"
-              onPress={handleAddTask}
-              variant="primary"
-              testID="add-task-button"
-            />
-          }
-          testID="focus-card"
-        />
-
-        <View style={{ marginBottom: theme.spacing.md }}>
-          <SegmentedControl
-            options={filterOptions}
-            selectedValue={selectedFilter}
-            onChange={(value) => setSelectedFilter(value as TaskStatus)}
-          />
-        </View>
-
-        <Card padded={false} style={{ marginBottom: theme.spacing.lg }}>
-          {filteredTasks.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={[theme.typography.body, { color: theme.textLow, textAlign: 'center' }]}>
-                Keine Aufgaben gefunden
+          <Text style={[theme.typography.caption, { color: theme.textLow, marginTop: 4 }]}>
+            {getCurrentDateString()}
+          </Text>
+          {currentUser && currentUser.currentStreakCount > 1 && (
+            <View style={[styles.streakBadge, { backgroundColor: theme.surfaceAlt, marginTop: 12 }]}>
+              <Text style={[theme.typography.body, { color: theme.primary, fontWeight: '600' }]}>
+                🔥 {currentUser.currentStreakCount}-Tage Serie!
               </Text>
             </View>
-          ) : (
-            filteredTasks.map((task) => (
-              <SwipeableTaskCard
-                key={task.id}
-                task={task}
-                onComplete={handleComplete}
-                onFail={handleFail}
-                onPress={handleTaskPress}
-                currencySymbol={currentList?.currencySymbol || '€'}
-                showStatus={true}
-              />
-            ))
           )}
-        </Card>
+        </View>
+
+        {overdueTasks.length > 0 && (
+          <View style={{ marginBottom: theme.spacing.lg }}>
+            <View style={[styles.sectionHeader, { paddingHorizontal: theme.spacing.md }]}>
+              <Text style={[theme.typography.h2, { color: theme.error, fontWeight: '700', fontSize: 14, letterSpacing: 0.5 }]}>
+                ⚠️ ÜBERFÄLLIG
+              </Text>
+            </View>
+            <Card padded={false}>
+              {overdueTasks.map((task) => (
+                <SwipeableTaskCard
+                  key={task.id}
+                  task={task}
+                  onComplete={handleComplete}
+                  onFail={handleFail}
+                  onPress={handleTaskPress}
+                  currencySymbol={currentList?.currencySymbol || '€'}
+                  showStatus={true}
+                />
+              ))}
+            </Card>
+          </View>
+        )}
+
+        {todayTasks.length > 0 && (
+          <View style={{ marginBottom: theme.spacing.lg }}>
+            <View style={[styles.sectionHeader, { paddingHorizontal: theme.spacing.md }]}>
+              <Text style={[theme.typography.h2, { color: theme.primary, fontWeight: '700', fontSize: 14, letterSpacing: 0.5 }]}>
+                HEUTE FÄLLIG
+              </Text>
+            </View>
+            <Card padded={false}>
+              {todayTasks.map((task) => (
+                <SwipeableTaskCard
+                  key={task.id}
+                  task={task}
+                  onComplete={handleComplete}
+                  onFail={handleFail}
+                  onPress={handleTaskPress}
+                  currencySymbol={currentList?.currencySymbol || '€'}
+                  showStatus={true}
+                />
+              ))}
+            </Card>
+          </View>
+        )}
+
+        {upcomingTasks.length > 0 && (
+          <View style={{ marginBottom: theme.spacing.lg }}>
+            <View style={[styles.sectionHeader, { paddingHorizontal: theme.spacing.md }]}>
+              <Text style={[theme.typography.h2, { color: theme.textLow, fontWeight: '700', fontSize: 14, letterSpacing: 0.5 }]}>
+                DEMNÄCHST
+              </Text>
+            </View>
+            <Card padded={false}>
+              {upcomingTasks.map((task) => (
+                <SwipeableTaskCard
+                  key={task.id}
+                  task={task}
+                  onComplete={handleComplete}
+                  onFail={handleFail}
+                  onPress={handleTaskPress}
+                  currencySymbol={currentList?.currencySymbol || '€'}
+                  showStatus={true}
+                />
+              ))}
+            </Card>
+          </View>
+        )}
+
+        {overdueTasks.length === 0 && todayTasks.length === 0 && upcomingTasks.length === 0 && (
+          <View style={styles.emptyState}>
+            <Text style={[theme.typography.h2, { fontSize: 48, marginBottom: 16 }]}>✅</Text>
+            <Text style={[theme.typography.h2, { color: theme.textHigh, marginBottom: 8 }]}>
+              Alles erledigt!
+            </Text>
+            <Text style={[theme.typography.body, { color: theme.textLow, textAlign: 'center' }]}>
+              Du hast für heute alle Aufgaben geschafft. Genieße deinen Tag!
+            </Text>
+          </View>
+        )}
       </ScrollView>
 
       <Pressable
@@ -315,7 +266,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
+    paddingTop: 16,
+  },
+  headerSection: {
+    marginBottom: 24,
+  },
+  streakBadge: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  sectionHeader: {
+    marginBottom: 12,
   },
   focusContent: {
     gap: 24,
