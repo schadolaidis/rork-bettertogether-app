@@ -149,35 +149,40 @@ export class DashboardService {
       }
     });
 
-    if (completionRate >= 90 && currentMetrics.completedTasks >= 5) {
+    if (currentMetrics.failedTasks > 0) {
+      const totalContribution = currentMetrics.fundGrowth;
       insights.push({
         type: 'success',
-        message: `Amazing! ${completionRate}% task completion rate this month`,
-        icon: 'check',
-      });
-    } else if (completionRate < 50 && currentMetrics.failedTasks > currentMetrics.completedTasks) {
-      insights.push({
-        type: 'warning',
-        message: `${currentMetrics.failedTasks} failed vs ${currentMetrics.completedTasks} completed this month`,
-        icon: 'alert',
+        message: `🎉 €${totalContribution.toFixed(2)} in deine Sparziele eingezahlt!`,
+        icon: 'trending',
         action: {
-          label: 'Review Progress',
-          route: '/tasks',
+          label: 'Sparziele ansehen',
+          route: '/(tabs)/funds',
+        },
+      });
+    } else if (currentMetrics.completedTasks > 0 && currentMetrics.failedTasks === 0) {
+      insights.push({
+        type: 'success',
+        message: `🏆 ${currentMetrics.completedTasks} Aufgaben erfolgreich erledigt!`,
+        icon: 'check',
+        action: {
+          label: 'Gute Arbeit',
+          route: '/(tabs)/tasks',
+        },
+      });
+    } else if (currentMetrics.failedTasks === 0 && currentMetrics.completedTasks === 0) {
+      insights.push({
+        type: 'info',
+        message: 'Alles im Plan. Diese Woche stehen keine Aufgaben an.',
+        icon: 'check',
+        action: {
+          label: 'Aufgabe planen',
+          route: '/(tabs)/tasks',
         },
       });
     }
 
-    if (currentMetrics.fundGrowth > 0) {
-      insights.push({
-        type: 'info',
-        message: `Group fund grew by $${currentMetrics.fundGrowth.toFixed(2)} this month`,
-        icon: 'trending',
-        action: {
-          label: 'View Balance',
-          route: '/balances',
-        },
-      });
-    }
+
 
     return insights;
   }
