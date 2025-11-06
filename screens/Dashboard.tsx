@@ -47,10 +47,10 @@ export default function Dashboard() {
   const [taskSheetVisible, setTaskSheetVisible] = useState(false);
 
   const filterOptions: SegmentedControlOption[] = [
-    { value: 'all', label: 'All' },
-    { value: 'upcoming', label: 'Upcoming' },
-    { value: 'failed', label: 'Failed' },
-    { value: 'completed', label: 'Completed' },
+    { value: 'all', label: 'Alle' },
+    { value: 'upcoming', label: 'Anstehend' },
+    { value: 'failed', label: 'Fehlgeschlagen' },
+    { value: 'completed', label: 'Erledigt' },
   ];
 
   const filteredTasks = useMemo(() => {
@@ -133,9 +133,9 @@ export default function Dashboard() {
             { backgroundColor: theme.colors.surface, marginBottom: theme.spacing.lg },
           ]}
         >
-          <Text style={[theme.typography.H2, { color: theme.colors.textHigh }]}>Today&apos;s Focus</Text>
+          <Text style={[theme.typography.H2, { color: theme.colors.textHigh }]}>Heutiger Fokus</Text>
           <Text style={[theme.typography.Caption, { color: theme.colors.textLow, marginTop: 8 }]}>
-            Your progress at a glance
+            Dein Fortschritt auf einen Blick
           </Text>
           <View style={{ alignItems: 'center', marginTop: 12 }}>
             <ProgressRing
@@ -151,23 +151,23 @@ export default function Dashboard() {
 
           <View style={{ marginTop: 16, gap: 8 }}>
             <View style={styles.statRow}>
-              <Text style={[theme.typography.Label, { color: theme.colors.textLow }]}>Tasks</Text>
+              <Text style={[theme.typography.Label, { color: theme.colors.textLow }]}>Aufgaben</Text>
               <StatMiniBar />
             </View>
 
             <View style={styles.statRow}>
-              <Text style={[theme.typography.Label, { color: theme.colors.textLow }]}>Goals</Text>
+              <Text style={[theme.typography.Label, { color: theme.colors.textLow }]}>Ziele</Text>
               <StatMiniBar />
             </View>
 
             <View style={styles.statRow}>
-              <Text style={[theme.typography.Label, { color: theme.colors.textLow }]}>Savings</Text>
+              <Text style={[theme.typography.Label, { color: theme.colors.textLow }]}>Ersparnis</Text>
               <StatMiniBar />
             </View>
           </View>
 
           <Button
-            title="+ Add Task"
+            title="+ Aufgabe hinzufügen"
             onPress={handleAddTask}
             variant="primary"
             style={{ marginTop: 16 }}
@@ -179,7 +179,7 @@ export default function Dashboard() {
           style={{ marginBottom: theme.spacing.lg }}
           header={
             <Text style={[theme.typography.H2, { color: theme.colors.textHigh }]}>
-              Today&apos;s Focus
+              Heutiger Fokus
             </Text>
           }
           content={
@@ -207,7 +207,7 @@ export default function Dashboard() {
                     />
                   </View>
                   <Text style={[theme.typography.Label, { color: theme.colors.textLow }]}>
-                    Tasks
+                    Aufgaben
                   </Text>
                   <Text style={[theme.typography.Body, { color: theme.colors.textHigh, fontWeight: '600' }]}>
                     {mockStats.tasksCompleted}
@@ -224,7 +224,7 @@ export default function Dashboard() {
                     />
                   </View>
                   <Text style={[theme.typography.Label, { color: theme.colors.textLow }]}>
-                    Goals
+                    Ziele
                   </Text>
                   <Text style={[theme.typography.Body, { color: theme.colors.textHigh, fontWeight: '600' }]}>
                     {mockStats.goalsAchieved}
@@ -241,10 +241,10 @@ export default function Dashboard() {
                     />
                   </View>
                   <Text style={[theme.typography.Label, { color: theme.colors.textLow }]}>
-                    Savings
+                    Ersparnis
                   </Text>
                   <Text style={[theme.typography.Body, { color: theme.colors.textHigh, fontWeight: '600' }]}>
-                    ${mockStats.savingsTotal}
+                    €{mockStats.savingsTotal}
                   </Text>
                 </View>
               </View>
@@ -252,7 +252,7 @@ export default function Dashboard() {
           }
           footer={
             <Button
-              title="+ Add Task"
+              title="+ Aufgabe hinzufügen"
               onPress={handleAddTask}
               variant="primary"
               testID="add-task-button"
@@ -273,7 +273,7 @@ export default function Dashboard() {
           {filteredTasks.length === 0 ? (
             <View style={styles.emptyState}>
               <Text style={[theme.typography.Body, { color: theme.colors.textLow, textAlign: 'center' }]}>
-                No tasks found
+                Keine Aufgaben gefunden
               </Text>
             </View>
           ) : (
@@ -290,7 +290,7 @@ export default function Dashboard() {
                 right={
                   <View style={styles.taskRight}>
                     <Text style={[theme.typography.Label, { color: theme.colors.textHigh }]}>
-                      ${task.stakeAmount}
+                      €{task.stakeAmount}
                     </Text>
                     <View
                       style={[

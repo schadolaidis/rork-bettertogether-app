@@ -11,7 +11,7 @@ export default function FocusGoals() {
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <AppBar
-        title="Focus Goals"
+        title="Sparziele"
         testID="focus-goals-appbar"
       />
 

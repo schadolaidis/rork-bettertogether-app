@@ -31,12 +31,12 @@ export const TaskEditSheet: React.FC<TaskEditSheetProps> = ({
   const toggleAnimation = React.useRef(new Animated.Value(0)).current;
 
   const focusGoalOptions: SelectOption[] = [
-    { label: 'Health & Fitness', value: 'health' },
-    { label: 'Career & Work', value: 'career' },
-    { label: 'Finance & Savings', value: 'finance' },
-    { label: 'Learning & Education', value: 'learning' },
-    { label: 'Relationships', value: 'relationships' },
-    { label: 'Personal Growth', value: 'personal' },
+    { label: 'Gesundheit & Fitness', value: 'health' },
+    { label: 'Karriere & Arbeit', value: 'career' },
+    { label: 'Finanzen & Ersparnisse', value: 'finance' },
+    { label: 'Lernen & Bildung', value: 'learning' },
+    { label: 'Beziehungen', value: 'relationships' },
+    { label: 'Persönliches Wachstum', value: 'personal' },
   ];
 
   const assigneeOptions: SelectOption[] = [
@@ -48,7 +48,7 @@ export const TaskEditSheet: React.FC<TaskEditSheetProps> = ({
 
   const handleSave = () => {
     if (!name.trim()) {
-      setNameError('Name is required');
+      setNameError('Name ist erforderlich');
       return;
     }
     setNameError(undefined);
@@ -74,7 +74,7 @@ export const TaskEditSheet: React.FC<TaskEditSheetProps> = ({
     <View style={styles.footerButtons}>
       <View style={{ flex: 1 }}>
         <Button
-          title="Cancel"
+          title="Abbrechen"
           onPress={onClose}
           variant="ghost"
           testID="task-edit-cancel"
@@ -83,7 +83,7 @@ export const TaskEditSheet: React.FC<TaskEditSheetProps> = ({
       <View style={{ width: theme.spacing.sm }} />
       <View style={{ flex: 1 }}>
         <Button
-          title="Save"
+          title="Speichern"
           onPress={handleSave}
           variant="primary"
           disabled={!name.trim()}
@@ -97,7 +97,7 @@ export const TaskEditSheet: React.FC<TaskEditSheetProps> = ({
     <ModalSheet
       visible={visible}
       onClose={onClose}
-      title="Edit Task"
+      title="Aufgabe bearbeiten"
       showCloseButton={true}
       footer={footer}
       testID="task-edit-sheet"
@@ -110,56 +110,56 @@ export const TaskEditSheet: React.FC<TaskEditSheetProps> = ({
             setName(text);
             if (nameError) setNameError(undefined);
           }}
-          placeholder="Enter task name"
+          placeholder="Aufgabenname eingeben"
           errorText={nameError}
           testID="task-name-field"
         />
 
         <TextField
-          label="Description"
+          label="Beschreibung"
           value={description}
           onChangeText={setDescription}
-          placeholder="Enter task description (optional)"
+          placeholder="Aufgabenbeschreibung eingeben (optional)"
           multiline
           numberOfLines={3}
           testID="task-description-field"
         />
 
         <Select
-          label="Focus Goal"
+          label="Sparziel"
           value={focusGoal}
           onChange={setFocusGoal}
           options={focusGoalOptions}
-          placeholder="Select a focus goal"
+          placeholder="Wähle ein Sparziel"
           testID="task-focus-goal-field"
         />
 
         <DateTimeInput
-          label="Due Date & Time"
+          label="Fälligkeitsdatum & Zeit"
           value={dueDate}
           onChange={(value) => {
             console.log('Date changed:', value);
             setDueDate(value);
           }}
-          placeholder="Select due date & time"
+          placeholder="Fälligkeitsdatum & Zeit auswählen"
           testID="task-due-date-field"
         />
 
         <AmountInput
-          label="Stake"
+          label="Einsatz"
           value={stakeAmount}
           onChange={setStakeAmount}
-          prefix="$"
-          placeholder="0.00"
+          prefix="€"
+          placeholder="0,00"
           testID="task-stake-field"
         />
 
         <Select
-          label="Assignee"
+          label="Zugewiesen an"
           value={assignee}
           onChange={setAssignee}
           options={assigneeOptions}
-          placeholder="Select assignee (optional)"
+          placeholder="Person auswählen (optional)"
           testID="task-assignee-field"
         />
 
@@ -174,7 +174,7 @@ export const TaskEditSheet: React.FC<TaskEditSheetProps> = ({
               { color: theme.textHigh, flex: 1 },
             ]}
           >
-            Reminder
+            Erinnerung
           </Text>
           <Animated.View
             style={[

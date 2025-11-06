@@ -117,20 +117,20 @@ const SwipeableTaskItem: React.FC<SwipeableTaskItemProps> = ({
   const getStatusLabel = (status: Task['status']) => {
     switch (status) {
       case 'completed':
-        return 'Done';
+        return 'Erledigt';
       case 'failed':
-        return 'Failed';
+        return 'Fehlgeschlagen';
       case 'overdue':
-        return 'Overdue';
+        return 'Überfällig';
       case 'pending':
-        return 'Active';
+        return 'Offen';
       default:
         return '';
     }
   };
 
   const formatDueDate = (task: Task): string => {
-    if (!task.startAt) return 'No due date';
+    if (!task.startAt) return 'Kein Fälligkeitsdatum';
     
     const startDate = new Date(task.startAt);
     const now = new Date();
@@ -138,16 +138,16 @@ const SwipeableTaskItem: React.FC<SwipeableTaskItemProps> = ({
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
     if (diffDays === 0) {
-      return `Today ${startDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+      return `Heute ${startDate.toLocaleTimeString('de-DE', { hour: 'numeric', minute: '2-digit' })}`;
     } else if (diffDays === 1) {
-      return `Tomorrow ${startDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+      return `Morgen ${startDate.toLocaleTimeString('de-DE', { hour: 'numeric', minute: '2-digit' })}`;
     } else if (diffDays === -1) {
-      return `Yesterday ${startDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+      return `Gestern ${startDate.toLocaleTimeString('de-DE', { hour: 'numeric', minute: '2-digit' })}`;
     } else if (diffDays > 1 && diffDays < 7) {
-      return `${startDate.toLocaleDateString('en-US', { weekday: 'short' })} ${startDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+      return `${startDate.toLocaleDateString('de-DE', { weekday: 'short' })} ${startDate.toLocaleTimeString('de-DE', { hour: 'numeric', minute: '2-digit' })}`;
     }
     
-    return startDate.toLocaleDateString('en-US', { 
+    return startDate.toLocaleDateString('de-DE', { 
       month: 'short', 
       day: 'numeric',
       hour: 'numeric',
@@ -238,11 +238,11 @@ export default function Tasks() {
   const [selectedFilter, setSelectedFilter] = useState<TaskFilterType>('all');
 
   const filterOptions: SegmentedControlOption[] = [
-    { value: 'all', label: 'All' },
-    { value: 'active', label: 'Active' },
-    { value: 'completed', label: 'Completed' },
-    { value: 'failed', label: 'Failed' },
-    { value: 'upcoming', label: 'Upcoming' },
+    { value: 'all', label: 'Alle' },
+    { value: 'active', label: 'Aktiv' },
+    { value: 'completed', label: 'Erledigt' },
+    { value: 'failed', label: 'Fehlgeschlagen' },
+    { value: 'upcoming', label: 'Anstehend' },
   ];
 
   const filteredTasks = useMemo(() => {
@@ -308,7 +308,7 @@ export default function Tasks() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <AppBar title="Tasks" testID="tasks-appbar" />
+      <AppBar title="Aufgaben" testID="tasks-appbar" />
 
       <View style={[styles.filterContainer, { paddingHorizontal: theme.spacing.md }]}>
         <SegmentedControl
@@ -338,12 +338,12 @@ export default function Tasks() {
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Text style={[theme.typography.h2, { color: theme.textLow, marginBottom: 8 }]}>
-              No tasks found
+              Keine Aufgaben gefunden
             </Text>
             <Text style={[theme.typography.body, { color: theme.textLow, textAlign: 'center' }]}>
               {selectedFilter === 'all' 
-                ? 'Create your first task to get started'
-                : `No ${selectedFilter} tasks`}
+                ? 'Erstelle deine erste Aufgabe'
+                : `Keine ${selectedFilter === 'active' ? 'aktiven' : selectedFilter === 'upcoming' ? 'anstehenden' : selectedFilter === 'completed' ? 'erledigten' : 'fehlgeschlagenen'} Aufgaben`}
             </Text>
           </View>
         }

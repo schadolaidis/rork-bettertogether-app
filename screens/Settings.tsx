@@ -50,13 +50,13 @@ export default function Settings() {
   };
 
   const handleLogout = () => {
-    console.log('Logout');
+    console.log('Abmelden');
   };
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <AppBar
-        title="Settings"
+        title="Einstellungen"
         testID="settings-appbar"
       />
 
@@ -91,25 +91,25 @@ export default function Settings() {
         {/* Section A - Account */}
         <View style={styles.section}>
           <Text style={[theme.typography.Caption, styles.sectionTitle, { color: theme.colors.textLow }]}>
-            ACCOUNT
+            KONTO
           </Text>
           <Card style={styles.listCard} padded={false}>
             <ListRow
-              title="Language"
+              title="Sprache"
               right={<ChevronRight size={20} color={theme.colors.textLow} />}
               onPress={() => setLanguageModalOpen(true)}
               testID="language-row"
             />
             <ListRow
-              title="Currency"
+              title="Währung"
               right={<ChevronRight size={20} color={theme.colors.textLow} />}
               onPress={() => setCurrencyModalOpen(true)}
               testID="currency-row"
             />
             <ListRow
-              title="Notifications"
+              title="Benachrichtigungen"
               right={<ChevronRight size={20} color={theme.colors.textLow} />}
-              onPress={() => console.log('Notifications')}
+              onPress={() => console.log('Benachrichtigungen')}
               testID="notifications-row"
             />
           </Card>
@@ -118,11 +118,11 @@ export default function Settings() {
         {/* Section B - Appearance */}
         <View style={styles.section}>
           <Text style={[theme.typography.Caption, styles.sectionTitle, { color: theme.colors.textLow }]}>
-            APPEARANCE
+            ERSCHEINUNGSBILD
           </Text>
           <Card style={styles.listCard} padded={false}>
             <ListRow
-              title="Theme"
+              title="Design"
               right={<ChevronRight size={20} color={theme.colors.textLow} />}
               onPress={() => setThemeModalOpen(true)}
               testID="theme-row"
@@ -133,19 +133,19 @@ export default function Settings() {
         {/* Section C - Workspace */}
         <View style={styles.section}>
           <Text style={[theme.typography.Caption, styles.sectionTitle, { color: theme.colors.textLow }]}>
-            WORKSPACE
+            ARBEITSBEREICH
           </Text>
           <Card style={styles.listCard} padded={false}>
             <ListRow
-              title="Members"
+              title="Mitglieder"
               right={<ChevronRight size={20} color={theme.colors.textLow} />}
-              onPress={() => console.log('Members')}
+              onPress={() => console.log('Mitglieder')}
               testID="members-row"
             />
             <ListRow
-              title="Defaults"
+              title="Standards"
               right={<ChevronRight size={20} color={theme.colors.textLow} />}
-              onPress={() => console.log('Defaults')}
+              onPress={() => console.log('Standards')}
               testID="defaults-row"
             />
           </Card>
@@ -154,13 +154,13 @@ export default function Settings() {
         {/* Section D - Categories */}
         <View style={styles.section}>
           <Text style={[theme.typography.Caption, styles.sectionTitle, { color: theme.colors.textLow }]}>
-            CATEGORIES
+            KATEGORIEN
           </Text>
           <Card style={styles.listCard} padded={false}>
             <ListRow
-              title="Manage Task Categories"
+              title="Aufgabenkategorien verwalten"
               right={<ChevronRight size={20} color={theme.colors.textLow} />}
-              onPress={() => console.log('Manage categories')}
+              onPress={() => console.log('Kategorien verwalten')}
               testID="categories-row"
             />
           </Card>
@@ -172,7 +172,7 @@ export default function Settings() {
             Version 1.0.0
           </Text>
           <Button
-            title="Logout"
+            title="Abmelden"
             onPress={handleLogout}
             variant="secondary"
             style={{ marginTop: 24, width: '100%' }}
@@ -195,7 +195,7 @@ export default function Settings() {
               { color: theme.colors.textHigh, marginBottom: theme.spacing.md },
             ]}
           >
-            Language
+            Sprache
           </Text>
           <View>
             {languageOptions.map((option, index) => {
@@ -247,7 +247,7 @@ export default function Settings() {
               { color: theme.colors.textHigh, marginBottom: theme.spacing.md },
             ]}
           >
-            Currency
+            Währung
           </Text>
           <View>
             {currencyOptions.map((option, index) => {
@@ -299,15 +299,15 @@ export default function Settings() {
               { color: theme.colors.textHigh, marginBottom: theme.spacing.md },
             ]}
           >
-            Theme
+            Design
           </Text>
           <View style={styles.themeToggleContainer}>
             <View style={{ flex: 1 }}>
               <Text style={[theme.typography.Body, { color: theme.colors.textHigh }]}>
-                Dark Mode
+                Dunkler Modus
               </Text>
               <Text style={[theme.typography.Caption, { color: theme.colors.textLow }]}>
-                {mode === 'dark' ? 'Enabled' : 'Disabled'}
+                {mode === 'dark' ? 'Aktiviert' : 'Deaktiviert'}
               </Text>
             </View>
             <Switch
