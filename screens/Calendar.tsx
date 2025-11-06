@@ -15,7 +15,7 @@ export default function Calendar() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { tasks, selectedDate, setCalendarSelectedDate } = useApp();
+  const { tasks, selectedDate, setCalendarSelectedDate, completeTask, failTask, currentList } = useApp();
 
   const [localSelectedDate, setLocalSelectedDate] = useState<Date>(selectedDate);
 
@@ -98,7 +98,7 @@ export default function Calendar() {
   }, [localSelectedDate, router]);
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <AppBar title="Calendar" testID="calendar-appbar" />
       
       <View style={styles.weekScrollerContainer}>
@@ -114,6 +114,9 @@ export default function Calendar() {
         tasks={filteredTasks}
         onTimeBlockPress={handleTimeBlockPress}
         onTaskPress={handleTaskPress}
+        onTaskComplete={completeTask}
+        onTaskFail={failTask}
+        currencySymbol={currentList?.currencySymbol || '€'}
         startHour={8}
         endHour={20}
       />
@@ -122,9 +125,9 @@ export default function Calendar() {
         style={({ pressed }) => [
           styles.fab,
           {
-            backgroundColor: theme.colors.primary,
+            backgroundColor: theme.primary,
             bottom: insets.bottom + 80,
-            shadowColor: theme.colors.primary,
+            shadowColor: theme.primary,
           },
           pressed && { opacity: 0.8, transform: [{ scale: 0.95 }] },
         ]}

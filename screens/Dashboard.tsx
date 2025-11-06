@@ -4,34 +4,20 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Bell, User, Plus } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useApp } from '@/contexts/AppContext';
 import { AppBar } from '@/components/design-system/AppBar';
 import { Card } from '@/components/design-system/Card';
 import { Button } from '@/components/design-system/Button';
 import { IconButton } from '@/components/design-system/IconButton';
-import { ListRow } from '@/components/design-system/ListRow';
 import { ProgressRing } from '@/components/interactive/basic/ProgressRing';
 import { SegmentedControl, SegmentedControlOption } from '@/components/interactive/basic/SegmentedControl';
 import { StatMiniBar } from '@/components/stats/StatMiniBar';
 import { TaskEditSheet } from '@/screens/TaskEditSheet';
+import { SwipeableTaskCard } from '@/components/interactive/SwipeableTaskCard';
 
 type TaskStatus = 'all' | 'upcoming' | 'failed' | 'completed';
 
-type Task = {
-  id: string;
-  emoji: string;
-  name: string;
-  dueDate: string;
-  stakeAmount: number;
-  status: 'completed' | 'failed' | 'pending' | 'upcoming';
-};
 
-const mockTasks: Task[] = [
-  { id: '1', emoji: '💪', name: 'Morning Workout', dueDate: 'Today 7:00 AM', stakeAmount: 10, status: 'upcoming' },
-  { id: '2', emoji: '📚', name: 'Read Chapter 5', dueDate: 'Today 2:00 PM', stakeAmount: 5, status: 'pending' },
-  { id: '3', emoji: '🧘', name: 'Evening Meditation', dueDate: 'Today 8:00 PM', stakeAmount: 8, status: 'upcoming' },
-  { id: '4', emoji: '💼', name: 'Team Meeting', dueDate: 'Today 10:00 AM', stakeAmount: 15, status: 'completed' },
-  { id: '5', emoji: '🎯', name: 'Weekly Review', dueDate: 'Yesterday 5:00 PM', stakeAmount: 12, status: 'failed' },
-];
 
 const mockStats = {
   completionRate: 0.72,
@@ -43,6 +29,7 @@ const mockStats = {
 export default function Dashboard() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const { tasks, completeTask, failTask, currentList } = useApp();
   const [selectedFilter, setSelectedFilter] = useState<TaskStatus>('all');
   const [taskSheetVisible, setTaskSheetVisible] = useState(false);
 
@@ -54,9 +41,17 @@ export default function Dashboard() {
   ];
 
   const filteredTasks = useMemo(() => {
-    if (selectedFilter === 'all') return mockTasks;
-    return mockTasks.filter(task => task.status === selectedFilter);
-  }, [selectedFilter]);
+    if (selectedFilter === 'all') return tasks;
+    return tasks.filter(task => {
+      if (selectedFilter === 'upcoming') {
+        return task.status === 'pending';
+      }
+      if (selectedFilter === 'failed') {
+        return task.status === 'failed' || task.status === 'failed_stake_paid' || task.status === 'failed_joker_used';
+      }
+      return task.status === selectedFilter;
+    });
+  }, [selectedFilter, tasks]);
 
   const handleNotificationPress = () => {
     if (Platform.OS !== 'web') {
@@ -79,41 +74,36 @@ export default function Dashboard() {
     setTaskSheetVisible(true);
   };
 
-  const handleTaskPress = (task: Task) => {
+  const handleTaskPress = (task: any) => {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-    console.log('Task pressed:', task.name);
+    console.log('Task pressed:', task.title || task.name);
   };
 
-  const getStatusColor = (status: Task['status']) => {
-    switch (status) {
-      case 'completed':
-        return theme.colors.success;
-      case 'failed':
-        return theme.colors.error;
-      case 'upcoming':
-        return theme.colors.accent;
-      case 'pending':
-        return theme.colors.warning;
-      default:
-        return theme.colors.textLow;
-    }
+  const handleComplete = (taskId: string) => {
+    console.log('[Dashboard] Completing task:', taskId);
+    completeTask(taskId);
+  };
+
+  const handleFail = (taskId: string) => {
+    console.log('[Dashboard] Failing task:', taskId);
+    failTask(taskId);
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <AppBar
         title="Dashboard"
         actions={
           <>
             <IconButton
-              icon={<Bell size={22} color={theme.colors.primary} />}
+              icon={<Bell size={22} color={theme.primary} />}
               onPress={handleNotificationPress}
               testID="bell-button"
             />
             <IconButton
-              icon={<User size={22} color={theme.colors.primary} />}
+              icon={<User size={22} color={theme.primary} />}
               onPress={handleAvatarPress}
               testID="avatar-button"
             />
@@ -130,11 +120,11 @@ export default function Dashboard() {
         <Card
           style={[
             styles.todayCard,
-            { backgroundColor: theme.colors.surface, marginBottom: theme.spacing.lg },
+            { backgroundColor: theme.surface, marginBottom: theme.spacing.lg },
           ]}
         >
-          <Text style={[theme.typography.H2, { color: theme.colors.textHigh }]}>Heutiger Fokus</Text>
-          <Text style={[theme.typography.Caption, { color: theme.colors.textLow, marginTop: 8 }]}>
+          <Text style={[theme.typography.h2, { color: theme.textHigh }]}>Heutiger Fokus</Text>
+          <Text style={[theme.typography.caption, { color: theme.textLow, marginTop: 8 }]}>
             Dein Fortschritt auf einen Blick
           </Text>
           <View style={{ alignItems: 'center', marginTop: 12 }}>
@@ -144,24 +134,24 @@ export default function Dashboard() {
               progress={0.42}
               showLabel
               labelType="percentage"
-              progressColor={theme.colors.primary}
-              trackColor={theme.colors.surfaceAlt}
+              progressColor={theme.primary}
+              trackColor={theme.surfaceAlt}
             />
           </View>
 
           <View style={{ marginTop: 16, gap: 8 }}>
             <View style={styles.statRow}>
-              <Text style={[theme.typography.Label, { color: theme.colors.textLow }]}>Aufgaben</Text>
+              <Text style={[theme.typography.label, { color: theme.textLow }]}>Aufgaben</Text>
               <StatMiniBar />
             </View>
 
             <View style={styles.statRow}>
-              <Text style={[theme.typography.Label, { color: theme.colors.textLow }]}>Ziele</Text>
+              <Text style={[theme.typography.label, { color: theme.textLow }]}>Ziele</Text>
               <StatMiniBar />
             </View>
 
             <View style={styles.statRow}>
-              <Text style={[theme.typography.Label, { color: theme.colors.textLow }]}>Ersparnis</Text>
+              <Text style={[theme.typography.label, { color: theme.textLow }]}>Ersparnis</Text>
               <StatMiniBar />
             </View>
           </View>
@@ -178,7 +168,7 @@ export default function Dashboard() {
         <Card
           style={{ marginBottom: theme.spacing.lg }}
           header={
-            <Text style={[theme.typography.H2, { color: theme.colors.textHigh }]}>
+            <Text style={[theme.typography.h2, { color: theme.textHigh }]}>
               Heutiger Fokus
             </Text>
           }
@@ -191,59 +181,59 @@ export default function Dashboard() {
                   progress={mockStats.completionRate}
                   showLabel
                   labelType="percentage"
-                  progressColor={theme.colors.primary}
-                  trackColor={theme.colors.surfaceAlt}
+                  progressColor={theme.primary}
+                  trackColor={theme.surfaceAlt}
                 />
               </View>
 
               <View style={styles.statsRow}>
                 <View style={styles.statItem}>
-                  <View style={[styles.statBar, { backgroundColor: theme.colors.primary }]}>
+                  <View style={[styles.statBar, { backgroundColor: theme.primary }]}>
                     <View
                       style={[
                         styles.statBarFill,
-                        { backgroundColor: theme.colors.primary, width: '75%', opacity: 0.7 },
+                        { backgroundColor: theme.primary, width: '75%', opacity: 0.7 },
                       ]}
                     />
                   </View>
-                  <Text style={[theme.typography.Label, { color: theme.colors.textLow }]}>
+                  <Text style={[theme.typography.label, { color: theme.textLow }]}>
                     Aufgaben
                   </Text>
-                  <Text style={[theme.typography.Body, { color: theme.colors.textHigh, fontWeight: '600' }]}>
+                  <Text style={[theme.typography.body, { color: theme.textHigh, fontWeight: '600' }]}>
                     {mockStats.tasksCompleted}
                   </Text>
                 </View>
 
                 <View style={styles.statItem}>
-                  <View style={[styles.statBar, { backgroundColor: theme.colors.accent }]}>
+                  <View style={[styles.statBar, { backgroundColor: theme.accent }]}>
                     <View
                       style={[
                         styles.statBarFill,
-                        { backgroundColor: theme.colors.accent, width: '60%', opacity: 0.7 },
+                        { backgroundColor: theme.accent, width: '60%', opacity: 0.7 },
                       ]}
                     />
                   </View>
-                  <Text style={[theme.typography.Label, { color: theme.colors.textLow }]}>
+                  <Text style={[theme.typography.label, { color: theme.textLow }]}>
                     Ziele
                   </Text>
-                  <Text style={[theme.typography.Body, { color: theme.colors.textHigh, fontWeight: '600' }]}>
+                  <Text style={[theme.typography.body, { color: theme.textHigh, fontWeight: '600' }]}>
                     {mockStats.goalsAchieved}
                   </Text>
                 </View>
 
                 <View style={styles.statItem}>
-                  <View style={[styles.statBar, { backgroundColor: theme.colors.success }]}>
+                  <View style={[styles.statBar, { backgroundColor: theme.success }]}>
                     <View
                       style={[
                         styles.statBarFill,
-                        { backgroundColor: theme.colors.success, width: '85%', opacity: 0.7 },
+                        { backgroundColor: theme.success, width: '85%', opacity: 0.7 },
                       ]}
                     />
                   </View>
-                  <Text style={[theme.typography.Label, { color: theme.colors.textLow }]}>
+                  <Text style={[theme.typography.label, { color: theme.textLow }]}>
                     Ersparnis
                   </Text>
-                  <Text style={[theme.typography.Body, { color: theme.colors.textHigh, fontWeight: '600' }]}>
+                  <Text style={[theme.typography.body, { color: theme.textHigh, fontWeight: '600' }]}>
                     €{mockStats.savingsTotal}
                   </Text>
                 </View>
@@ -272,36 +262,20 @@ export default function Dashboard() {
         <Card padded={false} style={{ marginBottom: theme.spacing.lg }}>
           {filteredTasks.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={[theme.typography.Body, { color: theme.colors.textLow, textAlign: 'center' }]}>
+              <Text style={[theme.typography.body, { color: theme.textLow, textAlign: 'center' }]}>
                 Keine Aufgaben gefunden
               </Text>
             </View>
           ) : (
-            filteredTasks.map((task, index) => (
-              <ListRow
+            filteredTasks.map((task) => (
+              <SwipeableTaskCard
                 key={task.id}
-                left={
-                  <View style={styles.taskEmoji}>
-                    <Text style={styles.emojiText}>{task.emoji}</Text>
-                  </View>
-                }
-                title={task.name}
-                subtitle={task.dueDate}
-                right={
-                  <View style={styles.taskRight}>
-                    <Text style={[theme.typography.Label, { color: theme.colors.textHigh }]}>
-                      €{task.stakeAmount}
-                    </Text>
-                    <View
-                      style={[
-                        styles.statusDot,
-                        { backgroundColor: getStatusColor(task.status) },
-                      ]}
-                    />
-                  </View>
-                }
-                onPress={() => handleTaskPress(task)}
-                testID={`task-${task.id}`}
+                task={task}
+                onComplete={handleComplete}
+                onFail={handleFail}
+                onPress={handleTaskPress}
+                currencySymbol={currentList?.currencySymbol || '€'}
+                showStatus={true}
               />
             ))
           )}
@@ -312,9 +286,9 @@ export default function Dashboard() {
         style={({ pressed }) => [
           styles.fab,
           {
-            backgroundColor: theme.colors.primary,
+            backgroundColor: theme.primary,
             bottom: insets.bottom + 16,
-            shadowColor: theme.colors.primary,
+            shadowColor: theme.primary,
           },
           pressed && { opacity: 0.8, transform: [{ scale: 0.95 }] },
         ]}

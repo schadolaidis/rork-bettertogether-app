@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Platform } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
+import { SwipeableTaskCard } from '@/components/interactive/SwipeableTaskCard';
 import type { Task } from '@/types';
 
 export type TimeBlock = {
@@ -14,6 +15,9 @@ export type TimelineListProps = {
   tasks: Task[];
   onTimeBlockPress: (date: Date, hour: number) => void;
   onTaskPress: (task: Task) => void;
+  onTaskComplete?: (taskId: string) => void;
+  onTaskFail?: (taskId: string) => void;
+  currencySymbol?: string;
   startHour?: number;
   endHour?: number;
 };
@@ -23,6 +27,9 @@ export const TimelineList: React.FC<TimelineListProps> = ({
   tasks,
   onTimeBlockPress,
   onTaskPress,
+  onTaskComplete,
+  onTaskFail,
+  currencySymbol = '€',
   startHour = 8,
   endHour = 20,
 }) => {
@@ -64,7 +71,7 @@ export const TimelineList: React.FC<TimelineListProps> = ({
       Work: '#F59E0B',
       Leisure: '#A78BFA',
     };
-    return categoryColors[category] || theme.colors.primary;
+    return categoryColors[category] || theme.primary;
   };
 
   const isCurrentHour = (hour: number): boolean => {
@@ -79,7 +86,7 @@ export const TimelineList: React.FC<TimelineListProps> = ({
 
   return (
     <ScrollView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      style={[styles.container, { backgroundColor: theme.background }]}
       showsVerticalScrollIndicator={Platform.OS === 'web'}
       testID="timeline-list"
     >
@@ -93,7 +100,7 @@ export const TimelineList: React.FC<TimelineListProps> = ({
                 style={[
                   styles.stickyHeader,
                   {
-                    backgroundColor: theme.colors.primary,
+                    backgroundColor: theme.primary,
                     paddingHorizontal: theme.spacing.md,
                     paddingVertical: theme.spacing.xs,
                   },
@@ -101,8 +108,8 @@ export const TimelineList: React.FC<TimelineListProps> = ({
               >
                 <Text
                   style={[
-                    theme.typography.Caption,
-                    { color: theme.colors.surface, fontWeight: '600' },
+                    theme.typography.caption,
+                    { color: theme.surface, fontWeight: '600' },
                   ]}
                 >
                   Now
@@ -114,9 +121,9 @@ export const TimelineList: React.FC<TimelineListProps> = ({
               style={[
                 styles.timeBlock,
                 {
-                  backgroundColor: theme.colors.surface,
+                  backgroundColor: theme.surface,
                   borderBottomWidth: StyleSheet.hairlineWidth,
-                  borderBottomColor: theme.colors.border,
+                  borderBottomColor: theme.border,
                   minHeight: 80,
                 },
               ]}
@@ -134,9 +141,9 @@ export const TimelineList: React.FC<TimelineListProps> = ({
               >
                 <Text
                   style={[
-                    theme.typography.Label,
+                    theme.typography.label,
                     {
-                      color: isCurrent ? theme.colors.primary : theme.colors.textLow,
+                      color: isCurrent ? theme.primary : theme.textLow,
                       fontWeight: isCurrent ? '600' : '400',
                     },
                   ]}
@@ -155,8 +162,8 @@ export const TimelineList: React.FC<TimelineListProps> = ({
                   >
                     <Text
                       style={[
-                        theme.typography.Caption,
-                        { color: theme.colors.textLow },
+                        theme.typography.caption,
+                        { color: theme.textLow },
                       ]}
                     >
                       Tap to add task
@@ -164,6 +171,21 @@ export const TimelineList: React.FC<TimelineListProps> = ({
                   </View>
                 ) : (
                   block.tasks.map((task) => {
+                    if (onTaskComplete && onTaskFail) {
+                      return (
+                        <View key={task.id} style={{ marginBottom: theme.spacing.xs }}>
+                          <SwipeableTaskCard
+                            task={task}
+                            onComplete={onTaskComplete}
+                            onFail={onTaskFail}
+                            onPress={onTaskPress}
+                            currencySymbol={currencySymbol}
+                            showStatus={false}
+                          />
+                        </View>
+                      );
+                    }
+
                     const categoryColor = getCategoryColor(task.category);
 
                     return (
@@ -172,8 +194,8 @@ export const TimelineList: React.FC<TimelineListProps> = ({
                         style={[
                           styles.taskCard,
                           {
-                            backgroundColor: theme.colors.surface,
-                            borderRadius: theme.radius - 4,
+                            backgroundColor: theme.surface,
+                            borderRadius: 12,
                             borderLeftWidth: 4,
                             borderLeftColor: categoryColor,
                             marginBottom: theme.spacing.xs,
@@ -192,9 +214,9 @@ export const TimelineList: React.FC<TimelineListProps> = ({
                         <View style={styles.taskHeader}>
                           <Text
                             style={[
-                              theme.typography.Body,
+                              theme.typography.body,
                               {
-                                color: theme.colors.textHigh,
+                                color: theme.textHigh,
                                 fontWeight: '500',
                                 flex: 1,
                               },
@@ -208,20 +230,20 @@ export const TimelineList: React.FC<TimelineListProps> = ({
                               style={[
                                 styles.stakeBadge,
                                 {
-                                  backgroundColor: theme.colors.surfaceAlt,
-                                  borderRadius: theme.radius - 8,
+                                  backgroundColor: theme.surfaceAlt,
+                                  borderRadius: 8,
                                   paddingHorizontal: theme.spacing.xs,
-                                  paddingVertical: theme.spacing.xxs,
+                                  paddingVertical: 4,
                                 },
                               ]}
                             >
                               <Text
                                 style={[
-                                  theme.typography.Caption,
-                                  { color: theme.colors.textHigh, fontWeight: '600' },
+                                  theme.typography.caption,
+                                  { color: theme.textHigh, fontWeight: '600' },
                                 ]}
                               >
-                                ${(task.stake / 100).toFixed(0)}
+                                {currencySymbol}{(task.stake / 100).toFixed(0)}
                               </Text>
                             </View>
                           )}
@@ -230,8 +252,8 @@ export const TimelineList: React.FC<TimelineListProps> = ({
                         <View style={styles.taskMeta}>
                           <Text
                             style={[
-                              theme.typography.Caption,
-                              { color: theme.colors.textLow },
+                              theme.typography.caption,
+                              { color: theme.textLow },
                             ]}
                           >
                             {new Date(task.startAt).toLocaleTimeString('en-US', {
