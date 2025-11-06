@@ -11,35 +11,24 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import {
-  TrendingUp,
-  TrendingDown,
-  AlertCircle,
-  CheckCircle2,
-  Clock,
   Users,
   X,
-  ChevronDown,
   Check,
   Plus,
   CheckSquare,
-  Target,
-  ChevronRight,
-  Sparkles,
+  CheckCircle,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useApp } from '@/contexts/AppContext';
-import { FundHero } from '@/components/FundHero';
-import { SectionHeader } from '@/components/design-system/SectionHeader';
-import { StreaksFundCard } from '@/components/StreaksFundCard';
-import { StatCard } from '@/components/design-system/StatCard';
+import { SwipeableTaskCard } from '@/components/interactive/SwipeableTaskCard';
 import { DesignTokens } from '@/constants/design-tokens';
-import { InsightData, DashboardService } from '@/services/DashboardService';
+import { Task } from '@/types';
+import { ClockService } from '@/services/ClockService';
 
 export default function DashboardScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const {
-    dashboardStats,
     tasks,
     allTasks,
     currentUser,
@@ -47,93 +36,94 @@ export default function DashboardScreen() {
     currentListMembers,
     lists,
     switchList,
-    ledgerEntries,
     currentListId,
-    fundTargets,
+    completeTask,
+    failTask,
   } = useApp();
 
   const [showListSwitcher, setShowListSwitcher] = useState(false);
 
-  const activeFundTargets = useMemo(() => {
-    return fundTargets;
-  }, [fundTargets]);
+  const currencySymbol = currentList?.currencySymbol || '€';
 
-  const currencySymbol = currentList?.currencySymbol || '$';
-  const totalBalance = dashboardStats?.totalBalance ?? 0;
-  const balanceColor = totalBalance >= 0 ? '#10B981' : '#EF4444';
-  const balanceSign = totalBalance >= 0 ? '+' : '';
+  const now = useMemo(() => ClockService.getCurrentTime(), []);
+  
+  const { todayStart, todayEnd, tomorrowEnd } = useMemo(() => {
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const end = new Date(start);
+    end.setDate(end.getDate() + 1);
+    const tomorrowEnd = new Date(end);
+    tomorrowEnd.setDate(tomorrowEnd.getDate() + 1);
+    return { todayStart: start, todayEnd: end, tomorrowEnd };
+  }, [now]);
 
-  const handleOpenTasksTap = useCallback(() => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    router.push('/tasks');
-  }, [router]);
+  const overdueTasks = useMemo(() => {
+    return tasks
+      .filter((t) => {
+        if (t.status !== 'pending' && t.status !== 'overdue') return false;
+        if (!t.startAt) return false;
+        const dueDate = new Date(t.startAt);
+        return dueDate < todayStart;
+      })
+      .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+  }, [tasks, todayStart]);
 
-  const handleOverdueTasksTap = useCallback(() => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    router.push('/tasks');
-  }, [router]);
+  const dueTodayTasks = useMemo(() => {
+    return tasks
+      .filter((t) => {
+        if (t.status !== 'pending' && t.status !== 'overdue') return false;
+        if (!t.startAt) return false;
+        const dueDate = new Date(t.startAt);
+        return dueDate >= todayStart && dueDate < todayEnd;
+      })
+      .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+  }, [tasks, todayStart, todayEnd]);
 
-  const handleCompletedTasksTap = useCallback(() => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    router.push('/tasks');
-  }, [router]);
+  const dueTomorrowTasks = useMemo(() => {
+    return tasks
+      .filter((t) => {
+        if (t.status !== 'pending') return false;
+        if (!t.startAt) return false;
+        const dueDate = new Date(t.startAt);
+        return dueDate >= todayEnd && dueDate < tomorrowEnd;
+      })
+      .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+  }, [tasks, todayEnd, tomorrowEnd]);
 
-  const handleBalanceTap = useCallback(() => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    router.push('/balances?month=current');
-  }, [router]);
+  const hasAnyTasks = overdueTasks.length > 0 || dueTodayTasks.length > 0 || dueTomorrowTasks.length > 0;
 
-  const handleInsightAction = useCallback(
-    (insight: InsightData) => {
+  const formatDateHeader = () => {
+    const options: Intl.DateTimeFormatOptions = { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    };
+    return `Heute, ${now.toLocaleDateString('de-DE', options)}`;
+  };
+
+  const handleTaskPress = useCallback(
+    (task: Task) => {
       if (Platform.OS !== 'web') {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
-      if (insight.action) {
-        router.push(insight.action.route as any);
-      }
+      router.push(`/task-detail?id=${task.id}` as any);
     },
     [router]
   );
 
-  const insights = dashboardStats.insights || [];
-  const hasInsights = insights.length > 0;
+  const handleCompleteTask = useCallback(
+    (taskId: string) => {
+      completeTask(taskId);
+    },
+    [completeTask]
+  );
 
-  const getInsightColor = (type: InsightData['type']) => {
-    switch (type) {
-      case 'success':
-        return '#10B981';
-      case 'warning':
-        return '#F59E0B';
-      case 'alert':
-        return '#EF4444';
-      case 'info':
-      default:
-        return '#3B82F6';
-    }
-  };
-
-  const getInsightIcon = (icon: InsightData['icon'], color: string) => {
-    switch (icon) {
-      case 'check':
-        return <CheckCircle2 size={18} color={color} />;
-      case 'alert':
-        return <AlertCircle size={18} color={color} />;
-      case 'trending':
-        return <TrendingUp size={18} color={color} />;
-      case 'target':
-        return <Target size={18} color={color} />;
-      default:
-        return <Sparkles size={18} color={color} />;
-    }
-  };
+  const handleFailTask = useCallback(
+    (taskId: string) => {
+      failTask(taskId);
+    },
+    [failTask]
+  );
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -143,195 +133,132 @@ export default function DashboardScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>Welcome back,</Text>
-            <Text style={styles.userName}>{currentUser?.name || 'User'}</Text>
+          <View style={styles.headerLeft}>
+            <Text style={styles.dateHeader}>{formatDateHeader()}</Text>
           </View>
-          <View style={[styles.avatar, { backgroundColor: currentUser?.color || '#3B82F6' }]}>
-            <Text style={styles.avatarText}>
-              {currentUser?.name?.charAt(0).toUpperCase() || 'U'}
-            </Text>
-          </View>
+          <TouchableOpacity
+            style={styles.listBadge}
+            onPress={() => {
+              if (Platform.OS !== 'web') {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+              setShowListSwitcher(true);
+            }}
+            activeOpacity={0.7}
+          >
+            <Users size={14} color="#FFFFFF" />
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity
-          style={styles.listBanner}
-          onPress={() => {
-            if (Platform.OS !== 'web') {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            }
-            setShowListSwitcher(true);
-          }}
-          activeOpacity={0.7}
-        >
-          <Users size={16} color="#3B82F6" />
-          <Text style={styles.listName}>{currentList?.name || 'List'}</Text>
-          <Text style={styles.listMembers}>
-            {currentListMembers.length} member{currentListMembers.length !== 1 ? 's' : ''}
-          </Text>
-          <ChevronDown size={16} color="#3B82F6" />
-        </TouchableOpacity>
-
-        {hasInsights && (
-          <View style={styles.insightsSection}>
-            <View style={styles.insightsHeader}>
-              <Sparkles size={16} color="#8B5CF6" />
-              <Text style={styles.insightsSectionTitle}>Smart Insights</Text>
+        {!hasAnyTasks && (
+          <View style={styles.emptyState}>
+            <View style={styles.emptyIcon}>
+              <CheckCircle size={80} color="#10B981" strokeWidth={1.5} />
             </View>
-            <View style={styles.insightsContainer}>
-              {insights.slice(0, 3).map((insight, index) => {
-                const color = getInsightColor(insight.type);
-                return (
-                  <TouchableOpacity
-                    key={index}
-                    style={[
-                      styles.insightCard,
-                      { borderLeftColor: color, backgroundColor: `${color}08` },
-                    ]}
-                    onPress={() => handleInsightAction(insight)}
-                    activeOpacity={insight.action ? 0.7 : 1}
-                    disabled={!insight.action}
-                  >
-                    <View style={styles.insightIconContainer}>
-                      {getInsightIcon(insight.icon, color)}
-                    </View>
-                    <View style={styles.insightContent}>
-                      <Text style={[styles.insightText, { color: DesignTokens.colors.neutral[900] }]}>
-                        {insight.message}
-                      </Text>
-                      {insight.action && (
-                        <Text style={[styles.insightAction, { color }]}>
-                          {insight.action.label}
-                        </Text>
-                      )}
-                    </View>
-                    {insight.action && (
-                      <ChevronRight size={16} color={color} />
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-        )}
-
-        <FundHero
-          ledgerEntries={ledgerEntries}
-          tasks={tasks}
-          currentListId={currentListId}
-          currencySymbol={currencySymbol}
-        />
-
-        <View style={styles.statsGrid}>
-          <StatCard
-            icon={<Clock size={24} color={'#3B82F6'} />}
-            label="Open Tasks"
-            value={String(dashboardStats.openTasks)}
-            color={'#3B82F6'}
-            onPress={handleOpenTasksTap}
-            testID="stat-open-tasks"
-          />
-          <StatCard
-            icon={<AlertCircle size={24} color={'#F59E0B'} />}
-            label="Overdue"
-            value={String(dashboardStats.overdueTasks)}
-            color={'#F59E0B'}
-            onPress={handleOverdueTasksTap}
-            testID="stat-overdue-tasks"
-          />
-          <StatCard
-            icon={<CheckCircle2 size={24} color={'#10B981'} />}
-            label="Completed"
-            value={String(dashboardStats.completedThisMonth)}
-            color={'#10B981'}
-            onPress={handleCompletedTasksTap}
-            testID="stat-completed-tasks"
-          />
-          <StatCard
-            icon={totalBalance >= 0 ? (
-              <TrendingUp size={24} color={balanceColor} />
-            ) : (
-              <TrendingDown size={24} color={balanceColor} />
-            )}
-            label="Balance"
-            value={`${balanceSign}${currencySymbol}${Math.abs(totalBalance).toFixed(2)}`}
-            color={balanceColor}
-            onPress={handleBalanceTap}
-            testID="stat-balance"
-          />
-        </View>
-
-        <SectionHeader 
-          title="FUND GOALS" 
-          subtitle={`${activeFundTargets.length} active`}
-          action={{ label: 'Manage', onPress: () => router.push('/settings/funds') }}
-        />
-
-        {activeFundTargets.length > 0 && (
-          <View style={styles.fundGoalsSection}>
-            <View style={styles.fundGoalsHeader}>
-              <Text style={styles.fundGoalsTitle}>Your Fund Goals</Text>
-              <TouchableOpacity
-                onPress={() => {
-                  if (Platform.OS !== 'web') {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }
-                  router.push('/settings/funds');
-                }}
-                activeOpacity={0.7}
-              >
-                <Target size={20} color="#3B82F6" />
-              </TouchableOpacity>
-            </View>
-            {activeFundTargets.map((target) => {
-              const targetAmountDollars = target.targetAmountCents ? target.targetAmountCents / 100 : undefined;
-              const collectedAmountDollars = target.totalCollectedCents / 100;
-              const fundProgress = DashboardService.getFundGoalProgress(target, tasks);
-
-              return (
-                <StreaksFundCard
-                  key={target.id}
-                  emoji={target.emoji}
-                  name={target.name}
-                  description={target.description}
-                  collectedAmount={collectedAmountDollars}
-                  targetAmount={targetAmountDollars}
-                  linkedTasksCount={fundProgress.linkedTasks}
-                  currencySymbol={currencySymbol}
-                  onPress={() => {
-                    if (Platform.OS !== 'web') {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    }
-                    router.push(`/tasks?fundTargetId=${target.id}`);
-                  }}
-                />
-              );
-            })}
-          </View>
-        )}
-
-        {activeFundTargets.length === 0 && (
-          <View style={styles.emptyFundsState}>
-            <View style={styles.emptyFundsIcon}>
-              <Target size={64} color="#D1D5DB" />
-            </View>
-            <Text style={styles.emptyFundsTitle}>No Fund Goals Yet</Text>
-            <Text style={styles.emptyFundsText}>
-              Create fund goals to track your savings and achievements
+            <Text style={styles.emptyTitle}>Alles erledigt!</Text>
+            <Text style={styles.emptySubtitle}>
+              Du hast für heute alle Aufgaben geschafft. Genieße deinen Tag!
             </Text>
             <TouchableOpacity
-              style={styles.createFundButton}
+              style={styles.emptyButton}
               onPress={() => {
                 if (Platform.OS !== 'web') {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 }
-                router.push('/settings/funds');
+                router.push('/(tabs)/tasks');
               }}
               activeOpacity={0.8}
             >
               <Plus size={20} color="#FFFFFF" />
-              <Text style={styles.createFundButtonText}>Create Fund Goal</Text>
+              <Text style={styles.emptyButtonText}>Neue Aufgabe</Text>
             </TouchableOpacity>
+          </View>
+        )}
+
+        {overdueTasks.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleContainer}>
+                <View style={[styles.sectionDot, { backgroundColor: '#EF4444' }]} />
+                <Text style={[styles.sectionTitle, { color: '#EF4444' }]}>
+                  Überfällig
+                </Text>
+              </View>
+              <View style={styles.sectionBadge}>
+                <Text style={styles.sectionBadgeText}>{overdueTasks.length}</Text>
+              </View>
+            </View>
+            <View style={styles.taskList}>
+              {overdueTasks.map((task) => (
+                <SwipeableTaskCard
+                  key={task.id}
+                  task={task}
+                  onComplete={handleCompleteTask}
+                  onFail={handleFailTask}
+                  onPress={handleTaskPress}
+                  currencySymbol={currencySymbol}
+                  showStatus={false}
+                />
+              ))}
+            </View>
+          </View>
+        )}
+
+        {dueTodayTasks.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleContainer}>
+                <View style={[styles.sectionDot, { backgroundColor: '#3B82F6' }]} />
+                <Text style={[styles.sectionTitle, { color: '#1F2937' }]}>
+                  Heute fällig
+                </Text>
+              </View>
+              <View style={styles.sectionBadge}>
+                <Text style={styles.sectionBadgeText}>{dueTodayTasks.length}</Text>
+              </View>
+            </View>
+            <View style={styles.taskList}>
+              {dueTodayTasks.map((task) => (
+                <SwipeableTaskCard
+                  key={task.id}
+                  task={task}
+                  onComplete={handleCompleteTask}
+                  onFail={handleFailTask}
+                  onPress={handleTaskPress}
+                  currencySymbol={currencySymbol}
+                  showStatus={false}
+                />
+              ))}
+            </View>
+          </View>
+        )}
+
+        {dueTomorrowTasks.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleContainer}>
+                <View style={[styles.sectionDot, { backgroundColor: '#9CA3AF' }]} />
+                <Text style={[styles.sectionTitle, { color: '#6B7280' }]}>
+                  Demnächst
+                </Text>
+              </View>
+              <View style={styles.sectionBadge}>
+                <Text style={styles.sectionBadgeText}>{dueTomorrowTasks.length}</Text>
+              </View>
+            </View>
+            <View style={styles.taskList}>
+              {dueTomorrowTasks.map((task) => (
+                <SwipeableTaskCard
+                  key={task.id}
+                  task={task}
+                  onComplete={handleCompleteTask}
+                  onFail={handleFailTask}
+                  onPress={handleTaskPress}
+                  currencySymbol={currencySymbol}
+                  showStatus={false}
+                />
+              ))}
+            </View>
           </View>
         )}
       </ScrollView>
@@ -461,140 +388,94 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: DesignTokens.spacing.lg,
-  },
-  greeting: {
-    ...DesignTokens.typography.bodyMedium,
-    color: DesignTokens.colors.neutral[600],
-  },
-  userName: {
-    ...DesignTokens.typography.displayMedium,
-    color: DesignTokens.colors.neutral[900],
-    marginTop: DesignTokens.spacing.xs,
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarText: {
-    color: DesignTokens.colors.neutral[0],
-    fontSize: 20,
-    fontWeight: '600' as const,
-  },
-  listBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: DesignTokens.spacing.sm,
-    paddingHorizontal: DesignTokens.spacing.lg,
-    paddingVertical: DesignTokens.spacing.md,
-    backgroundColor: DesignTokens.colors.primary[50],
-    borderRadius: DesignTokens.radius.md,
-    marginBottom: DesignTokens.spacing.lg,
-  },
-  listName: {
-    ...DesignTokens.typography.bodyMedium,
-    fontWeight: '600',
-    color: DesignTokens.colors.primary[700],
-    flex: 1,
-  },
-  listMembers: {
-    ...DesignTokens.typography.bodySmall,
-    color: DesignTokens.colors.neutral[600],
-  },
-  insightsSection: {
-    marginBottom: DesignTokens.spacing.xl,
-  },
-  insightsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: DesignTokens.spacing.xs,
-    marginBottom: DesignTokens.spacing.md,
-  },
-  insightsSectionTitle: {
-    ...DesignTokens.typography.bodyMedium,
-    fontWeight: '700',
-    color: DesignTokens.colors.neutral[900],
-  },
-  insightsContainer: {
-    gap: DesignTokens.spacing.sm,
-  },
-  insightCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: DesignTokens.spacing.md,
-    borderRadius: DesignTokens.radius.md,
-    borderLeftWidth: 3,
-    gap: DesignTokens.spacing.sm,
-    ...DesignTokens.shadow.sm,
-  },
-  insightIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  insightContent: {
-    flex: 1,
-    gap: 2,
-  },
-  insightText: {
-    ...DesignTokens.typography.bodyMedium,
-    lineHeight: 18,
-  },
-  insightAction: {
-    ...DesignTokens.typography.labelSmall,
-    fontWeight: '600',
-    marginTop: 2,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: DesignTokens.spacing.md,
-    marginBottom: DesignTokens.spacing.xxxl,
-  },
-
-  fundGoalsSection: {
     marginBottom: DesignTokens.spacing.xxl,
   },
-  fundGoalsHeader: {
+  headerLeft: {
+    flex: 1,
+  },
+  dateHeader: {
+    ...DesignTokens.typography.displayMedium,
+    color: DesignTokens.colors.neutral[900],
+    fontWeight: '700' as const,
+    fontSize: 22,
+  },
+  listBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: DesignTokens.colors.primary[500],
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...DesignTokens.shadow.sm,
+  },
+  section: {
+    marginBottom: DesignTokens.spacing.xxl,
+  },
+  sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: DesignTokens.spacing.xl,
+    marginBottom: DesignTokens.spacing.md,
   },
-  fundGoalsTitle: {
-    ...DesignTokens.typography.headingLarge,
-    color: DesignTokens.colors.neutral[900],
+  sectionTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DesignTokens.spacing.sm,
   },
-  emptyFundsState: {
+  sectionDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  sectionTitle: {
+    ...DesignTokens.typography.headingMedium,
+    fontWeight: '700' as const,
+    fontSize: 18,
+  },
+  sectionBadge: {
+    minWidth: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: DesignTokens.colors.neutral[200],
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+  },
+  sectionBadgeText: {
+    ...DesignTokens.typography.labelSmall,
+    fontWeight: '700' as const,
+    color: DesignTokens.colors.neutral[700],
+    fontSize: 13,
+  },
+  taskList: {
+    gap: DesignTokens.spacing.sm,
+  },
+  emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 60,
-    paddingHorizontal: DesignTokens.spacing.xxxl * 1.25,
+    paddingVertical: 80,
+    paddingHorizontal: DesignTokens.spacing.xl,
   },
-  emptyFundsIcon: {
+  emptyIcon: {
     marginBottom: DesignTokens.spacing.xl,
-    opacity: 0.3,
+    opacity: 0.9,
   },
-  emptyFundsTitle: {
-    ...DesignTokens.typography.headingMedium,
+  emptyTitle: {
+    ...DesignTokens.typography.displayMedium,
     color: DesignTokens.colors.neutral[900],
     marginBottom: DesignTokens.spacing.sm,
     textAlign: 'center',
+    fontWeight: '700' as const,
+    fontSize: 26,
   },
-  emptyFundsText: {
-    ...DesignTokens.typography.bodyMedium,
+  emptySubtitle: {
+    ...DesignTokens.typography.bodyLarge,
     color: DesignTokens.colors.neutral[600],
     textAlign: 'center',
     marginBottom: DesignTokens.spacing.xxl,
-    lineHeight: 22,
+    lineHeight: 24,
   },
-  createFundButton: {
+  emptyButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: DesignTokens.spacing.sm,
@@ -604,9 +485,9 @@ const styles = StyleSheet.create({
     borderRadius: DesignTokens.radius.md,
     ...DesignTokens.shadow.md,
   },
-  createFundButtonText: {
+  emptyButtonText: {
     ...DesignTokens.typography.bodyLarge,
-    fontWeight: '700',
+    fontWeight: '700' as const,
     color: DesignTokens.colors.neutral[0],
   },
 });
