@@ -11,6 +11,7 @@ import {
   Keyboard,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { ChevronLeft, ChevronRight, Keyboard as KeyboardIcon } from 'lucide-react-native';
 import { ModalSheet } from '@/components/interactive/modals/ModalSheet';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -155,9 +156,10 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
     let finalTime = time;
     if (time === 'now') {
       const now = new Date();
-      const hours = now.getHours().toString().padStart(2, '0');
-      const minutes = now.getMinutes().toString().padStart(2, '0');
-      finalTime = `${hours}:${minutes}`;
+      const roundedMinutes = Math.round(now.getMinutes() / 15) * 15;
+      const hours = roundedMinutes === 60 ? (now.getHours() + 1) % 24 : now.getHours();
+      const minutes = roundedMinutes === 60 ? 0 : roundedMinutes;
+      finalTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
     }
 
     setSelectedTime(finalTime);
@@ -690,46 +692,97 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
                       </Text>
                     )}
                   </View>
-                ) : (
-                  <View style={[styles.dialContainer, { marginTop: theme.spacing.md, backgroundColor: theme.surfaceAlt, borderRadius: theme.radius.input }]}>
-                    <ScrollView
-                      style={styles.dialScroll}
-                      showsVerticalScrollIndicator={true}
-                      contentContainerStyle={styles.dialContent}
-                    >
-                      {Array.from({ length: 24 }).map((_, h) => 
-                        Array.from({ length: 4 }).map((_, m) => {
-                          const hours = h.toString().padStart(2, '0');
-                          const minutes = (m * 15).toString().padStart(2, '0');
-                          const time = `${hours}:${minutes}`;
-                          const isSelected = selectedTime === time;
-
-                          return (
-                            <Pressable
-                              key={time}
-                              onPress={() => handleTimeChip(time)}
-                              style={({ pressed }) => [
-                                styles.dialTimeSlot,
-                                {
-                                  backgroundColor: isSelected ? theme.primary : 'transparent',
-                                  opacity: pressed ? 0.7 : 1,
-                                },
-                              ]}
-                              testID={testID ? `${testID}-dial-time-${time}` : undefined}
-                            >
-                              <Text
-                                style={[
-                                  styles.dialTimeText,
-                                  { color: isSelected ? '#FFFFFF' : theme.textHigh },
+                ) : Platform.OS === 'web' ? (
+                  <View style={[styles.webTimePickerContainer, { marginTop: theme.spacing.md }]}>
+                    <View style={styles.webTimePickerRow}>
+                      <View style={styles.webTimePickerColumn}>
+                        <Text style={[styles.webTimePickerLabel, { color: theme.textLow }]}>Hour</Text>
+                        <ScrollView 
+                          style={[styles.webTimePickerWheel, { backgroundColor: theme.surfaceAlt }]}
+                          showsVerticalScrollIndicator={false}
+                        >
+                          {Array.from({ length: 24 }).map((_, h) => {
+                            const hours = h.toString().padStart(2, '0');
+                            const isSelected = selectedTime?.startsWith(hours + ':');
+                            return (
+                              <Pressable
+                                key={h}
+                                onPress={() => {
+                                  const currentMinutes = selectedTime?.split(':')[1] || '00';
+                                  handleTimeChip(`${hours}:${currentMinutes}`);
+                                }}
+                                style={({ pressed }) => [
+                                  styles.webTimePickerOption,
+                                  isSelected && { backgroundColor: theme.primary },
+                                  pressed && !isSelected && { backgroundColor: theme.surface },
                                 ]}
                               >
-                                {time}
-                              </Text>
-                            </Pressable>
-                          );
-                        })
-                      ).flat()}
-                    </ScrollView>
+                                <Text style={[styles.webTimePickerOptionText, { color: isSelected ? '#FFFFFF' : theme.textHigh }]}>
+                                  {hours}
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </ScrollView>
+                      </View>
+                      <Text style={[styles.webTimePickerSeparator, { color: theme.textHigh }]}>:</Text>
+                      <View style={styles.webTimePickerColumn}>
+                        <Text style={[styles.webTimePickerLabel, { color: theme.textLow }]}>Minute</Text>
+                        <ScrollView 
+                          style={[styles.webTimePickerWheel, { backgroundColor: theme.surfaceAlt }]}
+                          showsVerticalScrollIndicator={false}
+                        >
+                          {Array.from({ length: 4 }).map((_, m) => {
+                            const minutes = (m * 15).toString().padStart(2, '0');
+                            const currentHours = selectedTime?.split(':')[0] || '00';
+                            const isSelected = selectedTime === `${currentHours}:${minutes}`;
+                            return (
+                              <Pressable
+                                key={m}
+                                onPress={() => {
+                                  handleTimeChip(`${currentHours}:${minutes}`);
+                                }}
+                                style={({ pressed }) => [
+                                  styles.webTimePickerOption,
+                                  isSelected && { backgroundColor: theme.primary },
+                                  pressed && !isSelected && { backgroundColor: theme.surface },
+                                ]}
+                              >
+                                <Text style={[styles.webTimePickerOptionText, { color: isSelected ? '#FFFFFF' : theme.textHigh }]}>
+                                  {minutes}
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </ScrollView>
+                      </View>
+                    </View>
+                  </View>
+                ) : (
+                  <View style={[styles.nativePickerContainer, { marginTop: theme.spacing.md }]}>
+                    <DateTimePicker
+                      value={(() => {
+                        if (selectedTime) {
+                          const [hours, minutes] = selectedTime.split(':').map(Number);
+                          const date = new Date();
+                          date.setHours(hours, minutes, 0, 0);
+                          return date;
+                        }
+                        return new Date();
+                      })()}
+                      mode="time"
+                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                      onChange={(event, date) => {
+                        if (event.type === 'set' && date) {
+                          const hours = date.getHours().toString().padStart(2, '0');
+                          const minutes = date.getMinutes().toString().padStart(2, '0');
+                          handleTimeChip(`${hours}:${minutes}`);
+                        }
+                      }}
+                      minuteInterval={15}
+                      style={styles.nativePicker}
+                      testID={testID ? `${testID}-time-picker` : undefined}
+                    />
                   </View>
                 )}
               </>
@@ -879,23 +932,53 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '400' as const,
   },
-  dialContainer: {
-    maxHeight: 240,
+  nativePickerContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
   },
-  dialScroll: {
-    borderRadius: 8,
+  nativePicker: {
+    width: '100%',
+    height: 200,
   },
-  dialContent: {
-    gap: 4,
+  webTimePickerContainer: {
+    paddingVertical: 16,
   },
-  dialTimeSlot: {
-    paddingVertical: 10,
+  webTimePickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
+  },
+  webTimePickerColumn: {
+    alignItems: 'center',
+    gap: 8,
+  },
+  webTimePickerLabel: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
+  },
+  webTimePickerWheel: {
+    height: 200,
+    width: 80,
+    borderRadius: 12,
+  },
+  webTimePickerOption: {
+    paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  dialTimeText: {
-    fontSize: 15,
+  webTimePickerOptionText: {
+    fontSize: 20,
     fontWeight: '500' as const,
+  },
+  webTimePickerSeparator: {
+    fontSize: 28,
+    fontWeight: '600' as const,
+    marginTop: 24,
   },
   allDayPlaceholder: {
     paddingVertical: 24,
