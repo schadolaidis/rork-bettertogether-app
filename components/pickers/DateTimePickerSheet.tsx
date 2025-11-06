@@ -182,42 +182,7 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
   const calendarWidth = Math.min(screenWidth - 32, 400);
   const dayCellSize = Math.floor((calendarWidth - 24) / 7);
 
-  const handleQuickChip = (type: 'today' | 'tomorrow' | 'thisWeekend' | 'nextWeek' | 'nextMonth') => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
 
-    const now = new Date();
-    let newDate: Date;
-
-    switch (type) {
-      case 'today':
-        newDate = now;
-        break;
-      case 'tomorrow':
-        newDate = new Date(now);
-        newDate.setDate(now.getDate() + 1);
-        break;
-      case 'thisWeekend':
-        newDate = new Date(now);
-        const daysUntilSaturday = (6 - now.getDay() + 7) % 7;
-        newDate.setDate(now.getDate() + (daysUntilSaturday === 0 ? 7 : daysUntilSaturday));
-        break;
-      case 'nextWeek':
-        newDate = new Date(now);
-        newDate.setDate(now.getDate() + 7);
-        break;
-      case 'nextMonth':
-        newDate = new Date(now);
-        newDate.setMonth(now.getMonth() + 1);
-        break;
-    }
-
-    const dateStr = newDate.toISOString().split('T')[0];
-    setSelectedDate(dateStr);
-    setCurrentMonth(newDate);
-    console.log('[DatePicker] Quick chip selected:', type, dateStr);
-  };
 
 
 
@@ -231,17 +196,7 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
     console.log('[DatePicker] Date selected:', dateStr);
   };
 
-  const handleAllDayToggle = () => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    const newAllDay = !isAllDay;
-    setIsAllDay(newAllDay);
-    if (newAllDay) {
-      setSelectedTime(null);
-    }
-    console.log('[DatePicker] All-day toggled:', newAllDay);
-  };
+
 
 
 
@@ -395,20 +350,28 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
           keyboardShouldPersistTaps="handled"
         >
           <View style={[styles.smartFieldSection, { marginBottom: theme.spacing.lg }]}>
-            <Text style={[styles.sectionTitle, { color: theme.textHigh, marginBottom: theme.spacing.sm }]}>
-              Quick Input
+            <Text style={[styles.heroTitle, { color: theme.textHigh, marginBottom: theme.spacing.xs }]}>
+              When should this happen?
+            </Text>
+            <Text style={[styles.heroSubtitle, { color: theme.textLow, marginBottom: theme.spacing.md }]}>
+              Type naturally or select from calendar below
             </Text>
             <View 
               style={[
                 styles.smartFieldContainer, 
                 {
-                  backgroundColor: theme.surfaceAlt,
+                  backgroundColor: theme.surface,
                   borderColor: parsedResult ? theme.primary : theme.border,
-                  borderWidth: parsedResult ? 2 : 1,
+                  borderWidth: parsedResult ? 2 : 1.5,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.08,
+                  shadowRadius: 8,
+                  elevation: 3,
                 }
               ]}
             >
-              <Calendar size={20} color={theme.textLow} />
+              <Calendar size={22} color={parsedResult ? theme.primary : theme.textLow} />
               <TextInput
                 value={naturalInput}
                 onChangeText={setNaturalInput}
@@ -424,136 +387,38 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
                 autoCorrect={false}
                 returnKeyType="done"
                 onSubmitEditing={() => Keyboard.dismiss()}
+                autoFocus={initialFocus === 'date'}
                 testID={testID ? `${testID}-natural-input` : undefined}
               />
             </View>
             {parsedResult && (
               <View style={[styles.parsedResultContainer, { backgroundColor: theme.primary + '15', borderColor: theme.primary }]}>
-                <Clock size={16} color={theme.primary} />
+                <Clock size={18} color={theme.primary} />
                 <Text style={[styles.parsedResultText, { color: theme.primary }]}>
-                  Parsed: {parsedResult.text}
+                  {parsedResult.text}
                 </Text>
               </View>
             )}
-            {naturalInput && !parsedResult && (
+            {!parsedResult && !naturalInput && (
               <Text style={[styles.helperText, { color: theme.textLow }]}>
-                Try: &ldquo;tomorrow 3pm&rdquo; or &ldquo;next friday at 2:30&rdquo; or &ldquo;in 2 hours&rdquo;
+                Try: &ldquo;tomorrow 3pm&rdquo; • &ldquo;next friday at 2:30&rdquo; • &ldquo;in 2 hours&rdquo; • &ldquo;dec 25 at 9am&rdquo;
+              </Text>
+            )}
+            {naturalInput && !parsedResult && (
+              <Text style={[styles.helperTextError, { color: theme.error || '#EF4444' }]}>
+                Can&apos;t understand that. Try &ldquo;tomorrow 3pm&rdquo; or select from calendar below
               </Text>
             )}
           </View>
-          <View style={[styles.divider, { backgroundColor: theme.border }]} />
+          <View style={[styles.divider, { backgroundColor: theme.border, marginVertical: theme.spacing.lg }]} />
 
-          <View style={[styles.section, { marginTop: theme.spacing.md }]}>
-            <Text style={[styles.sectionSubtitle, { color: theme.textLow, marginBottom: theme.spacing.sm }]}>
-              Or select manually:
-            </Text>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: theme.textHigh }]}>All Day</Text>
-              <Pressable
-                onPress={handleAllDayToggle}
-                style={({ pressed }) => [
-                  styles.toggleButton,
-                  {
-                    backgroundColor: isAllDay ? theme.primary : theme.surfaceAlt,
-                    opacity: pressed ? 0.7 : 1,
-                  },
-                ]}
-                testID={testID ? `${testID}-all-day-toggle` : undefined}
-              >
-                <View
-                  style={[
-                    styles.toggleThumb,
-                    {
-                      backgroundColor: theme.surface,
-                      transform: [{ translateX: isAllDay ? 20 : 2 }],
-                    },
-                  ]}
-                />
-              </Pressable>
-            </View>
-          </View>
-
-          <View style={[styles.section, { marginTop: theme.spacing.lg }]}>
+          <View style={[styles.section, { marginTop: 0 }]}>
             <Text style={[styles.sectionTitle, { color: theme.textHigh, marginBottom: theme.spacing.md }]}>
-              Date
+              Visual Calendar
             </Text>
-
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.quickChipsScroll}
-            >
-              <Pressable
-                onPress={() => handleQuickChip('today')}
-                style={({ pressed }) => [
-                  styles.chip,
-                  {
-                    backgroundColor: theme.surfaceAlt,
-                    borderColor: theme.border,
-                    opacity: pressed ? 0.7 : 1,
-                  },
-                ]}
-                testID={testID ? `${testID}-today-chip` : undefined}
-              >
-                <Text style={[styles.chipText, { color: theme.textHigh }]}>Today</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => handleQuickChip('tomorrow')}
-                style={({ pressed }) => [
-                  styles.chip,
-                  {
-                    backgroundColor: theme.surfaceAlt,
-                    borderColor: theme.border,
-                    opacity: pressed ? 0.7 : 1,
-                  },
-                ]}
-                testID={testID ? `${testID}-tomorrow-chip` : undefined}
-              >
-                <Text style={[styles.chipText, { color: theme.textHigh }]}>Tomorrow</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => handleQuickChip('thisWeekend')}
-                style={({ pressed }) => [
-                  styles.chip,
-                  {
-                    backgroundColor: theme.surfaceAlt,
-                    borderColor: theme.border,
-                    opacity: pressed ? 0.7 : 1,
-                  },
-                ]}
-                testID={testID ? `${testID}-weekend-chip` : undefined}
-              >
-                <Text style={[styles.chipText, { color: theme.textHigh }]}>This Weekend</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => handleQuickChip('nextWeek')}
-                style={({ pressed }) => [
-                  styles.chip,
-                  {
-                    backgroundColor: theme.surfaceAlt,
-                    borderColor: theme.border,
-                    opacity: pressed ? 0.7 : 1,
-                  },
-                ]}
-                testID={testID ? `${testID}-next-week-chip` : undefined}
-              >
-                <Text style={[styles.chipText, { color: theme.textHigh }]}>Next Week</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => handleQuickChip('nextMonth')}
-                style={({ pressed }) => [
-                  styles.chip,
-                  {
-                    backgroundColor: theme.surfaceAlt,
-                    borderColor: theme.border,
-                    opacity: pressed ? 0.7 : 1,
-                  },
-                ]}
-                testID={testID ? `${testID}-next-month-chip` : undefined}
-              >
-                <Text style={[styles.chipText, { color: theme.textHigh }]}>Next Month</Text>
-              </Pressable>
-            </ScrollView>
+            <Text style={[styles.sectionSubtitle, { color: theme.textLow, marginBottom: theme.spacing.md }]}>
+              Tap a date to select it. The calendar auto-updates as you type above.
+            </Text>
 
             <View style={[styles.calendarContainer, { marginTop: theme.spacing.md }]}>
               <View style={styles.calendarHeader}>
@@ -653,24 +518,7 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
             </View>
           </View>
 
-          {!isAllDay && selectedTime && (
-            <View style={[styles.section, { marginTop: theme.spacing.md }]}>
-              <Text style={[styles.sectionTitle, { color: theme.textHigh, marginBottom: theme.spacing.sm }]}>
-                Selected Time
-              </Text>
-              <View style={[styles.selectedTimeContainer, { backgroundColor: theme.surfaceAlt }]}>
-                <Clock size={20} color={theme.primary} />
-                <Text style={[styles.selectedTimeText, { color: theme.textHigh }]}>
-                  {(() => {
-                    const [hours, minutes] = selectedTime.split(':');
-                    const date = new Date();
-                    date.setHours(parseInt(hours), parseInt(minutes));
-                    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-                  })()}
-                </Text>
-              </View>
-            </View>
-          )}
+
         </ScrollView>
     </ModalSheet>
   );
@@ -683,45 +531,64 @@ const styles = StyleSheet.create({
   smartFieldSection: {
     gap: 8,
   },
+  heroTitle: {
+    fontSize: 20,
+    fontWeight: '700' as const,
+    letterSpacing: -0.3,
+  },
+  heroSubtitle: {
+    fontSize: 14,
+    fontWeight: '400' as const,
+    lineHeight: 20,
+  },
   smartFieldContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 12,
+    gap: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    borderRadius: 16,
   },
   smartFieldInput: {
     flex: 1,
-    fontSize: 15,
-    fontWeight: '400' as const,
+    fontSize: 16,
+    fontWeight: '500' as const,
+    lineHeight: 24,
   },
   parsedResultContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 8,
-    marginTop: 8,
-    borderWidth: 1,
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginTop: 10,
+    borderWidth: 1.5,
   },
   parsedResultText: {
-    fontSize: 13,
-    fontWeight: '600' as const,
+    fontSize: 15,
+    fontWeight: '700' as const,
+    flex: 1,
   },
   helperText: {
-    fontSize: 12,
-    marginTop: 6,
+    fontSize: 13,
+    marginTop: 8,
     fontWeight: '400' as const,
+    lineHeight: 18,
+  },
+  helperTextError: {
+    fontSize: 13,
+    marginTop: 8,
+    fontWeight: '500' as const,
+    lineHeight: 18,
   },
   divider: {
     height: 1,
-    marginVertical: 16,
   },
   sectionSubtitle: {
     fontSize: 13,
-    fontWeight: '500' as const,
+    fontWeight: '400' as const,
+    lineHeight: 18,
   },
   selectedTimeContainer: {
     flexDirection: 'row',
@@ -744,8 +611,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600' as const,
+    fontSize: 17,
+    fontWeight: '700' as const,
+    letterSpacing: -0.2,
   },
   toggleButton: {
     width: 48,
