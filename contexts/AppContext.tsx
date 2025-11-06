@@ -437,23 +437,30 @@ export const [AppProvider, useApp] = createContextHook(() => {
   }, [tasks, users, ledgerEntries, mutateTasks, mutateUsers, mutateLedger]);
 
   const failTask = useCallback((taskId: string) => {
+    console.log('[failTask] Initiating fail process for task:', taskId);
     const task = tasks.find((t) => t.id === taskId);
-    if (!task) return;
+    if (!task) {
+      console.error('[failTask] Task not found:', taskId);
+      return;
+    }
 
     const taskUserId = typeof task.assignedTo === 'string' ? task.assignedTo : task.assignedTo[0];
     const user = users.find((u) => u.id === taskUserId);
     if (!user) {
-      console.error(`[Task] User not found for task ${taskId}`);
+      console.error(`[failTask] User not found for task ${taskId}`);
       return;
     }
+
+    console.log(`[failTask] User: ${user.name}, Jokers: ${user.jokerCount}`);
 
     if (user.jokerCount > 0) {
+      console.log('[failTask] User has jokers - showing modal and pausing execution');
       setPendingFailedTask(task);
       setJokerModalVisible(true);
-      console.log(`[Task] User has ${user.jokerCount} jokers, showing modal`);
       return;
     }
 
+    console.log('[failTask] No jokers available - processing stake payment immediately');
     const now = ClockService.getCurrentTime();
     const ledgerEntry = LedgerService.post(task);
 
@@ -469,7 +476,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
 
     setUsers(updatedUsers);
     mutateUsers(updatedUsers);
-    console.log(`[Streak] User ${user.name} streak reset to 0`);
+    console.log(`[failTask] User ${user.name} streak reset to 0`);
 
     const updatedTasks = tasks.map((t) => {
       if (t.id === taskId) {
@@ -497,7 +504,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
     });
 
     NotificationService.sendTaskFailedNotification(task, task.stake);
-    console.log(`[Task] Failed (stake paid): ${task.title}`);
+    console.log(`[failTask] Completed - Failed (stake paid): ${task.title}`);
   }, [tasks, users, ledgerEntries, mutateTasks, mutateUsers, mutateLedger]);
 
   const undoFailTask = useCallback(() => {
@@ -967,17 +974,22 @@ export const [AppProvider, useApp] = createContextHook(() => {
   }, [fundTargets, currentListId]);
 
   const handleUseJoker = useCallback(() => {
-    if (!pendingFailedTask) return;
+    console.log('[handleUseJoker] User chose to use joker');
+    if (!pendingFailedTask) {
+      console.error('[handleUseJoker] No pending failed task');
+      return;
+    }
 
     const taskUserId = typeof pendingFailedTask.assignedTo === 'string' 
       ? pendingFailedTask.assignedTo 
       : pendingFailedTask.assignedTo[0];
     const user = users.find((u) => u.id === taskUserId);
     if (!user) {
-      console.error(`[Task] User not found for task ${pendingFailedTask.id}`);
+      console.error(`[handleUseJoker] User not found for task ${pendingFailedTask.id}`);
       return;
     }
 
+    console.log(`[handleUseJoker] Processing joker for user: ${user.name}`);
     const now = ClockService.getCurrentTime();
 
     const updatedUsers = users.map((u) => {
@@ -993,8 +1005,8 @@ export const [AppProvider, useApp] = createContextHook(() => {
 
     setUsers(updatedUsers);
     mutateUsers(updatedUsers);
-    console.log(`[Joker] User ${user.name} used a joker. Remaining: ${user.jokerCount - 1}`);
-    console.log(`[Streak] User ${user.name} streak reset to 0`);
+    console.log(`[handleUseJoker] User ${user.name} used a joker. Remaining: ${user.jokerCount - 1}`);
+    console.log(`[handleUseJoker] User ${user.name} streak reset to 0`);
 
     const updatedTasks = tasks.map((t) => {
       if (t.id === pendingFailedTask.id) {
@@ -1011,23 +1023,28 @@ export const [AppProvider, useApp] = createContextHook(() => {
     setTasks(updatedTasks);
     mutateTasks(updatedTasks);
 
-    console.log(`[Task] Failed (joker used): ${pendingFailedTask.title}`);
+    console.log(`[handleUseJoker] Completed - Failed (joker used): ${pendingFailedTask.title}`);
     setJokerModalVisible(false);
     setPendingFailedTask(null);
   }, [pendingFailedTask, tasks, users, mutateTasks, mutateUsers]);
 
   const handlePayStake = useCallback(() => {
-    if (!pendingFailedTask) return;
+    console.log('[handlePayStake] User chose to pay stake');
+    if (!pendingFailedTask) {
+      console.error('[handlePayStake] No pending failed task');
+      return;
+    }
 
     const taskUserId = typeof pendingFailedTask.assignedTo === 'string'
       ? pendingFailedTask.assignedTo
       : pendingFailedTask.assignedTo[0];
     const user = users.find((u) => u.id === taskUserId);
     if (!user) {
-      console.error(`[Task] User not found for task ${pendingFailedTask.id}`);
+      console.error(`[handlePayStake] User not found for task ${pendingFailedTask.id}`);
       return;
     }
 
+    console.log(`[handlePayStake] Processing stake payment for user: ${user.name}`);
     const now = ClockService.getCurrentTime();
     const ledgerEntry = LedgerService.post(pendingFailedTask);
 
@@ -1043,7 +1060,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
 
     setUsers(updatedUsers);
     mutateUsers(updatedUsers);
-    console.log(`[Streak] User ${user.name} streak reset to 0`);
+    console.log(`[handlePayStake] User ${user.name} streak reset to 0`);
 
     const updatedTasks = tasks.map((t) => {
       if (t.id === pendingFailedTask.id) {
@@ -1064,6 +1081,8 @@ export const [AppProvider, useApp] = createContextHook(() => {
     mutateTasks(updatedTasks);
     mutateLedger(updatedEntries);
 
+    console.log(`[handlePayStake] Ledger entry created:`, ledgerEntry.id);
+
     setUndoAction({
       taskId: pendingFailedTask.id,
       ledgerEntryId: ledgerEntry.id,
@@ -1071,7 +1090,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
     });
 
     NotificationService.sendTaskFailedNotification(pendingFailedTask, pendingFailedTask.stake);
-    console.log(`[Task] Failed (stake paid): ${pendingFailedTask.title}`);
+    console.log(`[handlePayStake] Completed - Failed (stake paid): ${pendingFailedTask.title}`);
     setJokerModalVisible(false);
     setPendingFailedTask(null);
   }, [pendingFailedTask, tasks, users, ledgerEntries, mutateTasks, mutateUsers, mutateLedger]);
