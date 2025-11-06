@@ -332,4 +332,25 @@ export class NotificationService {
   ): Notifications.Subscription {
     return Notifications.addNotificationResponseReceivedListener(listener);
   }
+
+  static async sendStreakJokerEarnedNotification(streakCount: number): Promise<void> {
+    if (!this.initialized || Platform.OS === 'web') {
+      return;
+    }
+
+    try {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: '🎉 Erfolgsserie!',
+          body: `Du hast ${streakCount} Aufgaben in Folge erledigt und einen Joker verdient!`,
+          sound: true,
+          priority: Notifications.AndroidNotificationPriority.HIGH,
+        },
+        trigger: null,
+      });
+      console.log(`[Notifications] Sent streak joker earned notification (${streakCount})`);
+    } catch (error) {
+      console.error('[Notifications] Error sending streak notification:', error);
+    }
+  }
 }

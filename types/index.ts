@@ -1,6 +1,6 @@
 export type TaskCategory = 'Household' | 'Finance' | 'Work' | 'Leisure';
 export type MemberRole = 'Owner' | 'Member';
-export type TaskStatus = 'pending' | 'completed' | 'failed' | 'overdue';
+export type TaskStatus = 'pending' | 'completed' | 'failed' | 'failed_joker_used' | 'failed_stake_paid' | 'overdue';
 export type TaskPriority = 'low' | 'medium' | 'high';
 export type ReminderType = 'none' | 'at_due' | '30_min' | 'custom';
 export type RecurrenceType = 'none' | 'daily' | 'weekly' | 'monthly';
@@ -79,6 +79,8 @@ export interface User {
   avatar?: string;
   avatarUrl?: string;
   color: string;
+  currentStreakCount: number;
+  jokerCount: number;
   notificationPrefs?: {
     taskReminders: boolean;
     overdueAlerts: boolean;

@@ -5,9 +5,10 @@ import * as Notifications from "expo-notifications";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { PortalProvider, PortalHost } from "@gorhom/portal";
-import { AppProvider } from "@/contexts/AppContext";
+import { AppProvider, useApp } from "@/contexts/AppContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { trpc, trpcClient } from "@/lib/trpc";
+import { JokerPromptModal } from "@/components/JokerPromptModal";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -16,6 +17,14 @@ const queryClient = new QueryClient();
 
 function RootLayoutNav() {
   const router = useRouter();
+  const { 
+    jokerModalVisible, 
+    pendingFailedTask, 
+    handleUseJoker, 
+    handlePayStake,
+    currentList,
+    currentUser
+  } = useApp();
 
   useEffect(() => {
     const notificationListener = Notifications.addNotificationReceivedListener(notification => {
@@ -36,24 +45,36 @@ function RootLayoutNav() {
     };
   }, [router]);
 
+  const currencySymbol = currentList?.currencySymbol || '€';
+
   return (
-    <Stack screenOptions={{ headerBackTitle: "Back" }}>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen 
-        name="join" 
-        options={{ 
-          presentation: "modal",
-          headerShown: false 
-        }} 
+    <>
+      <Stack screenOptions={{ headerBackTitle: "Back" }}>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen 
+          name="join" 
+          options={{ 
+            presentation: "modal",
+            headerShown: false 
+          }} 
+        />
+        <Stack.Screen
+          name="modal-demo"
+          options={{
+            presentation: "modal",
+            headerShown: false
+          }}
+        />
+      </Stack>
+      <JokerPromptModal
+        visible={jokerModalVisible}
+        onUseJoker={handleUseJoker}
+        onPayStake={handlePayStake}
+        jokerCount={currentUser?.jokerCount || 0}
+        stakeAmount={pendingFailedTask?.stake || 0}
+        currencySymbol={currencySymbol}
       />
-      <Stack.Screen
-        name="modal-demo"
-        options={{
-          presentation: "modal",
-          headerShown: false
-        }}
-      />
-    </Stack>
+    </>
   );
 }
 
