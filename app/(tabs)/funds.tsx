@@ -708,6 +708,9 @@ export default function FundsScreen() {
           title={editingFund ? `Edit Fund Goal: ${editingFund.name}` : 'Create Fund Goal'}
           onClose={() => {
             console.log('[FundModal] Closing modal');
+            if (editingFund) {
+              console.log('[FundModal] Canceling edit, clearing form');
+            }
             setShowCreateModal(false);
             setEditingFund(null);
             setName('');

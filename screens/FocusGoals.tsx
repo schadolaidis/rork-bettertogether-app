@@ -9,7 +9,7 @@ export default function FocusGoals() {
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <AppBar
         title="Sparziele"
         testID="focus-goals-appbar"
