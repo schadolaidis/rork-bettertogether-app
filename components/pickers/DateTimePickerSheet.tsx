@@ -7,12 +7,10 @@ import {
   ScrollView,
   Platform,
   useWindowDimensions,
-  TextInput,
-  Keyboard,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { ChevronLeft, ChevronRight, Keyboard as KeyboardIcon } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { ModalSheet } from '@/components/interactive/modals/ModalSheet';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -26,7 +24,7 @@ interface DateTimePickerSheetProps {
   initialFocus?: 'date' | 'time';
 }
 
-type TimePickerMode = 'dial' | 'keyboard';
+
 
 const WEEKDAYS_SHORT = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
@@ -92,9 +90,7 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
   const [isAllDay, setIsAllDay] = useState(initialState.allDay);
   const [timezone] = useState(initialState.timezone);
   const [currentMonth, setCurrentMonth] = useState(() => new Date(initialState.date));
-  const [timePickerMode, setTimePickerMode] = useState<TimePickerMode>('dial');
-  const [keyboardTimeInput, setKeyboardTimeInput] = useState('');
-  const [keyboardTimeError, setKeyboardTimeError] = useState('');
+
 
   useEffect(() => {
     if (visible) {
@@ -103,8 +99,6 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
       setSelectedTime(state.time);
       setIsAllDay(state.allDay);
       setCurrentMonth(new Date(state.date));
-      setKeyboardTimeInput('');
-      setKeyboardTimeError('');
     }
   }, [visible, value]);
 
@@ -164,8 +158,6 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
 
     setSelectedTime(finalTime);
     setIsAllDay(false);
-    setKeyboardTimeInput('');
-    setKeyboardTimeError('');
     console.log('[TimePicker] Time chip selected:', time, '→', finalTime);
   };
 
@@ -191,31 +183,7 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
     console.log('[DatePicker] All-day toggled:', newAllDay);
   };
 
-  const validateTimeInput = (input: string): { valid: boolean; time?: string; error?: string } => {
-    const timeRegex = /^([0-1]?[0-9]|2[0-3]):([0-5][0-9])$/;
-    const match = input.match(timeRegex);
 
-    if (!match) {
-      return { valid: false, error: 'Enter valid time (HH:MM)' };
-    }
-
-    const hours = match[1].padStart(2, '0');
-    const minutes = match[2];
-    return { valid: true, time: `${hours}:${minutes}` };
-  };
-
-  const handleKeyboardTimeConfirm = () => {
-    const result = validateTimeInput(keyboardTimeInput);
-    if (result.valid && result.time) {
-      setSelectedTime(result.time);
-      setIsAllDay(false);
-      setKeyboardTimeError('');
-      Keyboard.dismiss();
-      console.log('[TimePicker] Keyboard time confirmed:', result.time);
-    } else {
-      setKeyboardTimeError(result.error || 'Invalid time');
-    }
-  };
 
   const handleDone = () => {
     if (Platform.OS !== 'web') {
@@ -323,13 +291,7 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1));
   };
 
-  const toggleTimePickerMode = () => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    setTimePickerMode((prev) => (prev === 'dial' ? 'keyboard' : 'dial'));
-    setKeyboardTimeError('');
-  };
+
 
   const footer = (
     <View style={styles.footerContainer}>
@@ -576,25 +538,9 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
           </View>
 
           <View style={[styles.section, { marginTop: theme.spacing.lg }]}>
-            <View style={styles.timeSectionHeader}>
-              <Text style={[styles.sectionTitle, { color: theme.textHigh }]}>Time</Text>
-              <Pressable
-                onPress={toggleTimePickerMode}
-                style={({ pressed }) => [
-                  styles.modeToggle,
-                  {
-                    backgroundColor: theme.surfaceAlt,
-                    opacity: pressed ? 0.7 : 1,
-                  },
-                ]}
-                testID={testID ? `${testID}-time-mode-toggle` : undefined}
-              >
-                <KeyboardIcon size={16} color={theme.textHigh} />
-                <Text style={[styles.modeToggleText, { color: theme.textHigh }]}>
-                  {timePickerMode === 'dial' ? 'Keyboard' : 'Dial'}
-                </Text>
-              </Pressable>
-            </View>
+            <Text style={[styles.sectionTitle, { color: theme.textHigh, marginBottom: theme.spacing.md }]}>
+              Time
+            </Text>
 
             {!isAllDay && (
               <>
@@ -646,53 +592,7 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
                   ))}
                 </ScrollView>
 
-                {timePickerMode === 'keyboard' ? (
-                  <View style={[styles.keyboardTimeContainer, { marginTop: theme.spacing.md }]}>
-                    <TextInput
-                      style={[
-                        styles.keyboardTimeInput,
-                        {
-                          backgroundColor: theme.surfaceAlt,
-                          color: theme.textHigh,
-                          borderColor: keyboardTimeError ? theme.error : theme.border,
-                        },
-                      ]}
-                      value={keyboardTimeInput}
-                      onChangeText={(text) => {
-                        setKeyboardTimeInput(text);
-                        setKeyboardTimeError('');
-                      }}
-                      placeholder="HH:MM (e.g., 14:30)"
-                      placeholderTextColor={theme.textLow}
-                      keyboardType="numbers-and-punctuation"
-                      onSubmitEditing={handleKeyboardTimeConfirm}
-                      testID={testID ? `${testID}-keyboard-input` : undefined}
-                    />
-                    <Pressable
-                      onPress={handleKeyboardTimeConfirm}
-                      style={({ pressed }) => [
-                        styles.keyboardTimeButton,
-                        {
-                          backgroundColor: theme.primary,
-                          opacity: pressed ? 0.8 : 1,
-                        },
-                      ]}
-                      testID={testID ? `${testID}-keyboard-confirm` : undefined}
-                    >
-                      <Text style={[styles.keyboardTimeButtonText, { color: '#FFFFFF' }]}>
-                        Set
-                      </Text>
-                    </Pressable>
-                    {keyboardTimeError && (
-                      <Text
-                        style={[styles.keyboardTimeError, { color: theme.error }]}
-                        testID={testID ? `${testID}-keyboard-error` : undefined}
-                      >
-                        {keyboardTimeError}
-                      </Text>
-                    )}
-                  </View>
-                ) : Platform.OS === 'web' ? (
+                {Platform.OS === 'web' ? (
                   <View style={[styles.webTimePickerContainer, { marginTop: theme.spacing.md }]}>
                     <View style={styles.webTimePickerRow}>
                       <View style={styles.webTimePickerColumn}>
@@ -891,47 +791,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500' as const,
   },
-  timeSectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  modeToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-  },
-  modeToggleText: {
-    fontSize: 13,
-    fontWeight: '500' as const,
-  },
-  keyboardTimeContainer: {
-    gap: 12,
-  },
-  keyboardTimeInput: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    fontSize: 16,
-    fontWeight: '500' as const,
-    borderWidth: 1,
-  },
-  keyboardTimeButton: {
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderRadius: 8,
-  },
-  keyboardTimeButtonText: {
-    fontSize: 15,
-    fontWeight: '600' as const,
-  },
-  keyboardTimeError: {
-    fontSize: 13,
-    fontWeight: '400' as const,
-  },
+
   nativePickerContainer: {
     alignItems: 'center',
     justifyContent: 'center',
