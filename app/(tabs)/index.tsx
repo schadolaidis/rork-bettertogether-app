@@ -17,8 +17,6 @@ import {
   Plus,
   CheckSquare,
   CheckCircle,
-  TrendingUp,
-  AlertCircle,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useApp } from '@/contexts/AppContext';
@@ -26,8 +24,6 @@ import { SwipeableTaskCard } from '@/components/interactive/SwipeableTaskCard';
 import { DesignTokens } from '@/constants/design-tokens';
 import { Task } from '@/types';
 import { ClockService } from '@/services/ClockService';
-import { FundHero } from '@/components/FundHero';
-import { StreaksFundCard } from '@/components/StreaksFundCard';
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -43,9 +39,6 @@ export default function DashboardScreen() {
     currentListId,
     completeTask,
     failTask,
-    fundTargets,
-    ledgerEntries,
-    dashboardStats,
   } = useApp();
 
   const [showListSwitcher, setShowListSwitcher] = useState(false);
@@ -158,12 +151,27 @@ export default function DashboardScreen() {
         </View>
 
         {!hasAnyTasks && (
-          <View style={styles.emptyStateCard}>
-            <CheckCircle size={48} color="#10B981" strokeWidth={2} />
-            <Text style={styles.emptyStateTitle}>Alles erledigt!</Text>
-            <Text style={styles.emptyStateSubtitle}>
+          <View style={styles.emptyState}>
+            <View style={styles.emptyIcon}>
+              <CheckCircle size={80} color="#10B981" strokeWidth={1.5} />
+            </View>
+            <Text style={styles.emptyTitle}>Alles erledigt!</Text>
+            <Text style={styles.emptySubtitle}>
               Du hast für heute alle Aufgaben geschafft. Genieße deinen Tag!
             </Text>
+            <TouchableOpacity
+              style={styles.emptyButton}
+              onPress={() => {
+                if (Platform.OS !== 'web') {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                }
+                router.push('/(tabs)/tasks');
+              }}
+              activeOpacity={0.8}
+            >
+              <Plus size={20} color="#FFFFFF" />
+              <Text style={styles.emptyButtonText}>Neue Aufgabe</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -251,107 +259,6 @@ export default function DashboardScreen() {
                 />
               ))}
             </View>
-          </View>
-        )}
-
-        <View style={styles.glanceSection}>
-          <Text style={styles.glanceHeader}>Auf einen Blick</Text>
-        </View>
-
-        {currentUser && (
-          <View style={styles.streakJokerCard}>
-            <View style={styles.streakJokerRow}>
-              {currentUser.currentStreakCount > 1 && (
-                <View style={styles.streakJokerItem}>
-                  <Text style={styles.streakJokerEmoji}>🔥</Text>
-                  <View>
-                    <Text style={styles.streakJokerLabel}>Serie</Text>
-                    <Text style={styles.streakJokerValue}>
-                      {currentUser.currentStreakCount}-Tage
-                    </Text>
-                  </View>
-                </View>
-              )}
-              {currentUser.currentStreakCount > 1 && currentUser.jokerCount > 0 && (
-                <View style={styles.streakDivider} />
-              )}
-              {currentUser.jokerCount > 0 && (
-                <View style={styles.streakJokerItem}>
-                  <Text style={styles.streakJokerEmoji}>🃏</Text>
-                  <View>
-                    <Text style={styles.streakJokerLabel}>Joker</Text>
-                    <Text style={styles.streakJokerValue}>
-                      {currentUser.jokerCount} verfügbar
-                    </Text>
-                  </View>
-                </View>
-              )}
-            </View>
-          </View>
-        )}
-
-        <FundHero
-          ledgerEntries={ledgerEntries}
-          tasks={allTasks}
-          currentListId={currentListId}
-          currencySymbol={currencySymbol}
-        />
-
-        <View style={styles.statsGrid}>
-          <TouchableOpacity
-            style={[styles.statCard, { borderLeftColor: '#8B5CF6' }]}
-            activeOpacity={0.7}
-            onPress={() => {
-              if (Platform.OS !== 'web') {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              }
-              router.push('/(tabs)/funds');
-            }}
-          >
-            <View style={styles.statIconContainer}>
-              <TrendingUp size={20} color="#8B5CF6" />
-            </View>
-            <Text style={styles.statLabel}>Dieser Monat</Text>
-            <Text style={[styles.statValue, { color: '#8B5CF6' }]}>+{currencySymbol}{dashboardStats.currentMonthMetrics.fundGrowth.toFixed(2)}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.statCard, { borderLeftColor: '#EF4444' }]}
-            activeOpacity={0.7}
-            onPress={() => {
-              if (Platform.OS !== 'web') {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              }
-            }}
-          >
-            <View style={styles.statIconContainer}>
-              <AlertCircle size={20} color="#EF4444" />
-            </View>
-            <Text style={styles.statLabel}>Gescheiterte Aufgaben</Text>
-            <Text style={[styles.statValue, { color: '#EF4444' }]}>{dashboardStats.currentMonthMetrics.failedTasks}</Text>
-          </TouchableOpacity>
-        </View>
-
-        {fundTargets.length > 0 && (
-          <View style={styles.fundsPreview}>
-            {fundTargets.slice(0, 2).map((fund) => {
-              const linkedTasks = allTasks.filter((t) => t.fundTargetId === fund.id).length;
-              return (
-                <StreaksFundCard
-                  key={fund.id}
-                  emoji={fund.emoji}
-                  name={fund.name}
-                  description={fund.description}
-                  collectedAmount={fund.totalCollectedCents / 100}
-                  targetAmount={fund.targetAmountCents ? fund.targetAmountCents / 100 : undefined}
-                  linkedTasksCount={linkedTasks}
-                  currencySymbol={currencySymbol}
-                  onPress={() => {
-                    router.push('/(tabs)/funds');
-                  }}
-                />
-              );
-            })}
           </View>
         )}
       </ScrollView>
@@ -543,103 +450,45 @@ const styles = StyleSheet.create({
   taskList: {
     gap: DesignTokens.spacing.sm,
   },
-  emptyStateCard: {
-    backgroundColor: DesignTokens.colors.neutral[0],
-    borderRadius: DesignTokens.radius.lg,
-    padding: DesignTokens.spacing.xxl,
+  emptyState: {
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 80,
+    paddingHorizontal: DesignTokens.spacing.xl,
+  },
+  emptyIcon: {
+    marginBottom: DesignTokens.spacing.xl,
+    opacity: 0.9,
+  },
+  emptyTitle: {
+    ...DesignTokens.typography.displayMedium,
+    color: DesignTokens.colors.neutral[900],
+    marginBottom: DesignTokens.spacing.sm,
+    textAlign: 'center',
+    fontWeight: '700' as const,
+    fontSize: 26,
+  },
+  emptySubtitle: {
+    ...DesignTokens.typography.bodyLarge,
+    color: DesignTokens.colors.neutral[600],
+    textAlign: 'center',
     marginBottom: DesignTokens.spacing.xxl,
-    ...DesignTokens.shadow.sm,
+    lineHeight: 24,
   },
-  emptyStateTitle: {
-    ...DesignTokens.typography.headingLarge,
-    color: DesignTokens.colors.neutral[900],
-    marginTop: DesignTokens.spacing.md,
-    marginBottom: DesignTokens.spacing.xs,
-    textAlign: 'center',
-    fontWeight: '700' as const,
-  },
-  emptyStateSubtitle: {
-    ...DesignTokens.typography.bodyMedium,
-    color: DesignTokens.colors.neutral[600],
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  glanceSection: {
-    marginBottom: DesignTokens.spacing.lg,
-  },
-  glanceHeader: {
-    ...DesignTokens.typography.headingMedium,
-    color: DesignTokens.colors.neutral[900],
-    fontWeight: '700' as const,
-    fontSize: 20,
-  },
-  streakJokerCard: {
-    backgroundColor: DesignTokens.colors.neutral[0],
-    borderRadius: DesignTokens.radius.lg,
-    padding: DesignTokens.spacing.lg,
-    marginBottom: DesignTokens.spacing.lg,
-    ...DesignTokens.shadow.sm,
-  },
-  streakJokerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  streakJokerItem: {
+  emptyButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: DesignTokens.spacing.md,
+    gap: DesignTokens.spacing.sm,
+    paddingVertical: 14,
+    paddingHorizontal: DesignTokens.spacing.xxl,
+    backgroundColor: DesignTokens.colors.primary[500],
+    borderRadius: DesignTokens.radius.md,
+    ...DesignTokens.shadow.md,
   },
-  streakJokerEmoji: {
-    fontSize: 32,
-  },
-  streakJokerLabel: {
-    ...DesignTokens.typography.bodySmall,
-    color: DesignTokens.colors.neutral[600],
-    marginBottom: 2,
-  },
-  streakJokerValue: {
+  emptyButtonText: {
     ...DesignTokens.typography.bodyLarge,
     fontWeight: '700' as const,
-    color: DesignTokens.colors.neutral[900],
-  },
-  streakDivider: {
-    width: 1,
-    backgroundColor: DesignTokens.colors.neutral[200],
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    gap: DesignTokens.spacing.md,
-    marginBottom: DesignTokens.spacing.lg,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: DesignTokens.colors.neutral[0],
-    borderRadius: DesignTokens.radius.lg,
-    padding: DesignTokens.spacing.lg,
-    borderLeftWidth: 4,
-    ...DesignTokens.shadow.sm,
-  },
-  statIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: DesignTokens.colors.neutral[50],
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: DesignTokens.spacing.sm,
-  },
-  statLabel: {
-    ...DesignTokens.typography.bodySmall,
-    color: DesignTokens.colors.neutral[600],
-    marginBottom: DesignTokens.spacing.xs,
-  },
-  statValue: {
-    ...DesignTokens.typography.headingMedium,
-    fontWeight: '800' as const,
-  },
-  fundsPreview: {
-    marginBottom: DesignTokens.spacing.lg,
+    color: DesignTokens.colors.neutral[0],
   },
 });
 
