@@ -111,15 +111,21 @@ export default function FundsScreen() {
       return;
     }
 
-    const targetAmountCents = targetAmount
+    console.log('[FundEdit] Saving changes for fund:', editingFund.id);
+    console.log('[FundEdit] New values:', { name, emoji, description, targetAmount });
+
+    const targetAmountCents = targetAmount && targetAmount.trim() !== ''
       ? Math.round(parseFloat(targetAmount) * 100)
       : undefined;
-    updateFundTarget(editingFund.id, {
+    
+    const result = updateFundTarget(editingFund.id, {
       name,
       emoji,
       description: description || undefined,
       targetAmountCents,
     });
+
+    console.log('[FundEdit] Update result:', result);
 
     if (Platform.OS !== 'web') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -156,6 +162,7 @@ export default function FundsScreen() {
   );
 
   const openEditModal = useCallback((fund: any) => {
+    console.log('[FundEdit] Opening edit modal for fund:', fund.id, fund.name);
     setEditingFund(fund);
     setName(fund.name);
     setEmoji(fund.emoji);
@@ -698,8 +705,9 @@ export default function FundsScreen() {
 
         <ModalInputWrapper
           open={showCreateModal || !!editingFund}
-          title={editingFund ? 'Edit Fund Goal' : 'Create Fund Goal'}
+          title={editingFund ? `Edit Fund Goal: ${editingFund.name}` : 'Create Fund Goal'}
           onClose={() => {
+            console.log('[FundModal] Closing modal');
             setShowCreateModal(false);
             setEditingFund(null);
             setName('');
