@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,10 +7,12 @@ import {
   ScrollView,
   Platform,
   useWindowDimensions,
+  TextInput,
+  Keyboard,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { ChevronLeft, ChevronRight } from 'lucide-react-native';
+import * as chrono from 'chrono-node';
+import { ChevronLeft, ChevronRight, Calendar, Clock } from 'lucide-react-native';
 import { ModalSheet } from '@/components/interactive/modals/ModalSheet';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -40,15 +42,15 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
   const { theme } = useTheme();
   const { width: screenWidth } = useWindowDimensions();
 
-  const getDeviceTimezone = () => {
+  const getDeviceTimezone = useCallback(() => {
     try {
       return Intl.DateTimeFormat().resolvedOptions().timeZone;
     } catch {
       return 'UTC';
     }
-  };
+  }, []);
 
-  const parseInitialValue = (isoString: string | null) => {
+  const parseInitialValue = useCallback((isoString: string | null) => {
     if (!isoString) {
       const now = new Date();
       return {
@@ -82,7 +84,7 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
         timezone: getDeviceTimezone(),
       };
     }
-  };
+  }, [getDeviceTimezone]);
 
   const initialState = parseInitialValue(value);
   const [selectedDate, setSelectedDate] = useState<string>(initialState.date);
@@ -90,6 +92,12 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
   const [isAllDay, setIsAllDay] = useState(initialState.allDay);
   const [timezone] = useState(initialState.timezone);
   const [currentMonth, setCurrentMonth] = useState(() => new Date(initialState.date));
+  const [naturalInput, setNaturalInput] = useState<string>('');
+  const [parsedResult, setParsedResult] = useState<{
+    date: string | null;
+    time: string | null;
+    text: string;
+  } | null>(null);
 
 
   useEffect(() => {
@@ -99,8 +107,77 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
       setSelectedTime(state.time);
       setIsAllDay(state.allDay);
       setCurrentMonth(new Date(state.date));
+      setNaturalInput('');
+      setParsedResult(null);
     }
-  }, [visible, value]);
+  }, [visible, value, parseInitialValue]);
+
+  useEffect(() => {
+    if (!naturalInput.trim()) {
+      setParsedResult(null);
+      return;
+    }
+
+    const parseNaturalInput = () => {
+      try {
+        const results = chrono.parse(naturalInput, new Date(), { forwardDate: true });
+        
+        if (results.length > 0) {
+          const parsed = results[0];
+          const parsedDate = parsed.start.date();
+          
+          const dateStr = parsedDate.toISOString().split('T')[0];
+          let timeStr: string | null = null;
+          
+          if (parsed.start.isCertain('hour') && parsed.start.isCertain('minute')) {
+            const hours = parsedDate.getHours().toString().padStart(2, '0');
+            const minutes = parsedDate.getMinutes().toString().padStart(2, '0');
+            timeStr = `${hours}:${minutes}`;
+          }
+          
+          const displayDate = parsedDate.toLocaleDateString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            year: parsedDate.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined,
+          });
+          
+          const displayTime = timeStr 
+            ? parsedDate.toLocaleTimeString('en-US', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                hour12: true,
+              })
+            : 'All day';
+          
+          setParsedResult({
+            date: dateStr,
+            time: timeStr,
+            text: `${displayDate} at ${displayTime}`,
+          });
+          
+          setSelectedDate(dateStr);
+          setCurrentMonth(parsedDate);
+          
+          if (timeStr) {
+            setSelectedTime(timeStr);
+            setIsAllDay(false);
+          } else {
+            setSelectedTime(null);
+            setIsAllDay(true);
+          }
+        } else {
+          setParsedResult(null);
+        }
+      } catch (error) {
+        console.log('[NLP] Parsing error:', error);
+        setParsedResult(null);
+      }
+    };
+
+    const debounce = setTimeout(parseNaturalInput, 300);
+    return () => clearTimeout(debounce);
+  }, [naturalInput]);
 
   const calendarWidth = Math.min(screenWidth - 32, 400);
   const dayCellSize = Math.floor((calendarWidth - 24) / 7);
@@ -142,24 +219,7 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
     console.log('[DatePicker] Quick chip selected:', type, dateStr);
   };
 
-  const handleTimeChip = (time: string | 'now') => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
 
-    let finalTime = time;
-    if (time === 'now') {
-      const now = new Date();
-      const roundedMinutes = Math.round(now.getMinutes() / 15) * 15;
-      const hours = roundedMinutes === 60 ? (now.getHours() + 1) % 24 : now.getHours();
-      const minutes = roundedMinutes === 60 ? 0 : roundedMinutes;
-      finalTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-    }
-
-    setSelectedTime(finalTime);
-    setIsAllDay(false);
-    console.log('[TimePicker] Time chip selected:', time, '→', finalTime);
-  };
 
   const handleDateSelect = (dateStr: string) => {
     if (Platform.OS !== 'web') {
@@ -329,8 +389,64 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
       maxHeight={Platform.OS === 'web' ? 700 : undefined}
       testID={testID}
     >
-        <ScrollView showsVerticalScrollIndicator={false} style={styles.container}>
-          <View style={styles.section}>
+        <ScrollView 
+          showsVerticalScrollIndicator={false} 
+          style={styles.container}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={[styles.smartFieldSection, { marginBottom: theme.spacing.lg }]}>
+            <Text style={[styles.sectionTitle, { color: theme.textHigh, marginBottom: theme.spacing.sm }]}>
+              Quick Input
+            </Text>
+            <View 
+              style={[
+                styles.smartFieldContainer, 
+                {
+                  backgroundColor: theme.surfaceAlt,
+                  borderColor: parsedResult ? theme.primary : theme.border,
+                  borderWidth: parsedResult ? 2 : 1,
+                }
+              ]}
+            >
+              <Calendar size={20} color={theme.textLow} />
+              <TextInput
+                value={naturalInput}
+                onChangeText={setNaturalInput}
+                placeholder="e.g., Tomorrow at 5 PM, in 30 mins, Dec 25 at 9am"
+                placeholderTextColor={theme.textLow}
+                style={[
+                  styles.smartFieldInput,
+                  {
+                    color: theme.textHigh,
+                  },
+                ]}
+                autoCapitalize="none"
+                autoCorrect={false}
+                returnKeyType="done"
+                onSubmitEditing={() => Keyboard.dismiss()}
+                testID={testID ? `${testID}-natural-input` : undefined}
+              />
+            </View>
+            {parsedResult && (
+              <View style={[styles.parsedResultContainer, { backgroundColor: theme.primary + '15', borderColor: theme.primary }]}>
+                <Clock size={16} color={theme.primary} />
+                <Text style={[styles.parsedResultText, { color: theme.primary }]}>
+                  Parsed: {parsedResult.text}
+                </Text>
+              </View>
+            )}
+            {naturalInput && !parsedResult && (
+              <Text style={[styles.helperText, { color: theme.textLow }]}>
+                Try: &ldquo;tomorrow 3pm&rdquo; or &ldquo;next friday at 2:30&rdquo; or &ldquo;in 2 hours&rdquo;
+              </Text>
+            )}
+          </View>
+          <View style={[styles.divider, { backgroundColor: theme.border }]} />
+
+          <View style={[styles.section, { marginTop: theme.spacing.md }]}>
+            <Text style={[styles.sectionSubtitle, { color: theme.textLow, marginBottom: theme.spacing.sm }]}>
+              Or select manually:
+            </Text>
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { color: theme.textHigh }]}>All Day</Text>
               <Pressable
@@ -537,165 +653,24 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
             </View>
           </View>
 
-          <View style={[styles.section, { marginTop: theme.spacing.lg }]}>
-            <Text style={[styles.sectionTitle, { color: theme.textHigh, marginBottom: theme.spacing.md }]}>
-              Time
-            </Text>
-
-            {!isAllDay && (
-              <>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={[styles.quickChipsScroll, { marginTop: theme.spacing.md }]}
-                >
-                  <Pressable
-                    onPress={() => handleTimeChip('now')}
-                    style={({ pressed }) => [
-                      styles.chip,
-                      {
-                        backgroundColor: theme.surfaceAlt,
-                        borderColor: theme.border,
-                        opacity: pressed ? 0.7 : 1,
-                      },
-                    ]}
-                    testID={testID ? `${testID}-time-chip-now` : undefined}
-                  >
-                    <Text style={[styles.chipText, { color: theme.textHigh }]}>Now</Text>
-                  </Pressable>
-                  {['06:00', '09:00', '12:00', '15:00', '18:00', '21:00'].map((time) => (
-                    <Pressable
-                      key={time}
-                      onPress={() => handleTimeChip(time)}
-                      style={({ pressed }) => [
-                        styles.chip,
-                        {
-                          backgroundColor: selectedTime === time ? theme.primary : theme.surfaceAlt,
-                          borderColor: theme.border,
-                          opacity: pressed ? 0.7 : 1,
-                        },
-                      ]}
-                      testID={testID ? `${testID}-time-chip-${time}` : undefined}
-                    >
-                      <Text
-                        style={[
-                          styles.chipText,
-                          { 
-                            color: selectedTime === time ? '#FFFFFF' : theme.textHigh,
-                            fontWeight: selectedTime === time ? '600' : '500',
-                          },
-                        ]}
-                      >
-                        {time}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </ScrollView>
-
-                {Platform.OS === 'web' ? (
-                  <View style={[styles.webTimePickerContainer, { marginTop: theme.spacing.md }]}>
-                    <View style={styles.webTimePickerRow}>
-                      <View style={styles.webTimePickerColumn}>
-                        <Text style={[styles.webTimePickerLabel, { color: theme.textLow }]}>Hour</Text>
-                        <ScrollView 
-                          style={[styles.webTimePickerWheel, { backgroundColor: theme.surfaceAlt }]}
-                          showsVerticalScrollIndicator={false}
-                        >
-                          {Array.from({ length: 24 }).map((_, h) => {
-                            const hours = h.toString().padStart(2, '0');
-                            const isSelected = selectedTime?.startsWith(hours + ':');
-                            return (
-                              <Pressable
-                                key={h}
-                                onPress={() => {
-                                  const currentMinutes = selectedTime?.split(':')[1] || '00';
-                                  handleTimeChip(`${hours}:${currentMinutes}`);
-                                }}
-                                style={({ pressed }) => [
-                                  styles.webTimePickerOption,
-                                  isSelected && { backgroundColor: theme.primary },
-                                  pressed && !isSelected && { backgroundColor: theme.surface },
-                                ]}
-                              >
-                                <Text style={[styles.webTimePickerOptionText, { color: isSelected ? '#FFFFFF' : theme.textHigh }]}>
-                                  {hours}
-                                </Text>
-                              </Pressable>
-                            );
-                          })}
-                        </ScrollView>
-                      </View>
-                      <Text style={[styles.webTimePickerSeparator, { color: theme.textHigh }]}>:</Text>
-                      <View style={styles.webTimePickerColumn}>
-                        <Text style={[styles.webTimePickerLabel, { color: theme.textLow }]}>Minute</Text>
-                        <ScrollView 
-                          style={[styles.webTimePickerWheel, { backgroundColor: theme.surfaceAlt }]}
-                          showsVerticalScrollIndicator={false}
-                        >
-                          {Array.from({ length: 4 }).map((_, m) => {
-                            const minutes = (m * 15).toString().padStart(2, '0');
-                            const currentHours = selectedTime?.split(':')[0] || '00';
-                            const isSelected = selectedTime === `${currentHours}:${minutes}`;
-                            return (
-                              <Pressable
-                                key={m}
-                                onPress={() => {
-                                  handleTimeChip(`${currentHours}:${minutes}`);
-                                }}
-                                style={({ pressed }) => [
-                                  styles.webTimePickerOption,
-                                  isSelected && { backgroundColor: theme.primary },
-                                  pressed && !isSelected && { backgroundColor: theme.surface },
-                                ]}
-                              >
-                                <Text style={[styles.webTimePickerOptionText, { color: isSelected ? '#FFFFFF' : theme.textHigh }]}>
-                                  {minutes}
-                                </Text>
-                              </Pressable>
-                            );
-                          })}
-                        </ScrollView>
-                      </View>
-                    </View>
-                  </View>
-                ) : (
-                  <View style={[styles.nativePickerContainer, { marginTop: theme.spacing.md }]}>
-                    <DateTimePicker
-                      value={(() => {
-                        if (selectedTime) {
-                          const [hours, minutes] = selectedTime.split(':').map(Number);
-                          const date = new Date();
-                          date.setHours(hours, minutes, 0, 0);
-                          return date;
-                        }
-                        return new Date();
-                      })()}
-                      mode="time"
-                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                      onChange={(event, date) => {
-                        if (event.type === 'set' && date) {
-                          const hours = date.getHours().toString().padStart(2, '0');
-                          const minutes = date.getMinutes().toString().padStart(2, '0');
-                          handleTimeChip(`${hours}:${minutes}`);
-                        }
-                      }}
-                      minuteInterval={15}
-                      style={styles.nativePicker}
-                      testID={testID ? `${testID}-time-picker` : undefined}
-                    />
-                  </View>
-                )}
-              </>
-            )}
-
-            {isAllDay && (
-              <View style={[styles.allDayPlaceholder, { marginTop: theme.spacing.md }]}>
-                <Text style={[styles.allDayPlaceholderText, { color: theme.textLow }]}>
-                  Time is disabled when All Day is on
+          {!isAllDay && selectedTime && (
+            <View style={[styles.section, { marginTop: theme.spacing.md }]}>
+              <Text style={[styles.sectionTitle, { color: theme.textHigh, marginBottom: theme.spacing.sm }]}>
+                Selected Time
+              </Text>
+              <View style={[styles.selectedTimeContainer, { backgroundColor: theme.surfaceAlt }]}>
+                <Clock size={20} color={theme.primary} />
+                <Text style={[styles.selectedTimeText, { color: theme.textHigh }]}>
+                  {(() => {
+                    const [hours, minutes] = selectedTime.split(':');
+                    const date = new Date();
+                    date.setHours(parseInt(hours), parseInt(minutes));
+                    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                  })()}
                 </Text>
               </View>
-            )}
-          </View>
+            </View>
+          )}
         </ScrollView>
     </ModalSheet>
   );
@@ -704,6 +679,61 @@ export const DateTimePickerSheet: React.FC<DateTimePickerSheetProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  smartFieldSection: {
+    gap: 8,
+  },
+  smartFieldContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+  },
+  smartFieldInput: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '400' as const,
+  },
+  parsedResultContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 8,
+    borderWidth: 1,
+  },
+  parsedResultText: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+  },
+  helperText: {
+    fontSize: 12,
+    marginTop: 6,
+    fontWeight: '400' as const,
+  },
+  divider: {
+    height: 1,
+    marginVertical: 16,
+  },
+  sectionSubtitle: {
+    fontSize: 13,
+    fontWeight: '500' as const,
+  },
+  selectedTimeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+  },
+  selectedTimeText: {
+    fontSize: 17,
+    fontWeight: '600' as const,
   },
   section: {
     gap: 8,
@@ -792,62 +822,7 @@ const styles = StyleSheet.create({
     fontWeight: '500' as const,
   },
 
-  nativePickerContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-  },
-  nativePicker: {
-    width: '100%',
-    height: 200,
-  },
-  webTimePickerContainer: {
-    paddingVertical: 16,
-  },
-  webTimePickerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 16,
-  },
-  webTimePickerColumn: {
-    alignItems: 'center',
-    gap: 8,
-  },
-  webTimePickerLabel: {
-    fontSize: 12,
-    fontWeight: '600' as const,
-    textTransform: 'uppercase' as const,
-    letterSpacing: 0.5,
-  },
-  webTimePickerWheel: {
-    height: 200,
-    width: 80,
-    borderRadius: 12,
-  },
-  webTimePickerOption: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  webTimePickerOptionText: {
-    fontSize: 20,
-    fontWeight: '500' as const,
-  },
-  webTimePickerSeparator: {
-    fontSize: 28,
-    fontWeight: '600' as const,
-    marginTop: 24,
-  },
-  allDayPlaceholder: {
-    paddingVertical: 24,
-    alignItems: 'center',
-  },
-  allDayPlaceholderText: {
-    fontSize: 14,
-    fontWeight: '400' as const,
-  },
+
   footerContainer: {
     flexDirection: 'row',
     gap: 12,
