@@ -33,17 +33,40 @@ export default function Dashboard() {
   const { tasks, completeTask, failTask, currentList } = useApp();
   const [selectedFilter, setSelectedFilter] = useState<TaskStatus>('all');
   const [taskSheetVisible, setTaskSheetVisible] = useState(false);
+  const [pendingJokerTaskId, setPendingJokerTaskId] = useState<string | null>(null);
+  const utils = trpc.useUtils();
+
+  const useJokerMutation = trpc.tasks.useJokerOnTask.useMutation({
+    onSuccess: async () => {
+      try {
+        await utils.user.getMe.invalidate();
+      } catch (e) {
+        console.log('[Dashboard] invalidate user.getMe error:', e);
+      }
+      if (pendingJokerTaskId) {
+        setPendingJokerTaskId(null);
+      }
+    },
+    onError: (error) => {
+      console.log('[Dashboard] useJokerOnTask error:', error);
+    },
+  });
 
   const resolveTaskMutation = trpc.tasks.resolveTask.useMutation({
     onSuccess: (data) => {
       const maybeStatus = (data as unknown) as { status?: string };
       if (maybeStatus && maybeStatus.status === 'JOKER_AVAILABLE') {
+        const taskId = pendingJokerTaskId;
         Alert.alert(
           'Joker einsetzen?',
           'Möchtest du einen Joker einsetzen?',
           [
             { text: 'Nein, Einsatz zahlen', style: 'destructive' },
-            { text: 'Ja, Joker einsetzen', style: 'default' },
+            { text: 'Ja, Joker einsetzen', style: 'default', onPress: () => {
+              if (taskId) {
+                useJokerMutation.mutate({ task_id: taskId });
+              }
+            } },
           ],
         );
         return;
@@ -64,12 +87,17 @@ export default function Dashboard() {
       // If backend encodes via error in future, catch here
       const msg = (error as unknown as { message?: string }).message ?? '';
       if (msg.includes('JOKER_AVAILABLE')) {
+        const taskId = pendingJokerTaskId;
         Alert.alert(
           'Joker einsetzen?',
           'Möchtest du einen Joker einsetzen?',
           [
             { text: 'Nein, Einsatz zahlen', style: 'destructive' },
-            { text: 'Ja, Joker einsetzen', style: 'default' },
+            { text: 'Ja, Joker einsetzen', style: 'default', onPress: () => {
+              if (taskId) {
+                useJokerMutation.mutate({ task_id: taskId });
+              }
+            } },
           ],
         );
       }
@@ -131,6 +159,7 @@ export default function Dashboard() {
 
   const handleFail = (taskId: string) => {
     console.log('[Dashboard] Failing task:', taskId);
+    setPendingJokerTaskId(taskId);
     resolveTaskMutation.mutate({ task_id: taskId, resolution_status: 'failed' });
   };
 
