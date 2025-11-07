@@ -1,6 +1,6 @@
 import { publicProcedure } from "@/backend/trpc/create-context";
 import { z } from "zod";
-import { MOCK_TASKS, MOCK_FUND_TARGETS } from "@/mocks/data";
+import { MOCK_TASKS, MOCK_FUND_TARGETS, MOCK_USERS } from "@/mocks/data";
 import type { Task } from "@/types";
 import { TRPCError } from "@trpc/server";
 
@@ -51,11 +51,45 @@ export default publicProcedure
     }
 
     if (resolution_status === "completed") {
+      // Update task status first
       MOCK_TASKS[taskIndex] = {
         ...task,
         status: "completed",
         completedAt: now,
       };
+
+      // Streak and Joker logic for the assigned user
+      const assigned = task.assignedTo;
+      const assignedUserId = Array.isArray(assigned) ? (assigned[0] ?? null) : assigned ?? null;
+
+      if (assignedUserId) {
+        const userIndex = MOCK_USERS.findIndex((u) => u.id === assignedUserId);
+        if (userIndex !== -1) {
+          const user = MOCK_USERS[userIndex];
+          const newStreakCount = (user.currentStreakCount ?? 0) + 1;
+          const isMilestone = newStreakCount % 10 === 0;
+          const newJokerCount = isMilestone ? (user.jokerCount ?? 0) + 1 : user.jokerCount ?? 0;
+
+          MOCK_USERS[userIndex] = {
+            ...user,
+            currentStreakCount: newStreakCount,
+            jokerCount: newJokerCount,
+          };
+
+          if (isMilestone) {
+            console.log(
+              `Milestone reached: User ${user.id} streak=${newStreakCount}. Granted a Joker. Total jokers=${newJokerCount}`
+            );
+            // Optional push notification placeholder
+            // In a real implementation, trigger a push here
+          }
+        } else {
+          console.warn("Assigned user not found for task completion", { assignedUserId, taskId: task.id });
+        }
+      } else {
+        console.warn("No assigned user found on task for streak accounting", { taskId: task.id });
+      }
+
       return MOCK_TASKS[taskIndex];
     }
 
