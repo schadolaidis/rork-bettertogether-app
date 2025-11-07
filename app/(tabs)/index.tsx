@@ -25,6 +25,7 @@ import { DesignTokens } from '@/constants/design-tokens';
 import { Task } from '@/types';
 import { ClockService } from '@/services/ClockService';
 import { Card } from '@/components/design-system/Card';
+import { trpc } from '@/lib/trpc';
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -45,6 +46,10 @@ export default function DashboardScreen() {
   const [showListSwitcher, setShowListSwitcher] = useState(false);
 
   const currencySymbol = currentList?.currencySymbol || '€';
+
+  const fundTotalsQuery = trpc.fundGoals.getTotals.useQuery(undefined, {
+    staleTime: 30_000,
+  });
 
   const now = useMemo(() => ClockService.getCurrentTime(), []);
   
@@ -269,7 +274,18 @@ export default function DashboardScreen() {
           <View style={styles.glanceCards}>
             <Card style={styles.glanceCard} testID="glance-group-fund">
               <Text style={styles.glanceCardTitle}>Gruppen-Topf</Text>
-              <Text style={styles.glanceCardValue}>€0.00</Text>
+              <Text style={styles.glanceCardValue} testID="group-fund-total">
+                {(() => {
+                  const cents = fundTotalsQuery.data?.totalCollectedCents ?? 0;
+                  const euros = cents / 100;
+                  try {
+                    return euros.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+                  } catch (e) {
+                    console.log('[Dashboard] Currency format error', e);
+                    return `€${euros.toFixed(2)}`;
+                  }
+                })()}
+              </Text>
             </Card>
 
             <Card style={styles.glanceCard} testID="glance-streak">
