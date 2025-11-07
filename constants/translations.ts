@@ -506,7 +506,7 @@ const de: Translations = {
     member: 'Mitglied',
   },
   tabs: {
-    dashboard: 'Dashboard',
+    dashboard: 'Heute',
     calendar: 'Kalender',
     tasks: 'Aufgaben',
     fundGoals: 'Sparziele',
