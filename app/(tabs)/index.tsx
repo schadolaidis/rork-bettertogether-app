@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Platform,
   Modal,
+  Animated,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -17,12 +18,15 @@ import {
   Plus,
   CheckSquare,
   CheckCircle,
+  Flame,
+  Egg,
+  ChevronRight,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useApp } from '@/contexts/AppContext';
 import { SwipeableTaskCard } from '@/components/interactive/SwipeableTaskCard';
 import { DesignTokens } from '@/constants/design-tokens';
-import { Task } from '@/types';
+import { Task, FundTarget } from '@/types';
 import { ClockService } from '@/services/ClockService';
 import { Card } from '@/components/design-system/Card';
 import { trpc } from '@/lib/trpc';
@@ -41,6 +45,7 @@ export default function DashboardScreen() {
     currentListId,
     completeTask,
     failTask,
+    fundTargets,
   } = useApp();
 
   const [showListSwitcher, setShowListSwitcher] = useState(false);
@@ -120,6 +125,12 @@ export default function DashboardScreen() {
 
   const hasAnyTasks = overdueTasks.length > 0 || dueTodayTasks.length > 0 || dueTomorrowTasks.length > 0;
 
+  const nextTask: Task | undefined = useMemo(() => {
+    const schedulable = tasks.filter((t) => (t.status === 'pending' || t.status === 'overdue') && t.startAt);
+    const sorted = [...schedulable].sort((a, b) => new Date(a.startAt as string).getTime() - new Date(b.startAt as string).getTime());
+    return sorted[0];
+  }, [tasks]);
+
   const formatDateHeader = () => {
     const options: Intl.DateTimeFormatOptions = { 
       weekday: 'long', 
@@ -165,7 +176,15 @@ export default function DashboardScreen() {
       >
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Text style={styles.dateHeader}>{formatDateHeader()}</Text>
+            <Text style={styles.greeting} testID="greeting-text">
+              {(() => {
+                const name = meQuery.data?.name ?? currentUser?.name ?? '';
+                const hour = new Date().getHours();
+                const msg = hour < 12 ? 'Guten Morgen' : hour < 18 ? 'Guten Tag' : 'Guten Abend';
+                return `${msg}${name ? `, ${name}` : ''}.`;
+              })()}
+            </Text>
+            <Text style={styles.subGreeting}>Deine Flamme wartet.</Text>
           </View>
           <TouchableOpacity
             style={styles.listBadge}
@@ -176,10 +195,93 @@ export default function DashboardScreen() {
               setShowListSwitcher(true);
             }}
             activeOpacity={0.7}
+            testID="open-list-switcher"
           >
             <Users size={14} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
+
+        <Card style={styles.streakHero} testID="streak-hero">
+          <View style={styles.streakLeft}>
+            {(() => {
+              const streak = meQuery.data?.currentStreakCount ?? 0;
+              if (streak === 0) {
+                return (
+                  <View style={styles.eggBadge}>
+                    <Egg size={36} color="#6B7280" />
+                  </View>
+                );
+              }
+              return (
+                <Animated.View style={[styles.flameBadge, { transform: [{ scale: new Animated.Value(1) }] }]}>
+                  <Flame size={36} color="#F97316" />
+                </Animated.View>
+              );
+            })()}
+            <View style={styles.streakTexts}>
+              <Text style={styles.streakLabel}>{(meQuery.data?.currentStreakCount ?? 0) > 0 ? 'Weiter so!' : 'Starte deine Serie!'}</Text>
+              <Text style={styles.streakValue} testID="streak-current-hero">
+                {meQuery.data?.currentStreakCount ?? 0} Tage
+              </Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            style={styles.streakCta}
+            onPress={() => router.push('/(tabs)/tasks')}
+            activeOpacity={0.8}
+            testID="streak-cta"
+          >
+            <Text style={styles.streakCtaText}>Jetzt loslegen</Text>
+            <ChevronRight size={16} color="#FFFFFF" />
+          </TouchableOpacity>
+        </Card>
+
+        {nextTask && (
+          <Card style={styles.nextTaskCard} testID="next-task-card">
+            <View style={styles.nextTaskHeader}>
+              <Text style={styles.nextTaskLabel}>Als Nächstes</Text>
+              <Text style={styles.nextTaskTime}>
+                {(() => {
+                  const d = new Date(nextTask.startAt as string);
+                  try {
+                    return d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+                  } catch (e) {
+                    return `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+                  }
+                })()}
+              </Text>
+            </View>
+            <TouchableOpacity onPress={() => handleTaskPress(nextTask)} activeOpacity={0.8}>
+              <Text style={styles.nextTaskTitle} numberOfLines={2}>{nextTask.title}</Text>
+            </TouchableOpacity>
+          </Card>
+        )}
+
+        {fundTargets && fundTargets.length > 0 && (
+          <View style={styles.ringsSection} testID="fund-rings-section">
+            <Text style={styles.ringsHeader}>Sparziele</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.ringsRow}>
+              {fundTargets.slice(0, 5).map((f: FundTarget) => {
+                const target = f.targetAmountCents ?? undefined;
+                const total = f.totalCollectedCents ?? 0;
+                const progress = target ? Math.min(total / target, 1) : 0;
+                return (
+                  <View key={f.id} style={styles.ringCard} testID={`fund-ring-${f.id}`}>
+                    <View style={styles.ringCircleOuter}>
+                      <View style={styles.ringTrack} />
+                      <View style={[styles.ringFill, { height: `${progress * 100}%` }]} />
+                      <Text style={styles.ringEmoji}>{f.emoji}</Text>
+                    </View>
+                    <Text numberOfLines={1} style={styles.ringName}>{f.name}</Text>
+                    <Text style={styles.ringAmount}>
+                      {currencySymbol}{(total/100).toFixed(2)}{target ? ` / ${(target/100).toFixed(0)}€` : ''}
+                    </Text>
+                  </View>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
 
         {!hasAnyTasks && (
           <View style={styles.emptyState}>
@@ -466,11 +568,17 @@ const styles = StyleSheet.create({
   headerLeft: {
     flex: 1,
   },
-  dateHeader: {
+  greeting: {
     ...DesignTokens.typography.displayMedium,
     color: DesignTokens.colors.neutral[900],
-    fontWeight: '700' as const,
-    fontSize: 22,
+    fontWeight: '800' as const,
+    fontSize: 26,
+    letterSpacing: -0.5,
+  },
+  subGreeting: {
+    ...DesignTokens.typography.bodyLarge,
+    color: DesignTokens.colors.neutral[600],
+    marginTop: 4,
   },
   listBadge: {
     width: 40,
@@ -563,6 +671,153 @@ const styles = StyleSheet.create({
     fontWeight: '700' as const,
     color: DesignTokens.colors.neutral[0],
   },
+  streakHero: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 18,
+    borderRadius: 16,
+    backgroundColor: '#FFF7ED',
+    marginBottom: DesignTokens.spacing.xl,
+  },
+  streakLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  flameBadge: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFEDD5',
+  },
+  eggBadge: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F3F4F6',
+  },
+  streakTexts: {
+    gap: 2,
+  },
+  streakLabel: {
+    ...DesignTokens.typography.labelSmall,
+    color: '#FB923C',
+    fontWeight: '700' as const,
+  },
+  streakValue: {
+    ...DesignTokens.typography.headingLarge,
+    fontWeight: '800' as const,
+    color: DesignTokens.colors.neutral[900],
+  },
+  streakCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#F97316',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+  },
+  streakCtaText: {
+    color: '#FFFFFF',
+    fontWeight: '700' as const,
+  },
+
+  nextTaskCard: {
+    padding: 18,
+    borderRadius: 16,
+    backgroundColor: '#ECFEFF',
+    marginBottom: DesignTokens.spacing.xl,
+  },
+  nextTaskHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  nextTaskLabel: {
+    ...DesignTokens.typography.labelSmall,
+    color: '#0EA5E9',
+    fontWeight: '800' as const,
+    letterSpacing: 0.2,
+  },
+  nextTaskTime: {
+    ...DesignTokens.typography.labelSmall,
+    color: DesignTokens.colors.neutral[600],
+  },
+  nextTaskTitle: {
+    ...DesignTokens.typography.headingLarge,
+    fontWeight: '800' as const,
+    color: DesignTokens.colors.neutral[900],
+  },
+
+  ringsSection: {
+    marginBottom: DesignTokens.spacing.xxl,
+  },
+  ringsHeader: {
+    ...DesignTokens.typography.headingMedium,
+    fontWeight: '700' as const,
+    color: DesignTokens.colors.neutral[900],
+    marginBottom: DesignTokens.spacing.md,
+  },
+  ringsRow: {
+    gap: 12,
+  },
+  ringCard: {
+    width: 120,
+    padding: 12,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    marginRight: 8,
+    alignItems: 'center',
+  },
+  ringCircleOuter: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#F3F4F6',
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginBottom: 8,
+    position: 'relative',
+  },
+  ringTrack: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    top: 0,
+    backgroundColor: '#E5E7EB',
+  },
+  ringFill: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#3B82F6',
+  },
+  ringEmoji: {
+    position: 'absolute',
+    top: 18,
+    fontSize: 22,
+  },
+  ringName: {
+    ...DesignTokens.typography.labelSmall,
+    color: DesignTokens.colors.neutral[900],
+    fontWeight: '700' as const,
+  },
+  ringAmount: {
+    ...DesignTokens.typography.bodySmall,
+    color: DesignTokens.colors.neutral[600],
+    marginTop: 2,
+  },
+
   glanceSection: {
     marginTop: DesignTokens.spacing.xxl,
   },
