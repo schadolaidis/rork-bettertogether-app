@@ -51,6 +51,10 @@ export default function DashboardScreen() {
     staleTime: 30_000,
   });
 
+  const meQuery = trpc.user.getMe.useQuery(undefined, {
+    staleTime: 30_000,
+  });
+
   const now = useMemo(() => ClockService.getCurrentTime(), []);
   
   const { todayStart, todayEnd, tomorrowEnd } = useMemo(() => {
@@ -290,7 +294,12 @@ export default function DashboardScreen() {
 
             <Card style={styles.glanceCard} testID="glance-streak">
               <Text style={styles.glanceCardTitle}>Streak</Text>
-              <Text style={styles.glanceCardValue}>🔥 0-Tage Serie</Text>
+              <Text style={styles.glanceCardValue} testID="streak-current">
+                {(() => {
+                  const count = meQuery.data?.currentStreakCount ?? 0;
+                  return `🔥 ${count}-Tage Serie`;
+                })()}
+              </Text>
             </Card>
 
             <Card style={styles.glanceCard} testID="glance-joker">
