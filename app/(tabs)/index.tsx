@@ -304,7 +304,12 @@ export default function DashboardScreen() {
 
             <Card style={styles.glanceCard} testID="glance-joker">
               <Text style={styles.glanceCardTitle}>Joker</Text>
-              <Text style={styles.glanceCardValue}>🃏 0 Joker verfügbar</Text>
+              <Text style={styles.glanceCardValue} testID="joker-available">
+                {(() => {
+                  const count = meQuery.data?.jokerCount ?? 0;
+                  return `🃏 ${count} Joker verfügbar`;
+                })()}
+              </Text>
             </Card>
           </View>
         </View>
