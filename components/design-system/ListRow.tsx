@@ -16,11 +16,11 @@ export const ListRow: React.FC<ListRowProps> = ({ title, subtitle, left, right, 
   if (onPress) {
     return (
       <Pressable onPress={onPress} testID={testID}>
-        <View style={[styles.container, { borderBottomColor: theme.colors.border }]}> 
+        <View style={[styles.container, { borderBottomColor: theme.border }]}> 
           {!!left && <View style={styles.left}>{typeof left === 'string' ? <Text>{left}</Text> : left}</View>}
           <View style={styles.center}>
-            <Text style={[styles.title, { color: theme.colors.textHigh }]} numberOfLines={1}>{title}</Text>
-            {!!subtitle && <Text style={[styles.subtitle, { color: theme.colors.textLow }]} numberOfLines={1}>{subtitle}</Text>}
+            <Text style={[styles.title, { color: theme.textHigh }]} numberOfLines={1}>{title}</Text>
+            {!!subtitle && <Text style={[styles.subtitle, { color: theme.textLow }]} numberOfLines={1}>{subtitle}</Text>}
           </View>
           {!!right && <View style={styles.right}>{typeof right === 'string' ? <Text>{right}</Text> : right}</View>}
         </View>
@@ -29,11 +29,11 @@ export const ListRow: React.FC<ListRowProps> = ({ title, subtitle, left, right, 
   }
 
   return (
-    <View style={[styles.container, { borderBottomColor: theme.colors.border }]}> 
+    <View style={[styles.container, { borderBottomColor: theme.border }]}> 
       {!!left && <View style={styles.left}>{typeof left === 'string' ? <Text>{left}</Text> : left}</View>}
       <View style={styles.center}>
-        <Text style={[styles.title, { color: theme.colors.textHigh }]} numberOfLines={1}>{title}</Text>
-        {!!subtitle && <Text style={[styles.subtitle, { color: theme.colors.textLow }]} numberOfLines={1}>{subtitle}</Text>}
+        <Text style={[styles.title, { color: theme.textHigh }]} numberOfLines={1}>{title}</Text>
+        {!!subtitle && <Text style={[styles.subtitle, { color: theme.textLow }]} numberOfLines={1}>{subtitle}</Text>}
       </View>
       {!!right && <View style={styles.right}>{typeof right === 'string' ? <Text>{right}</Text> : right}</View>}
     </View>

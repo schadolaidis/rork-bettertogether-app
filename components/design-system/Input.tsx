@@ -7,8 +7,8 @@ export const Input: React.FC<TextInputProps> = ({ style, placeholderTextColor, .
   return (
     <TextInput
       {...rest}
-      style={[styles.base, { color: theme.colors.textHigh, backgroundColor: theme.colors.surface, borderColor: theme.colors.border, borderRadius: theme.radius }, style]}
-      placeholderTextColor={placeholderTextColor ?? theme.colors.textLow}
+      style={[styles.base, { color: theme.textHigh, backgroundColor: theme.surface, borderColor: theme.border, borderRadius: theme.radius.input }, style]}
+      placeholderTextColor={placeholderTextColor ?? theme.textLow}
     />
   );
 };
