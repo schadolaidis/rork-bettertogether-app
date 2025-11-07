@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ViewProps } from 'react-native';
+import { View, StyleSheet, ViewProps, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -14,6 +14,13 @@ export const Card: React.FC<CardProps> = ({ style, padded = true, header, conten
   const { theme } = useTheme();
 
   const hasSlots = header || content || footer;
+
+  const renderChildren = () => {
+    if (typeof children === 'string' || typeof children === 'number') {
+      return <Text>{children}</Text>;
+    }
+    return children;
+  };
 
   return (
     <LinearGradient
@@ -37,12 +44,24 @@ export const Card: React.FC<CardProps> = ({ style, padded = true, header, conten
     >
       {hasSlots ? (
         <>
-          {header && <View style={{ padding: 16 }}>{header}</View>}
-          {content && <View style={{ padding: 16 }}>{content}</View>}
-          {footer && <View style={{ padding: 16, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.border }}>{footer}</View>}
+          {header && (
+            <View style={{ padding: 16 }}>
+              {typeof header === 'string' || typeof header === 'number' ? <Text>{header}</Text> : header}
+            </View>
+          )}
+          {content && (
+            <View style={{ padding: 16 }}>
+              {typeof content === 'string' || typeof content === 'number' ? <Text>{content}</Text> : content}
+            </View>
+          )}
+          {footer && (
+            <View style={{ padding: 16, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.border }}>
+              {typeof footer === 'string' || typeof footer === 'number' ? <Text>{footer}</Text> : footer}
+            </View>
+          )}
         </>
       ) : (
-        children
+        renderChildren()
       )}
     </LinearGradient>
   );

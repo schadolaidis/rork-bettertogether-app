@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, ViewStyle } from 'react-native';
+import { StyleSheet, View, ViewStyle, Text } from 'react-native';
 import { DesignTokens } from '@/constants/design-tokens';
 
 interface GroupCardProps {
@@ -9,9 +9,16 @@ interface GroupCardProps {
 }
 
 export function GroupCard({ children, style, testID }: GroupCardProps) {
+  const renderChildren = () => {
+    if (typeof children === 'string' || typeof children === 'number') {
+      return <Text>{children}</Text>;
+    }
+    return children;
+  };
+
   return (
     <View style={[styles.container, style]} testID={testID}>
-      {children}
+      {renderChildren()}
     </View>
   );
 }

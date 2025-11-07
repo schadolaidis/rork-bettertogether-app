@@ -236,7 +236,11 @@ export const ModalSheet: React.FC<ModalSheetProps> = ({
               nestedScrollEnabled={true}
               scrollEnabled={true}
             >
-              {children}
+              {typeof children === 'string' || typeof children === 'number' ? (
+                <Text>{children}</Text>
+              ) : (
+                children
+              )}
             </ScrollView>
 
             {footer && (
@@ -251,7 +255,7 @@ export const ModalSheet: React.FC<ModalSheetProps> = ({
                   },
                 ]}
               >
-                {footer}
+                {typeof footer === 'string' || typeof footer === 'number' ? <Text>{footer}</Text> : footer}
               </View>
             )}
           </View>
