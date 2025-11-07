@@ -8,6 +8,7 @@ export type Theme = {
   warning: string;
   error: string;
   textHigh: string;
+  textMedium: string;
   textLow: string;
   border: string;
   
@@ -52,6 +53,7 @@ export const lightTheme: Theme = {
   warning: '#FACC15',
   error: '#DC2626',
   textHigh: '#1E293B',
+  textMedium: '#475569',
   textLow: '#64748B',
   border: '#CBD5E1',
   
@@ -96,6 +98,7 @@ export const darkTheme: Theme = {
   warning: '#FCD34D',
   error: '#EF4444',
   textHigh: '#F1F5F9',
+  textMedium: '#CBD5E1',
   textLow: '#94A3B8',
   border: '#475569',
   

@@ -1,40 +1,26 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, Platform, Pressable, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Bell, User, Plus } from 'lucide-react-native';
+import { Bell, User, Plus, CheckCircle, Flame } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useApp } from '@/contexts/AppContext';
 import { AppBar } from '@/components/design-system/AppBar';
 import { Card } from '@/components/design-system/Card';
-import { Button } from '@/components/design-system/Button';
 import { IconButton } from '@/components/design-system/IconButton';
-import { ProgressRing } from '@/components/interactive/basic/ProgressRing';
-import { SegmentedControl, SegmentedControlOption } from '@/components/interactive/basic/SegmentedControl';
-import { StatMiniBar } from '@/components/stats/StatMiniBar';
 import { TaskEditSheet } from '@/screens/TaskEditSheet';
-import { SwipeableTaskCard } from '@/components/interactive/SwipeableTaskCard';
 import { trpc } from '@/lib/trpc';
-
-type TaskStatus = 'all' | 'upcoming' | 'failed' | 'completed';
-
-
-
-const mockStats = {
-  completionRate: 0.72,
-  tasksCompleted: 18,
-  goalsAchieved: 3,
-  savingsTotal: 245,
-};
 
 export default function Dashboard() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { tasks, completeTask, failTask, currentList } = useApp();
-  const [selectedFilter, setSelectedFilter] = useState<TaskStatus>('all');
   const [taskSheetVisible, setTaskSheetVisible] = useState(false);
   const [pendingJokerTaskId, setPendingJokerTaskId] = useState<string | null>(null);
   const utils = trpc.useUtils();
+
+  const userQuery = trpc.user.getMe.useQuery();
+  const fundTotalsQuery = trpc.fundGoals.getTotals.useQuery();
 
   const useJokerMutation = trpc.tasks.useJokerOnTask.useMutation({
     onSuccess: async () => {
@@ -104,25 +90,24 @@ export default function Dashboard() {
     },
   });
 
-  const filterOptions: SegmentedControlOption[] = [
-    { value: 'all', label: 'Alle' },
-    { value: 'upcoming', label: 'Anstehend' },
-    { value: 'failed', label: 'Fehlgeschlagen' },
-    { value: 'completed', label: 'Erledigt' },
-  ];
+  const todayTasks = useMemo(() => {
+    const now = new Date();
+    const endOfDay = new Date(now);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    return tasks
+      .filter(task => {
+        const taskDate = new Date(task.startAt);
+        return taskDate >= now && taskDate <= endOfDay && task.status === 'pending';
+      })
+      .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+  }, [tasks]);
 
-  const filteredTasks = useMemo(() => {
-    if (selectedFilter === 'all') return tasks;
-    return tasks.filter(task => {
-      if (selectedFilter === 'upcoming') {
-        return task.status === 'pending';
-      }
-      if (selectedFilter === 'failed') {
-        return task.status === 'failed' || task.status === 'failed_stake_paid' || task.status === 'failed_joker_used';
-      }
-      return task.status === selectedFilter;
-    });
-  }, [selectedFilter, tasks]);
+  const nextTask = todayTasks[0] || null;
+  
+  const streakCount = userQuery.data?.currentStreakCount ?? 0;
+  const jokerCount = userQuery.data?.jokerCount ?? 0;
+  const totalSavings = (fundTotalsQuery.data?.totalCollectedCents ?? 0) / 100;
 
   const handleNotificationPress = () => {
     if (Platform.OS !== 'web') {
@@ -155,6 +140,7 @@ export default function Dashboard() {
   const handleComplete = (taskId: string) => {
     console.log('[Dashboard] Completing task:', taskId);
     completeTask(taskId);
+    resolveTaskMutation.mutate({ task_id: taskId, resolution_status: 'completed' });
   };
 
   const handleFail = (taskId: string) => {
@@ -163,10 +149,22 @@ export default function Dashboard() {
     resolveTaskMutation.mutate({ task_id: taskId, resolution_status: 'failed' });
   };
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Guten Morgen';
+    if (hour < 18) return 'Guten Tag';
+    return 'Guten Abend';
+  };
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <AppBar
-        title="Dashboard"
+        title="Heute"
         actions={
           <>
             <IconButton
@@ -189,169 +187,188 @@ export default function Dashboard() {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 90 }]}
         showsVerticalScrollIndicator={false}
       >
-        <Card
-          style={[
-            styles.todayCard,
-            { backgroundColor: theme.surface, marginBottom: theme.spacing.lg },
-          ]}
-        >
-          <Text style={[theme.typography.h2, { color: theme.textHigh }]}>Heutiger Fokus</Text>
-          <Text style={[theme.typography.caption, { color: theme.textLow, marginTop: 8 }]}>
-            Dein Fortschritt auf einen Blick
-          </Text>
-          <View style={{ alignItems: 'center', marginTop: 12 }}>
-            <ProgressRing
-              size={80}
-              stroke={8}
-              progress={0.42}
-              showLabel
-              labelType="percentage"
-              progressColor={theme.primary}
-              trackColor={theme.surfaceAlt}
-            />
+        <Text style={[styles.greeting, { color: theme.textHigh }]}>
+          {getGreeting()}, {userQuery.data?.name || 'Rork'}
+        </Text>
+        <Text style={[styles.subGreeting, { color: theme.textMedium }]}>
+          {streakCount > 0 ? 'Deine Flamme brennt.' : 'Starte deine Serie!'}
+        </Text>
+
+        <View style={styles.gridContainer}>
+          {nextTask ? (
+            <Card style={[styles.heroCard, { backgroundColor: theme.surface }]}>
+              <View style={styles.heroHeader}>
+                <Text style={[styles.heroLabel, { color: theme.textMedium }]}>Als Nächstes</Text>
+                <Text style={[styles.heroTime, { color: theme.primary }]}>
+                  {formatTime(nextTask.startAt)}
+                </Text>
+              </View>
+              <Text style={[styles.heroTitle, { color: theme.textHigh }]} numberOfLines={2}>
+                {nextTask.title}
+              </Text>
+              <View style={styles.heroFooter}>
+                <View style={styles.heroStake}>
+                  <Text style={[styles.heroStakeText, { color: theme.textMedium }]}>
+                    Einsatz: {currentList?.currencySymbol || '€'}{nextTask.stake}
+                  </Text>
+                </View>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.heroButton,
+                    { backgroundColor: theme.success },
+                    pressed && { opacity: 0.8 },
+                  ]}
+                  onPress={() => handleComplete(nextTask.id)}
+                >
+                  <CheckCircle size={20} color="#FFFFFF" />
+                  <Text style={styles.heroButtonText}>Erledigt</Text>
+                </Pressable>
+              </View>
+            </Card>
+          ) : (
+            <Card style={[styles.heroCard, { backgroundColor: theme.surface }]}>
+              <View style={styles.emptyHero}>
+                <Text style={[styles.emptyHeroText, { color: theme.textMedium }]}>
+                  🎉 Keine Aufgaben heute!
+                </Text>
+              </View>
+            </Card>
+          )}
+
+          <View style={styles.gridRow}>
+            <Card style={[styles.smallCard, { backgroundColor: theme.surface }]}>
+              <View style={styles.smallCardContent}>
+                {streakCount > 0 ? (
+                  <View style={[styles.flameContainer, { backgroundColor: `${theme.warning}15` }]}>
+                    <Flame size={32} color={theme.warning} fill={theme.warning} />
+                  </View>
+                ) : (
+                  <View style={[styles.flameContainer, { backgroundColor: `${theme.textLow}10` }]}>
+                    <Text style={styles.eggEmoji}>🥚</Text>
+                  </View>
+                )}
+                <Text style={[styles.smallCardValue, { color: theme.textHigh }]}>
+                  {streakCount}
+                </Text>
+                <Text style={[styles.smallCardLabel, { color: theme.textMedium }]}>
+                  Tage Serie
+                </Text>
+              </View>
+            </Card>
+
+            <Card style={[styles.smallCard, { backgroundColor: theme.surface }]}>
+              <View style={styles.smallCardContent}>
+                <View style={[styles.iconContainer, { backgroundColor: `${theme.accent}15` }]}>
+                  <Text style={styles.jokerEmoji}>🃏</Text>
+                </View>
+                <Text style={[styles.smallCardValue, { color: theme.textHigh }]}>
+                  {jokerCount}
+                </Text>
+                <Text style={[styles.smallCardLabel, { color: theme.textMedium }]}>
+                  Joker
+                </Text>
+              </View>
+            </Card>
           </View>
 
-          <View style={{ marginTop: 16, gap: 8 }}>
-            <View style={styles.statRow}>
-              <Text style={[theme.typography.label, { color: theme.textLow }]}>Aufgaben</Text>
-              <StatMiniBar />
-            </View>
-
-            <View style={styles.statRow}>
-              <Text style={[theme.typography.label, { color: theme.textLow }]}>Ziele</Text>
-              <StatMiniBar />
-            </View>
-
-            <View style={styles.statRow}>
-              <Text style={[theme.typography.label, { color: theme.textLow }]}>Ersparnis</Text>
-              <StatMiniBar />
-            </View>
-          </View>
-
-          <Button
-            title="+ Aufgabe hinzufügen"
-            onPress={handleAddTask}
-            variant="primary"
-            style={{ marginTop: 16 }}
-            testID="focus-card-add-task-button"
-          />
-        </Card>
-
-        <Card
-          style={{ marginBottom: theme.spacing.lg }}
-          header={
-            <Text style={[theme.typography.h2, { color: theme.textHigh }]}>
-              Heutiger Fokus
-            </Text>
-          }
-          content={
-            <View style={styles.focusContent}>
-              <View style={styles.progressSection}>
-                <ProgressRing
-                  size={80}
-                  stroke={8}
-                  progress={mockStats.completionRate}
-                  showLabel
-                  labelType="percentage"
-                  progressColor={theme.primary}
-                  trackColor={theme.surfaceAlt}
-                />
-              </View>
-
-              <View style={styles.statsRow}>
-                <View style={styles.statItem}>
-                  <View style={[styles.statBar, { backgroundColor: theme.primary }]}>
-                    <View
-                      style={[
-                        styles.statBarFill,
-                        { backgroundColor: theme.primary, width: '75%', opacity: 0.7 },
-                      ]}
-                    />
-                  </View>
-                  <Text style={[theme.typography.label, { color: theme.textLow }]}>
-                    Aufgaben
-                  </Text>
-                  <Text style={[theme.typography.body, { color: theme.textHigh, fontWeight: '600' }]}>
-                    {mockStats.tasksCompleted}
-                  </Text>
-                </View>
-
-                <View style={styles.statItem}>
-                  <View style={[styles.statBar, { backgroundColor: theme.accent }]}>
-                    <View
-                      style={[
-                        styles.statBarFill,
-                        { backgroundColor: theme.accent, width: '60%', opacity: 0.7 },
-                      ]}
-                    />
-                  </View>
-                  <Text style={[theme.typography.label, { color: theme.textLow }]}>
-                    Ziele
-                  </Text>
-                  <Text style={[theme.typography.body, { color: theme.textHigh, fontWeight: '600' }]}>
-                    {mockStats.goalsAchieved}
-                  </Text>
-                </View>
-
-                <View style={styles.statItem}>
-                  <View style={[styles.statBar, { backgroundColor: theme.success }]}>
-                    <View
-                      style={[
-                        styles.statBarFill,
-                        { backgroundColor: theme.success, width: '85%', opacity: 0.7 },
-                      ]}
-                    />
-                  </View>
-                  <Text style={[theme.typography.label, { color: theme.textLow }]}>
-                    Ersparnis
-                  </Text>
-                  <Text style={[theme.typography.body, { color: theme.textHigh, fontWeight: '600' }]}>
-                    €{mockStats.savingsTotal}
-                  </Text>
-                </View>
-              </View>
-            </View>
-          }
-          footer={
-            <Button
-              title="+ Aufgabe hinzufügen"
-              onPress={handleAddTask}
-              variant="primary"
-              testID="add-task-button"
-            />
-          }
-          testID="focus-card"
-        />
-
-        <View style={{ marginBottom: theme.spacing.md }}>
-          <SegmentedControl
-            options={filterOptions}
-            selectedValue={selectedFilter}
-            onChange={(value) => setSelectedFilter(value as TaskStatus)}
-          />
-        </View>
-
-        <Card padded={false} style={{ marginBottom: theme.spacing.lg }}>
-          {filteredTasks.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={[theme.typography.body, { color: theme.textLow, textAlign: 'center' }]}>
-                Keine Aufgaben gefunden
+          <Card style={[styles.wideCard, { backgroundColor: theme.surface }]}>
+            <View style={styles.wideCardHeader}>
+              <Text style={[styles.wideCardTitle, { color: theme.textHigh }]}>Sparziele</Text>
+              <Text style={[styles.wideCardTotal, { color: theme.primary }]}>
+                {currentList?.currencySymbol || '€'}{totalSavings.toFixed(2)}
               </Text>
             </View>
-          ) : (
-            filteredTasks.map((task) => (
-              <SwipeableTaskCard
-                key={task.id}
-                task={task}
-                onComplete={handleComplete}
-                onFail={handleFail}
-                onPress={handleTaskPress}
-                currencySymbol={currentList?.currencySymbol || '€'}
-                showStatus={true}
-              />
-            ))
+            <View style={styles.goalsContainer}>
+              <View style={styles.goalRow}>
+                <View style={styles.goalInfo}>
+                  <Text style={styles.goalEmoji}>🏖</Text>
+                  <View style={styles.goalText}>
+                    <Text style={[styles.goalName, { color: theme.textHigh }]}>Vacation Fund</Text>
+                    <Text style={[styles.goalProgress, { color: theme.textMedium }]}>€20 / €500</Text>
+                  </View>
+                </View>
+                <View style={[styles.progressBar, { backgroundColor: `${theme.primary}15` }]}>
+                  <View
+                    style={[
+                      styles.progressBarFill,
+                      { backgroundColor: theme.primary, width: '4%' },
+                    ]}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.goalRow}>
+                <View style={styles.goalInfo}>
+                  <Text style={styles.goalEmoji}>🎗</Text>
+                  <View style={styles.goalText}>
+                    <Text style={[styles.goalName, { color: theme.textHigh }]}>Donation / Charity</Text>
+                    <Text style={[styles.goalProgress, { color: theme.textMedium }]}>€15 / €100</Text>
+                  </View>
+                </View>
+                <View style={[styles.progressBar, { backgroundColor: `${theme.accent}15` }]}>
+                  <View
+                    style={[
+                      styles.progressBarFill,
+                      { backgroundColor: theme.accent, width: '15%' },
+                    ]}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.goalRow}>
+                <View style={styles.goalInfo}>
+                  <Text style={styles.goalEmoji}>🛒</Text>
+                  <View style={styles.goalText}>
+                    <Text style={[styles.goalName, { color: theme.textHigh }]}>Group Purchase</Text>
+                    <Text style={[styles.goalProgress, { color: theme.textMedium }]}>€5 / €50</Text>
+                  </View>
+                </View>
+                <View style={[styles.progressBar, { backgroundColor: `${theme.success}15` }]}>
+                  <View
+                    style={[
+                      styles.progressBarFill,
+                      { backgroundColor: theme.success, width: '10%' },
+                    ]}
+                  />
+                </View>
+              </View>
+            </View>
+          </Card>
+
+          {todayTasks.length > 1 && (
+            <Card style={[styles.wideCard, { backgroundColor: theme.surface }]}>
+              <Text style={[styles.wideCardTitle, { color: theme.textHigh, marginBottom: 12 }]}>
+                Weitere Aufgaben heute
+              </Text>
+              {todayTasks.slice(1, 4).map((task, index) => (
+                <Pressable
+                  key={task.id}
+                  style={({ pressed }) => [
+                    styles.taskRow,
+                    index < todayTasks.slice(1, 4).length - 1 && {
+                      borderBottomWidth: 1,
+                      borderBottomColor: theme.surfaceAlt,
+                    },
+                    pressed && { opacity: 0.7 },
+                  ]}
+                  onPress={() => handleTaskPress(task)}
+                >
+                  <View style={styles.taskRowLeft}>
+                    <Text style={[styles.taskRowTime, { color: theme.textMedium }]}>
+                      {formatTime(task.startAt)}
+                    </Text>
+                    <Text style={[styles.taskRowTitle, { color: theme.textHigh }]} numberOfLines={1}>
+                      {task.title}
+                    </Text>
+                  </View>
+                  <Text style={[styles.taskRowStake, { color: theme.textMedium }]}>
+                    {currentList?.currencySymbol || '€'}{task.stake}
+                  </Text>
+                </Pressable>
+              ))}
+            </Card>
           )}
-        </Card>
+        </View>
       </ScrollView>
 
       <Pressable
@@ -389,59 +406,201 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 16,
   },
-  focusContent: {
-    gap: 24,
+  greeting: {
+    fontSize: 28,
+    fontWeight: '700' as const,
+    marginBottom: 4,
   },
-  progressSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
+  subGreeting: {
+    fontSize: 16,
+    marginBottom: 24,
   },
-  statsRow: {
+  gridContainer: {
+    gap: 12,
+  },
+  heroCard: {
+    padding: 20,
+    minHeight: 160,
+  },
+  heroHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 16,
+    alignItems: 'center',
+    marginBottom: 12,
   },
-  statItem: {
+  heroLabel: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
+  },
+  heroTime: {
+    fontSize: 15,
+    fontWeight: '700' as const,
+  },
+  heroTitle: {
+    fontSize: 24,
+    fontWeight: '700' as const,
+    marginBottom: 16,
+    lineHeight: 32,
+  },
+  heroFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  heroStake: {
+    flex: 1,
+  },
+  heroStakeText: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+  },
+  heroButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  heroButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600' as const,
+  },
+  emptyHero: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  emptyHeroText: {
+    fontSize: 18,
+    fontWeight: '600' as const,
+  },
+  gridRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  smallCard: {
+    flex: 1,
+    padding: 16,
+    minHeight: 140,
+  },
+  smallCardContent: {
     flex: 1,
     alignItems: 'center',
-    gap: 4,
+    justifyContent: 'space-between',
   },
-  statBar: {
-    width: '100%',
+  flameContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  eggEmoji: {
+    fontSize: 32,
+  },
+  iconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  jokerEmoji: {
+    fontSize: 28,
+  },
+  smallCardValue: {
+    fontSize: 28,
+    fontWeight: '700' as const,
+  },
+  smallCardLabel: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+  },
+  wideCard: {
+    padding: 16,
+  },
+  wideCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  wideCardTitle: {
+    fontSize: 18,
+    fontWeight: '700' as const,
+  },
+  wideCardTotal: {
+    fontSize: 20,
+    fontWeight: '700' as const,
+  },
+  goalsContainer: {
+    gap: 16,
+  },
+  goalRow: {
+    gap: 8,
+  },
+  goalInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 6,
+  },
+  goalEmoji: {
+    fontSize: 20,
+  },
+  goalText: {
+    flex: 1,
+  },
+  goalName: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+  },
+  goalProgress: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  progressBar: {
     height: 6,
     borderRadius: 3,
     overflow: 'hidden',
-    opacity: 0.2,
-    marginBottom: 4,
   },
-  statBarFill: {
+  progressBarFill: {
     height: '100%',
+    borderRadius: 3,
+  },
+  taskRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  taskRowLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  taskRowTime: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    width: 50,
+  },
+  taskRowTitle: {
+    fontSize: 15,
+    flex: 1,
+  },
+  taskRowStake: {
+    fontSize: 14,
+    fontWeight: '600' as const,
   },
   emptyState: {
     padding: 40,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  taskEmoji: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emojiText: {
-    fontSize: 24,
-  },
-  taskRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
   },
   fab: {
     position: 'absolute',
@@ -455,12 +614,5 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
-  },
-  todayCard: {
-    borderRadius: 16,
-    padding: 16,
-  },
-  statRow: {
-    gap: 4,
   },
 });
