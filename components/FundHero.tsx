@@ -11,24 +11,9 @@ interface FundHeroProps {
   tasks: Task[];
   currentListId: string;
   currencySymbol: string;
-  titleLabel?: string;
-  subtitleLabel?: string;
-  thisMonthLabel?: string;
-  failedTasksLabel?: string;
-  testID?: string;
 }
 
-export function FundHero({
-  ledgerEntries,
-  tasks,
-  currentListId,
-  currencySymbol,
-  titleLabel = 'Gruppen-Topf',
-  subtitleLabel = 'Geld von gescheiterten Aufgaben',
-  thisMonthLabel = 'Dieser Monat',
-  failedTasksLabel = 'Gescheiterte Aufgaben',
-  testID,
-}: FundHeroProps) {
+export function FundHero({ ledgerEntries, tasks, currentListId, currencySymbol }: FundHeroProps) {
   const router = useRouter();
 
   const totalFundAmount = useMemo(() => {
@@ -39,7 +24,7 @@ export function FundHero({
 
   const failedTasksThisMonth = useMemo(() => {
     return tasks.filter((t) => {
-      if ((t.status !== 'failed' && t.status !== 'failed_stake_paid' && t.status !== 'failed_joker_used') || !t.failedAt) return false;
+      if (t.status !== 'failed' || !t.failedAt) return false;
       const failDate = new Date(t.failedAt);
       const now = new Date();
       return failDate.getMonth() === now.getMonth() && failDate.getFullYear() === now.getFullYear();
@@ -76,13 +61,9 @@ export function FundHero({
         if (Platform.OS !== 'web') {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         }
-        console.log('[FundHero] Navigate to balances');
-        // Hidden tab route
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (router as any).push('/(tabs)/balances');
+        router.push('/balances');
       }}
       activeOpacity={0.95}
-      testID={testID ?? 'group-fund-card'}
     >
       <View style={styles.fundHeroHeader}>
         <View style={styles.progressCircleContainer}>
@@ -114,12 +95,12 @@ export function FundHero({
         </View>
 
         <View style={styles.fundInfo}>
-          <Text style={styles.fundLabel}>{titleLabel}</Text>
+          <Text style={styles.fundLabel}>Group Fund</Text>
           <View style={styles.amountRow}>
             <Text style={styles.currencySymbol}>{currencySymbol}</Text>
             <Text style={styles.fundAmount}>{totalFundAmount.toFixed(2)}</Text>
           </View>
-          <Text style={styles.fundSubtitle}>{subtitleLabel}</Text>
+          <Text style={styles.fundSubtitle}>Money from failed tasks</Text>
         </View>
       </View>
 
@@ -129,9 +110,9 @@ export function FundHero({
             <TrendingUp size={16} color={accentColor} />
           </View>
           <View style={styles.statContent}>
-            <Text style={styles.statLabel}>{thisMonthLabel}</Text>
-            <Text style={[styles.statValue, { color: accentColor }]}>+
-              {currencySymbol}{fundGrowthThisMonth.toFixed(2)}
+            <Text style={styles.statLabel}>This Month</Text>
+            <Text style={[styles.statValue, { color: accentColor }]}>
+              +{currencySymbol}{fundGrowthThisMonth.toFixed(2)}
             </Text>
           </View>
         </View>
@@ -143,8 +124,8 @@ export function FundHero({
             <AlertCircle size={16} color="#EF4444" />
           </View>
           <View style={styles.statContent}>
-            <Text style={styles.statLabel}>{failedTasksLabel}</Text>
-            <Text style={[styles.statValue, { color: '#EF4444' }]}> 
+            <Text style={styles.statLabel}>Failed Tasks</Text>
+            <Text style={[styles.statValue, { color: '#EF4444' }]}>
               {failedTasksThisMonth}
             </Text>
           </View>

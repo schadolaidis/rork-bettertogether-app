@@ -17,8 +17,6 @@ import {
   Plus,
   CheckSquare,
   CheckCircle,
-  TrendingUp,
-  AlertCircle,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useApp } from '@/contexts/AppContext';
@@ -27,16 +25,12 @@ import { DesignTokens } from '@/constants/design-tokens';
 import { Task } from '@/types';
 import { ClockService } from '@/services/ClockService';
 
-import { FundHero } from '@/components/FundHero';
-import { StatCard } from '@/components/design-system/StatCard';
-
 export default function DashboardScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const {
     tasks,
     allTasks,
-    ledgerEntries,
     currentUser,
     currentList,
     currentListMembers,
@@ -45,7 +39,6 @@ export default function DashboardScreen() {
     currentListId,
     completeTask,
     failTask,
-    dashboardStats,
   } = useApp();
 
   const [showListSwitcher, setShowListSwitcher] = useState(false);
@@ -96,7 +89,7 @@ export default function DashboardScreen() {
       .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
   }, [tasks, todayEnd, tomorrowEnd]);
 
-  const showCompactEmpty = overdueTasks.length === 0 && dueTodayTasks.length === 0;
+  const hasAnyTasks = overdueTasks.length > 0 || dueTodayTasks.length > 0 || dueTomorrowTasks.length > 0;
 
   const formatDateHeader = () => {
     const options: Intl.DateTimeFormatOptions = { 
@@ -157,17 +150,28 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        {showCompactEmpty && (
-          <View style={styles.emptyCard} testID="all-done-card">
-            <View style={styles.emptyCardIcon}>
-              <CheckCircle size={28} color="#10B981" strokeWidth={2} />
+        {!hasAnyTasks && (
+          <View style={styles.emptyState}>
+            <View style={styles.emptyIcon}>
+              <CheckCircle size={80} color="#10B981" strokeWidth={1.5} />
             </View>
-            <View style={styles.emptyCardText}>
-              <Text style={styles.emptyCardTitle}>Alles erledigt!</Text>
-              <Text style={styles.emptyCardSubtitle}>
-                Du hast für heute alle Aufgaben geschafft.
-              </Text>
-            </View>
+            <Text style={styles.emptyTitle}>Alles erledigt!</Text>
+            <Text style={styles.emptySubtitle}>
+              Du hast für heute alle Aufgaben geschafft. Genieße deinen Tag!
+            </Text>
+            <TouchableOpacity
+              style={styles.emptyButton}
+              onPress={() => {
+                if (Platform.OS !== 'web') {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                }
+                router.push('/(tabs)/tasks');
+              }}
+              activeOpacity={0.8}
+            >
+              <Plus size={20} color="#FFFFFF" />
+              <Text style={styles.emptyButtonText}>Neue Aufgabe</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -234,7 +238,9 @@ export default function DashboardScreen() {
             <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleContainer}>
                 <View style={[styles.sectionDot, { backgroundColor: '#9CA3AF' }]} />
-                <Text style={[styles.sectionTitle, { color: '#6B7280' }]}>Demnächst</Text>
+                <Text style={[styles.sectionTitle, { color: '#6B7280' }]}>
+                  Demnächst
+                </Text>
               </View>
               <View style={styles.sectionBadge}>
                 <Text style={styles.sectionBadgeText}>{dueTomorrowTasks.length}</Text>
@@ -255,50 +261,6 @@ export default function DashboardScreen() {
             </View>
           </View>
         )}
-
-        <View style={styles.summarySection}>
-          <Text style={styles.summaryHeader}>Auf einen Blick</Text>
-
-          <FundHero
-            ledgerEntries={ledgerEntries}
-            tasks={allTasks}
-            currentListId={currentListId}
-            currencySymbol={currencySymbol}
-            titleLabel="Gruppen-Topf"
-            subtitleLabel="Geld von gescheiterten Aufgaben"
-            thisMonthLabel="Dieser Monat"
-            failedTasksLabel="Gescheiterte Aufgaben"
-            testID="group-fund"
-          />
-
-          <View style={styles.inlineStatsRow}>
-            <View style={styles.inlineStatBox}>
-              <Text style={styles.inlineStatLabel}>🔥 Serie</Text>
-              <Text style={styles.inlineStatValue}>{currentUser?.currentStreakCount ?? 0}-Tage</Text>
-            </View>
-            <View style={styles.inlineStatBox}>
-              <Text style={styles.inlineStatLabel}>🃏 Joker</Text>
-              <Text style={styles.inlineStatValue}>{currentUser?.jokerCount ?? 0} verfügbar</Text>
-            </View>
-          </View>
-
-          <View style={styles.smallCardsRow}>
-            <StatCard
-              icon={<TrendingUp size={20} color={DesignTokens.colors.primary[600]} />}
-              label="Dieser Monat"
-              value={`+${currencySymbol}${dashboardStats.currentMonthMetrics.fundGrowth.toFixed(2)}`}
-              color={DesignTokens.colors.primary[600]}
-              testID="stat-this-month"
-            />
-            <StatCard
-              icon={<AlertCircle size={20} color={DesignTokens.colors.error[600]} />} 
-              label="Gescheiterte Aufgaben"
-              value={`${dashboardStats.currentMonthMetrics.failedTasks}`}
-              color={DesignTokens.colors.error[600]}
-              testID="stat-failed"
-            />
-          </View>
-        </View>
       </ScrollView>
 
       <Modal
@@ -488,73 +450,45 @@ const styles = StyleSheet.create({
   taskList: {
     gap: DesignTokens.spacing.sm,
   },
-  emptyCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: DesignTokens.spacing.md,
-    backgroundColor: DesignTokens.colors.neutral[0],
-    borderRadius: DesignTokens.radius.lg,
-    padding: DesignTokens.spacing.lg,
-    borderWidth: 1,
-    borderColor: DesignTokens.colors.neutral[200],
-    marginBottom: DesignTokens.spacing.xxl,
-  },
-  emptyCardIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#ECFDF5',
+  emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 80,
+    paddingHorizontal: DesignTokens.spacing.xl,
   },
-  emptyCardText: {
-    flex: 1,
+  emptyIcon: {
+    marginBottom: DesignTokens.spacing.xl,
+    opacity: 0.9,
   },
-  emptyCardTitle: {
-    ...DesignTokens.typography.headingSmall,
+  emptyTitle: {
+    ...DesignTokens.typography.displayMedium,
     color: DesignTokens.colors.neutral[900],
+    marginBottom: DesignTokens.spacing.sm,
+    textAlign: 'center',
     fontWeight: '700' as const,
+    fontSize: 26,
   },
-  emptyCardSubtitle: {
-    ...DesignTokens.typography.bodySmall,
+  emptySubtitle: {
+    ...DesignTokens.typography.bodyLarge,
     color: DesignTokens.colors.neutral[600],
-    marginTop: 2,
+    textAlign: 'center',
+    marginBottom: DesignTokens.spacing.xxl,
+    lineHeight: 24,
   },
-  summarySection: {
-    marginTop: DesignTokens.spacing.xl,
-    gap: DesignTokens.spacing.lg,
-    paddingBottom: DesignTokens.spacing.xxl,
+  emptyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DesignTokens.spacing.sm,
+    paddingVertical: 14,
+    paddingHorizontal: DesignTokens.spacing.xxl,
+    backgroundColor: DesignTokens.colors.primary[500],
+    borderRadius: DesignTokens.radius.md,
+    ...DesignTokens.shadow.md,
   },
-  summaryHeader: {
-    ...DesignTokens.typography.headingSmall,
-    color: DesignTokens.colors.neutral[900],
+  emptyButtonText: {
+    ...DesignTokens.typography.bodyLarge,
     fontWeight: '700' as const,
-    marginBottom: DesignTokens.spacing.xs,
-  },
-  inlineStatsRow: {
-    flexDirection: 'row',
-    gap: DesignTokens.spacing.md,
-  },
-  inlineStatBox: {
-    flex: 1,
-    backgroundColor: DesignTokens.colors.neutral[0],
-    borderRadius: DesignTokens.radius.lg,
-    padding: DesignTokens.spacing.lg,
-    borderWidth: 1,
-    borderColor: DesignTokens.colors.neutral[200],
-  },
-  inlineStatLabel: {
-    ...DesignTokens.typography.bodySmall,
-    color: DesignTokens.colors.neutral[600],
-    marginBottom: 4,
-  },
-  inlineStatValue: {
-    ...DesignTokens.typography.headingMedium,
-    color: DesignTokens.colors.neutral[900],
-  },
-  smallCardsRow: {
-    flexDirection: 'row',
-    gap: DesignTokens.spacing.md,
+    color: DesignTokens.colors.neutral[0],
   },
 });
 
@@ -663,41 +597,5 @@ const listSwitcherStyles = StyleSheet.create({
     ...DesignTokens.typography.bodyLarge,
     fontWeight: '600',
     color: DesignTokens.colors.primary[500],
-  },
-  summarySection: {
-    marginTop: DesignTokens.spacing.xl,
-    gap: DesignTokens.spacing.lg,
-    paddingBottom: DesignTokens.spacing.xxl,
-  },
-  summaryHeader: {
-    ...DesignTokens.typography.headingSmall,
-    color: DesignTokens.colors.neutral[900],
-    fontWeight: '700' as const,
-    marginBottom: DesignTokens.spacing.xs,
-  },
-  inlineStatsRow: {
-    flexDirection: 'row',
-    gap: DesignTokens.spacing.md,
-  },
-  inlineStatBox: {
-    flex: 1,
-    backgroundColor: DesignTokens.colors.neutral[0],
-    borderRadius: DesignTokens.radius.lg,
-    padding: DesignTokens.spacing.lg,
-    borderWidth: 1,
-    borderColor: DesignTokens.colors.neutral[200],
-  },
-  inlineStatLabel: {
-    ...DesignTokens.typography.bodySmall,
-    color: DesignTokens.colors.neutral[600],
-    marginBottom: 4,
-  },
-  inlineStatValue: {
-    ...DesignTokens.typography.headingMedium,
-    color: DesignTokens.colors.neutral[900],
-  },
-  smallCardsRow: {
-    flexDirection: 'row',
-    gap: DesignTokens.spacing.md,
   },
 });
