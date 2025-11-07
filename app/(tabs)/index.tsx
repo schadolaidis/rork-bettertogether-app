@@ -24,6 +24,7 @@ import { SwipeableTaskCard } from '@/components/interactive/SwipeableTaskCard';
 import { DesignTokens } from '@/constants/design-tokens';
 import { Task } from '@/types';
 import { ClockService } from '@/services/ClockService';
+import { Card } from '@/components/design-system/Card';
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -261,6 +262,27 @@ export default function DashboardScreen() {
             </View>
           </View>
         )}
+
+        <View style={styles.glanceSection} testID="glance-section">
+          <Text style={styles.glanceHeader}>Auf einen Blick</Text>
+
+          <View style={styles.glanceCards}>
+            <Card style={styles.glanceCard} testID="glance-group-fund">
+              <Text style={styles.glanceCardTitle}>Gruppen-Topf</Text>
+              <Text style={styles.glanceCardValue}>€0.00</Text>
+            </Card>
+
+            <Card style={styles.glanceCard} testID="glance-streak">
+              <Text style={styles.glanceCardTitle}>Streak</Text>
+              <Text style={styles.glanceCardValue}>🔥 0-Tage Serie</Text>
+            </Card>
+
+            <Card style={styles.glanceCard} testID="glance-joker">
+              <Text style={styles.glanceCardTitle}>Joker</Text>
+              <Text style={styles.glanceCardValue}>🃏 0 Joker verfügbar</Text>
+            </Card>
+          </View>
+        </View>
       </ScrollView>
 
       <Modal
@@ -489,6 +511,32 @@ const styles = StyleSheet.create({
     ...DesignTokens.typography.bodyLarge,
     fontWeight: '700' as const,
     color: DesignTokens.colors.neutral[0],
+  },
+  glanceSection: {
+    marginTop: DesignTokens.spacing.xxl,
+  },
+  glanceHeader: {
+    ...DesignTokens.typography.headingMedium,
+    fontWeight: '700' as const,
+    color: DesignTokens.colors.neutral[900],
+    marginBottom: DesignTokens.spacing.md,
+  },
+  glanceCards: {
+    gap: DesignTokens.spacing.md,
+  },
+  glanceCard: {
+    borderRadius: 16,
+  },
+  glanceCardTitle: {
+    ...DesignTokens.typography.labelSmall,
+    color: DesignTokens.colors.neutral[600],
+    marginBottom: 6,
+    fontWeight: '600' as const,
+  },
+  glanceCardValue: {
+    ...DesignTokens.typography.headingLarge,
+    color: DesignTokens.colors.neutral[900],
+    fontWeight: '700' as const,
   },
 });
 
