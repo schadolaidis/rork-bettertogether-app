@@ -99,7 +99,7 @@ export default function Tasks() {
     console.log('[Tasks] Add task pressed');
   };
 
-  const currencySymbol = currentList?.currencySymbol || '$';
+  const currencySymbol = currentList?.currencySymbol || '€';
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
