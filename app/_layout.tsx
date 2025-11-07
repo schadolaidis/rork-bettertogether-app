@@ -9,6 +9,7 @@ import { AppProvider, useApp } from "@/contexts/AppContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { trpc, trpcClient } from "@/lib/trpc";
 import { JokerPromptModal } from "@/components/JokerPromptModal";
+import { DebugErrorBoundary } from "@/components/DebugErrorBoundary";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -90,7 +91,9 @@ export default function RootLayout() {
           <GestureHandlerRootView style={{ flex: 1 }}>
             <ThemeProvider>
               <PortalProvider>
-                <RootLayoutNav />
+                <DebugErrorBoundary>
+                  <RootLayoutNav />
+                </DebugErrorBoundary>
                 <PortalHost name="modal-input-wrapper" />
               </PortalProvider>
             </ThemeProvider>
