@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, Platform, Pressable, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Platform, Pressable, Alert, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Bell, User, Plus, CheckCircle, Flame } from 'lucide-react-native';
+import { Bell, User, Plus, CheckCircle, Flame, Target } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useApp } from '@/contexts/AppContext';
@@ -10,6 +10,8 @@ import { Card } from '@/components/design-system/Card';
 import { IconButton } from '@/components/design-system/IconButton';
 import { TaskEditSheet } from '@/screens/TaskEditSheet';
 import { trpc } from '@/lib/trpc';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function Dashboard() {
   const { theme } = useTheme();
@@ -104,10 +106,19 @@ export default function Dashboard() {
   }, [tasks]);
 
   const nextTask = todayTasks[0] || null;
+  const upcomingTasks = todayTasks.slice(1, 4);
   
   const streakCount = userQuery.data?.currentStreakCount ?? 0;
   const jokerCount = userQuery.data?.jokerCount ?? 0;
   const totalSavings = (fundTotalsQuery.data?.totalCollectedCents ?? 0) / 100;
+  
+  const fundGoals = useMemo(() => {
+    return [
+      { id: '1', name: 'Vacation Fund', emoji: '🏖', current: 20, target: 500, color: theme.primary },
+      { id: '2', name: 'Donation', emoji: '🎗', current: 15, target: 100, color: theme.accent },
+      { id: '3', name: 'Group Purchase', emoji: '🛒', current: 5, target: 50, color: theme.success },
+    ];
+  }, [theme]);
 
   const handleNotificationPress = () => {
     if (Platform.OS !== 'web') {
@@ -191,181 +202,161 @@ export default function Dashboard() {
           {getGreeting()}, {userQuery.data?.name || 'Rork'}
         </Text>
         <Text style={[styles.subGreeting, { color: theme.textMedium }]}>
-          {streakCount > 0 ? 'Deine Flamme brennt.' : 'Starte deine Serie!'}
+          {streakCount > 0 ? 'Deine Flamme wartet.' : 'Starte deine Serie!'}
         </Text>
 
-        <View style={styles.gridContainer}>
-          {nextTask ? (
-            <Card style={[styles.heroCard, { backgroundColor: theme.surface }]}>
-              <View style={styles.heroHeader}>
-                <Text style={[styles.heroLabel, { color: theme.textMedium }]}>Als Nächstes</Text>
-                <Text style={[styles.heroTime, { color: theme.primary }]}>
-                  {formatTime(nextTask.startAt)}
-                </Text>
-              </View>
-              <Text style={[styles.heroTitle, { color: theme.textHigh }]} numberOfLines={2}>
-                {nextTask.title}
-              </Text>
-              <View style={styles.heroFooter}>
-                <View style={styles.heroStake}>
-                  <Text style={[styles.heroStakeText, { color: theme.textMedium }]}>
-                    Einsatz: {currentList?.currencySymbol || '€'}{nextTask.stake}
+        <View style={styles.tilesGrid}>
+          <Card style={[styles.tileHero, { backgroundColor: theme.surface }]}>
+            {nextTask ? (
+              <>
+                <View style={styles.tileHeroHeader}>
+                  <Text style={[styles.tileHeroLabel, { color: theme.textMedium }]}>ALS NÄCHSTES</Text>
+                  <Text style={[styles.tileHeroTime, { color: theme.primary }]}>
+                    {formatTime(nextTask.startAt)}
                   </Text>
                 </View>
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.heroButton,
-                    { backgroundColor: theme.success },
-                    pressed && { opacity: 0.8 },
-                  ]}
-                  onPress={() => handleComplete(nextTask.id)}
-                >
-                  <CheckCircle size={20} color="#FFFFFF" />
-                  <Text style={styles.heroButtonText}>Erledigt</Text>
-                </Pressable>
-              </View>
-            </Card>
-          ) : (
-            <Card style={[styles.heroCard, { backgroundColor: theme.surface }]}>
-              <View style={styles.emptyHero}>
-                <Text style={[styles.emptyHeroText, { color: theme.textMedium }]}>
-                  🎉 Keine Aufgaben heute!
+                <Text style={[styles.tileHeroTitle, { color: theme.textHigh }]} numberOfLines={2}>
+                  {nextTask.title}
+                </Text>
+                <View style={styles.tileHeroFooter}>
+                  <View style={styles.tileHeroStake}>
+                    <Text style={[styles.tileHeroStakeLabel, { color: theme.textLow }]}>Einsatz</Text>
+                    <Text style={[styles.tileHeroStakeValue, { color: theme.textHigh }]}>
+                      {currentList?.currencySymbol || '€'}{nextTask.stake}
+                    </Text>
+                  </View>
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.tileHeroButton,
+                      { backgroundColor: theme.success },
+                      pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
+                    ]}
+                    onPress={() => handleComplete(nextTask.id)}
+                  >
+                    <CheckCircle size={20} color="#FFFFFF" />
+                    <Text style={styles.tileHeroButtonText}>Complete</Text>
+                  </Pressable>
+                </View>
+              </>
+            ) : (
+              <View style={styles.tileHeroEmpty}>
+                <Text style={styles.tileHeroEmptyEmoji}>🎉</Text>
+                <Text style={[styles.tileHeroEmptyText, { color: theme.textMedium }]}>
+                  No tasks today!
                 </Text>
               </View>
-            </Card>
-          )}
+            )}
+          </Card>
 
-          <View style={styles.gridRow}>
-            <Card style={[styles.smallCard, { backgroundColor: theme.surface }]}>
-              <View style={styles.smallCardContent}>
+          <View style={styles.tilesRow}>
+            <Card style={[styles.tileSmall, { backgroundColor: theme.surface }]}>
+              <View style={styles.tileSmallContent}>
                 {streakCount > 0 ? (
-                  <View style={[styles.flameContainer, { backgroundColor: `${theme.warning}15` }]}>
-                    <Flame size={32} color={theme.warning} fill={theme.warning} />
+                  <View style={[styles.tileIconContainer, { backgroundColor: `${theme.warning}15` }]}>
+                    <Flame size={28} color={theme.warning} fill={theme.warning} />
                   </View>
                 ) : (
-                  <View style={[styles.flameContainer, { backgroundColor: `${theme.textLow}10` }]}>
-                    <Text style={styles.eggEmoji}>🥚</Text>
+                  <View style={[styles.tileIconContainer, { backgroundColor: `${theme.textLow}10` }]}>
+                    <Text style={styles.tileIconEmoji}>🥚</Text>
                   </View>
                 )}
-                <Text style={[styles.smallCardValue, { color: theme.textHigh }]}>
+                <Text style={[styles.tileSmallValue, { color: theme.textHigh }]}>
                   {streakCount}
                 </Text>
-                <Text style={[styles.smallCardLabel, { color: theme.textMedium }]}>
-                  Tage Serie
+                <Text style={[styles.tileSmallLabel, { color: theme.textMedium }]}>
+                  Days
                 </Text>
               </View>
             </Card>
 
-            <Card style={[styles.smallCard, { backgroundColor: theme.surface }]}>
-              <View style={styles.smallCardContent}>
-                <View style={[styles.iconContainer, { backgroundColor: `${theme.accent}15` }]}>
-                  <Text style={styles.jokerEmoji}>🃏</Text>
+            <Card style={[styles.tileSmall, { backgroundColor: theme.surface }]}>
+              <View style={styles.tileSmallContent}>
+                <View style={[styles.tileIconContainer, { backgroundColor: `${theme.accent}15` }]}>
+                  <Text style={styles.tileIconEmoji}>🃏</Text>
                 </View>
-                <Text style={[styles.smallCardValue, { color: theme.textHigh }]}>
+                <Text style={[styles.tileSmallValue, { color: theme.textHigh }]}>
                   {jokerCount}
                 </Text>
-                <Text style={[styles.smallCardLabel, { color: theme.textMedium }]}>
-                  Joker
+                <Text style={[styles.tileSmallLabel, { color: theme.textMedium }]}>
+                  Jokers
                 </Text>
               </View>
             </Card>
           </View>
 
-          <Card style={[styles.wideCard, { backgroundColor: theme.surface }]}>
-            <View style={styles.wideCardHeader}>
-              <Text style={[styles.wideCardTitle, { color: theme.textHigh }]}>Sparziele</Text>
-              <Text style={[styles.wideCardTotal, { color: theme.primary }]}>
+          <Card style={[styles.tileFundGoals, { backgroundColor: theme.surface }]}>
+            <View style={styles.tileFundHeader}>
+              <View style={styles.tileFundHeaderLeft}>
+                <Target size={18} color={theme.primary} />
+                <Text style={[styles.tileFundTitle, { color: theme.textHigh }]}>Fund Goals</Text>
+              </View>
+              <Text style={[styles.tileFundTotal, { color: theme.primary }]}>
                 {currentList?.currencySymbol || '€'}{totalSavings.toFixed(2)}
               </Text>
             </View>
-            <View style={styles.goalsContainer}>
-              <View style={styles.goalRow}>
-                <View style={styles.goalInfo}>
-                  <Text style={styles.goalEmoji}>🏖</Text>
-                  <View style={styles.goalText}>
-                    <Text style={[styles.goalName, { color: theme.textHigh }]}>Vacation Fund</Text>
-                    <Text style={[styles.goalProgress, { color: theme.textMedium }]}>€20 / €500</Text>
+            <View style={styles.tileFundGoalsContainer}>
+              {fundGoals.map((goal) => {
+                const progress = goal.target > 0 ? (goal.current / goal.target) * 100 : 0;
+                return (
+                  <View key={goal.id} style={styles.tileFundGoalRow}>
+                    <View style={styles.tileFundGoalInfo}>
+                      <Text style={styles.tileFundGoalEmoji}>{goal.emoji}</Text>
+                      <View style={styles.tileFundGoalText}>
+                        <Text style={[styles.tileFundGoalName, { color: theme.textHigh }]} numberOfLines={1}>
+                          {goal.name}
+                        </Text>
+                        <View style={[styles.tileFundGoalBar, { backgroundColor: `${goal.color}15` }]}>
+                          <View
+                            style={[
+                              styles.tileFundGoalBarFill,
+                              { backgroundColor: goal.color, width: `${Math.min(progress, 100)}%` },
+                            ]}
+                          />
+                        </View>
+                      </View>
+                    </View>
+                    <Text style={[styles.tileFundGoalAmount, { color: theme.textMedium }]}>
+                      €{goal.current}
+                    </Text>
                   </View>
-                </View>
-                <View style={[styles.progressBar, { backgroundColor: `${theme.primary}15` }]}>
-                  <View
-                    style={[
-                      styles.progressBarFill,
-                      { backgroundColor: theme.primary, width: '4%' },
-                    ]}
-                  />
-                </View>
-              </View>
-
-              <View style={styles.goalRow}>
-                <View style={styles.goalInfo}>
-                  <Text style={styles.goalEmoji}>🎗</Text>
-                  <View style={styles.goalText}>
-                    <Text style={[styles.goalName, { color: theme.textHigh }]}>Donation / Charity</Text>
-                    <Text style={[styles.goalProgress, { color: theme.textMedium }]}>€15 / €100</Text>
-                  </View>
-                </View>
-                <View style={[styles.progressBar, { backgroundColor: `${theme.accent}15` }]}>
-                  <View
-                    style={[
-                      styles.progressBarFill,
-                      { backgroundColor: theme.accent, width: '15%' },
-                    ]}
-                  />
-                </View>
-              </View>
-
-              <View style={styles.goalRow}>
-                <View style={styles.goalInfo}>
-                  <Text style={styles.goalEmoji}>🛒</Text>
-                  <View style={styles.goalText}>
-                    <Text style={[styles.goalName, { color: theme.textHigh }]}>Group Purchase</Text>
-                    <Text style={[styles.goalProgress, { color: theme.textMedium }]}>€5 / €50</Text>
-                  </View>
-                </View>
-                <View style={[styles.progressBar, { backgroundColor: `${theme.success}15` }]}>
-                  <View
-                    style={[
-                      styles.progressBarFill,
-                      { backgroundColor: theme.success, width: '10%' },
-                    ]}
-                  />
-                </View>
-              </View>
+                );
+              })}
             </View>
           </Card>
 
-          {todayTasks.length > 1 && (
-            <Card style={[styles.wideCard, { backgroundColor: theme.surface }]}>
-              <Text style={[styles.wideCardTitle, { color: theme.textHigh, marginBottom: 12 }]}>
-                Weitere Aufgaben heute
+          {upcomingTasks.length > 0 && (
+            <Card style={[styles.tileUpcoming, { backgroundColor: theme.surface }]}>
+              <Text style={[styles.tileUpcomingTitle, { color: theme.textHigh }]}>
+                Upcoming Tasks
               </Text>
-              {todayTasks.slice(1, 4).map((task, index) => (
-                <Pressable
-                  key={task.id}
-                  style={({ pressed }) => [
-                    styles.taskRow,
-                    index < todayTasks.slice(1, 4).length - 1 && {
-                      borderBottomWidth: 1,
-                      borderBottomColor: theme.surfaceAlt,
-                    },
-                    pressed && { opacity: 0.7 },
-                  ]}
-                  onPress={() => handleTaskPress(task)}
-                >
-                  <View style={styles.taskRowLeft}>
-                    <Text style={[styles.taskRowTime, { color: theme.textMedium }]}>
-                      {formatTime(task.startAt)}
+              <View style={styles.tileUpcomingList}>
+                {upcomingTasks.map((task, index) => (
+                  <Pressable
+                    key={task.id}
+                    style={({ pressed }) => [
+                      styles.tileUpcomingRow,
+                      index < upcomingTasks.length - 1 && {
+                        borderBottomWidth: 1,
+                        borderBottomColor: theme.border,
+                      },
+                      pressed && { opacity: 0.6 },
+                    ]}
+                    onPress={() => handleTaskPress(task)}
+                  >
+                    <View style={styles.tileUpcomingRowLeft}>
+                      <Text style={[styles.tileUpcomingRowTime, { color: theme.textMedium }]}>
+                        {formatTime(task.startAt)}
+                      </Text>
+                      <Text style={[styles.tileUpcomingRowTitle, { color: theme.textHigh }]} numberOfLines={1}>
+                        {task.title}
+                      </Text>
+                    </View>
+                    <Text style={[styles.tileUpcomingRowStake, { color: theme.textLow }]}>
+                      {currentList?.currencySymbol || '€'}{task.stake}
                     </Text>
-                    <Text style={[styles.taskRowTitle, { color: theme.textHigh }]} numberOfLines={1}>
-                      {task.title}
-                    </Text>
-                  </View>
-                  <Text style={[styles.taskRowStake, { color: theme.textMedium }]}>
-                    {currentList?.currencySymbol || '€'}{task.stake}
-                  </Text>
-                </Pressable>
-              ))}
+                  </Pressable>
+                ))}
+              </View>
             </Card>
           )}
         </View>
@@ -396,6 +387,10 @@ export default function Dashboard() {
   );
 }
 
+const TILE_GAP = 12 as const;
+const CONTENT_PADDING = 16 as const;
+const TILE_WIDTH = (SCREEN_WIDTH - CONTENT_PADDING * 2 - TILE_GAP) / 2;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -404,7 +399,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
+    padding: CONTENT_PADDING,
   },
   greeting: {
     fontSize: 28,
@@ -415,192 +410,209 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 24,
   },
-  gridContainer: {
-    gap: 12,
+  tilesGrid: {
+    gap: TILE_GAP,
   },
-  heroCard: {
+  tileHero: {
     padding: 20,
-    minHeight: 160,
+    minHeight: 180,
   },
-  heroHeader: {
+  tileHeroHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
   },
-  heroLabel: {
+  tileHeroLabel: {
+    fontSize: 11,
+    fontWeight: '700' as const,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 1,
+  },
+  tileHeroTime: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+  },
+  tileHeroTitle: {
+    fontSize: 26,
+    fontWeight: '700' as const,
+    marginBottom: 20,
+    lineHeight: 34,
+  },
+  tileHeroFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+  tileHeroStake: {
+    flex: 1,
+  },
+  tileHeroStakeLabel: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    marginBottom: 4,
+  },
+  tileHeroStakeValue: {
+    fontSize: 20,
+    fontWeight: '700' as const,
+  },
+  tileHeroButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  tileHeroButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600' as const,
+  },
+  tileHeroEmpty: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  tileHeroEmptyEmoji: {
+    fontSize: 48,
+    marginBottom: 12,
+  },
+  tileHeroEmptyText: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+  },
+  tilesRow: {
+    flexDirection: 'row',
+    gap: TILE_GAP,
+  },
+  tileSmall: {
+    width: TILE_WIDTH,
+    padding: 16,
+    minHeight: 150,
+  },
+  tileSmallContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  tileIconContainer: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tileIconEmoji: {
+    fontSize: 28,
+  },
+  tileSmallValue: {
+    fontSize: 32,
+    fontWeight: '700' as const,
+  },
+  tileSmallLabel: {
     fontSize: 13,
     fontWeight: '600' as const,
     textTransform: 'uppercase' as const,
     letterSpacing: 0.5,
   },
-  heroTime: {
-    fontSize: 15,
-    fontWeight: '700' as const,
+  tileFundGoals: {
+    padding: 18,
   },
-  heroTitle: {
-    fontSize: 24,
-    fontWeight: '700' as const,
-    marginBottom: 16,
-    lineHeight: 32,
-  },
-  heroFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  heroStake: {
-    flex: 1,
-  },
-  heroStakeText: {
-    fontSize: 14,
-    fontWeight: '600' as const,
-  },
-  heroButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  heroButtonText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '600' as const,
-  },
-  emptyHero: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 40,
-  },
-  emptyHeroText: {
-    fontSize: 18,
-    fontWeight: '600' as const,
-  },
-  gridRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  smallCard: {
-    flex: 1,
-    padding: 16,
-    minHeight: 140,
-  },
-  smallCardContent: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  flameContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  eggEmoji: {
-    fontSize: 32,
-  },
-  iconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  jokerEmoji: {
-    fontSize: 28,
-  },
-  smallCardValue: {
-    fontSize: 28,
-    fontWeight: '700' as const,
-  },
-  smallCardLabel: {
-    fontSize: 13,
-    fontWeight: '600' as const,
-  },
-  wideCard: {
-    padding: 16,
-  },
-  wideCardHeader: {
+  tileFundHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
   },
-  wideCardTitle: {
-    fontSize: 18,
-    fontWeight: '700' as const,
-  },
-  wideCardTotal: {
-    fontSize: 20,
-    fontWeight: '700' as const,
-  },
-  goalsContainer: {
-    gap: 16,
-  },
-  goalRow: {
+  tileFundHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
-  goalInfo: {
+  tileFundTitle: {
+    fontSize: 17,
+    fontWeight: '700' as const,
+  },
+  tileFundTotal: {
+    fontSize: 19,
+    fontWeight: '700' as const,
+  },
+  tileFundGoalsContainer: {
+    gap: 14,
+  },
+  tileFundGoalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  tileFundGoalInfo: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    marginBottom: 6,
+    marginRight: 12,
   },
-  goalEmoji: {
-    fontSize: 20,
+  tileFundGoalEmoji: {
+    fontSize: 18,
   },
-  goalText: {
+  tileFundGoalText: {
     flex: 1,
+    gap: 6,
   },
-  goalName: {
+  tileFundGoalName: {
     fontSize: 14,
     fontWeight: '600' as const,
   },
-  goalProgress: {
-    fontSize: 12,
-    marginTop: 2,
-  },
-  progressBar: {
-    height: 6,
-    borderRadius: 3,
+  tileFundGoalBar: {
+    height: 5,
+    borderRadius: 2.5,
     overflow: 'hidden',
   },
-  progressBarFill: {
+  tileFundGoalBarFill: {
     height: '100%',
-    borderRadius: 3,
+    borderRadius: 2.5,
   },
-  taskRow: {
+  tileFundGoalAmount: {
+    fontSize: 13,
+    fontWeight: '700' as const,
+  },
+  tileUpcoming: {
+    padding: 18,
+  },
+  tileUpcomingTitle: {
+    fontSize: 17,
+    fontWeight: '700' as const,
+    marginBottom: 12,
+  },
+  tileUpcomingList: {
+    gap: 0,
+  },
+  tileUpcomingRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 12,
   },
-  taskRowLeft: {
+  tileUpcomingRowLeft: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
-  taskRowTime: {
+  tileUpcomingRowTime: {
     fontSize: 13,
     fontWeight: '600' as const,
-    width: 50,
+    width: 48,
   },
-  taskRowTitle: {
+  tileUpcomingRowTitle: {
     fontSize: 15,
+    fontWeight: '500' as const,
     flex: 1,
   },
-  taskRowStake: {
-    fontSize: 14,
+  tileUpcomingRowStake: {
+    fontSize: 13,
     fontWeight: '600' as const,
-  },
-  emptyState: {
-    padding: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   fab: {
     position: 'absolute',
