@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, Platform, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Platform, Pressable, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Bell, User, Plus } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
@@ -14,6 +14,7 @@ import { SegmentedControl, SegmentedControlOption } from '@/components/interacti
 import { StatMiniBar } from '@/components/stats/StatMiniBar';
 import { TaskEditSheet } from '@/screens/TaskEditSheet';
 import { SwipeableTaskCard } from '@/components/interactive/SwipeableTaskCard';
+import { trpc } from '@/lib/trpc';
 
 type TaskStatus = 'all' | 'upcoming' | 'failed' | 'completed';
 
@@ -32,6 +33,48 @@ export default function Dashboard() {
   const { tasks, completeTask, failTask, currentList } = useApp();
   const [selectedFilter, setSelectedFilter] = useState<TaskStatus>('all');
   const [taskSheetVisible, setTaskSheetVisible] = useState(false);
+
+  const resolveTaskMutation = trpc.tasks.resolveTask.useMutation({
+    onSuccess: (data) => {
+      const maybeStatus = (data as unknown) as { status?: string };
+      if (maybeStatus && maybeStatus.status === 'JOKER_AVAILABLE') {
+        Alert.alert(
+          'Joker einsetzen?',
+          'Möchtest du einen Joker einsetzen?',
+          [
+            { text: 'Nein, Einsatz zahlen', style: 'destructive' },
+            { text: 'Ja, Joker einsetzen', style: 'default' },
+          ],
+        );
+        return;
+      }
+      if ((data as any)?.id) {
+        // Normal fail path completed on backend – mirror locally for now
+        // to keep UI consistent without invalidations
+        try {
+          const taskId = (data as any).id as string;
+          failTask(taskId);
+        } catch (e) {
+          console.log('[Dashboard] Mirror fail fallback error:', e);
+        }
+      }
+    },
+    onError: (error) => {
+      console.log('[Dashboard] resolveTask error:', error);
+      // If backend encodes via error in future, catch here
+      const msg = (error as unknown as { message?: string }).message ?? '';
+      if (msg.includes('JOKER_AVAILABLE')) {
+        Alert.alert(
+          'Joker einsetzen?',
+          'Möchtest du einen Joker einsetzen?',
+          [
+            { text: 'Nein, Einsatz zahlen', style: 'destructive' },
+            { text: 'Ja, Joker einsetzen', style: 'default' },
+          ],
+        );
+      }
+    },
+  });
 
   const filterOptions: SegmentedControlOption[] = [
     { value: 'all', label: 'Alle' },
@@ -88,7 +131,7 @@ export default function Dashboard() {
 
   const handleFail = (taskId: string) => {
     console.log('[Dashboard] Failing task:', taskId);
-    failTask(taskId);
+    resolveTaskMutation.mutate({ task_id: taskId, resolution_status: 'failed' });
   };
 
   return (
