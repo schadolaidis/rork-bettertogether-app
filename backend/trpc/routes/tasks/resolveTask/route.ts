@@ -25,6 +25,20 @@ export default publicProcedure
     const now = new Date().toISOString();
 
     if (resolution_status === "failed") {
+      const assigned = task.assignedTo;
+      const assignedUserId = Array.isArray(assigned) ? (assigned[0] ?? null) : assigned ?? null;
+      if (assignedUserId) {
+        const userIndex = MOCK_USERS.findIndex((u) => u.id === assignedUserId);
+        if (userIndex !== -1) {
+          const user = MOCK_USERS[userIndex];
+          const jokers = user.jokerCount ?? 0;
+          if (jokers > 0) {
+            console.log("Joker available - intercepting fail", { taskId: task.id, userId: user.id, jokers });
+            return { status: "JOKER_AVAILABLE", joker_count: jokers, task_id } as const;
+          }
+        }
+      }
+
       const fundId = task.fundTargetId;
       const stake = typeof task.stake === "number" ? task.stake : 0;
 
@@ -41,9 +55,20 @@ export default publicProcedure
         }
       }
 
+      if (assignedUserId) {
+        const userIndex = MOCK_USERS.findIndex((u) => u.id === assignedUserId);
+        if (userIndex !== -1) {
+          const user = MOCK_USERS[userIndex];
+          MOCK_USERS[userIndex] = {
+            ...user,
+            currentStreakCount: 0,
+          };
+        }
+      }
+
       MOCK_TASKS[taskIndex] = {
         ...task,
-        status: "failed",
+        status: "failed_stake_paid",
         failedAt: now,
       };
 
@@ -51,14 +76,12 @@ export default publicProcedure
     }
 
     if (resolution_status === "completed") {
-      // Update task status first
       MOCK_TASKS[taskIndex] = {
         ...task,
         status: "completed",
         completedAt: now,
       };
 
-      // Streak and Joker logic for the assigned user
       const assigned = task.assignedTo;
       const assignedUserId = Array.isArray(assigned) ? (assigned[0] ?? null) : assigned ?? null;
 
@@ -80,8 +103,6 @@ export default publicProcedure
             console.log(
               `Milestone reached: User ${user.id} streak=${newStreakCount}. Granted a Joker. Total jokers=${newJokerCount}`
             );
-            // Optional push notification placeholder
-            // In a real implementation, trigger a push here
           }
         } else {
           console.warn("Assigned user not found for task completion", { assignedUserId, taskId: task.id });
