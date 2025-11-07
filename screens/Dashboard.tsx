@@ -5,10 +5,11 @@ import { Bell, User, Plus, CheckCircle, Flame, Target } from 'lucide-react-nativ
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useApp } from '@/contexts/AppContext';
+import { TaskFormModal, TaskFormData } from '@/components/TaskFormModal';
 import { AppBar } from '@/components/design-system/AppBar';
 import { Card } from '@/components/design-system/Card';
 import { IconButton } from '@/components/design-system/IconButton';
-import { TaskEditSheet } from '@/screens/TaskEditSheet';
+
 import { trpc } from '@/lib/trpc';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -16,7 +17,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 export default function Dashboard() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
-  const { tasks, completeTask, failTask, currentList } = useApp();
+  const { tasks, completeTask, failTask, currentList, currentListMembers, addTask, fundTargets: appFundTargets } = useApp();
   const [taskSheetVisible, setTaskSheetVisible] = useState(false);
   const [pendingJokerTaskId, setPendingJokerTaskId] = useState<string | null>(null);
   const utils = trpc.useUtils();
@@ -113,12 +114,16 @@ export default function Dashboard() {
   const totalSavings = (fundTotalsQuery.data?.totalCollectedCents ?? 0) / 100;
   
   const fundGoals = useMemo(() => {
-    return [
-      { id: '1', name: 'Vacation Fund', emoji: '🏖', current: 20, target: 500, color: theme.primary },
-      { id: '2', name: 'Donation', emoji: '🎗', current: 15, target: 100, color: theme.accent },
-      { id: '3', name: 'Group Purchase', emoji: '🛒', current: 5, target: 50, color: theme.success },
-    ];
-  }, [theme]);
+    const colors = [theme.primary, theme.accent, theme.success, theme.warning];
+    return appFundTargets.map((fund, index) => ({
+      id: fund.id,
+      name: fund.name,
+      emoji: fund.emoji,
+      current: (fund.totalCollectedCents ?? 0) / 100,
+      target: fund.targetAmountCents ? fund.targetAmountCents / 100 : undefined,
+      color: colors[index % colors.length],
+    }));
+  }, [appFundTargets, theme]);
 
   const handleNotificationPress = () => {
     if (Platform.OS !== 'web') {
@@ -150,15 +155,18 @@ export default function Dashboard() {
 
   const handleComplete = (taskId: string) => {
     console.log('[Dashboard] Completing task:', taskId);
-    completeTask(taskId);
-    resolveTaskMutation.mutate({ task_id: taskId, resolution_status: 'completed' });
+    resolveTaskMutation.mutate({ task_id: taskId, resolution_status: 'completed' }, {
+      onSuccess: () => {
+        completeTask(taskId);
+      },
+      onError: (error) => {
+        console.log('[Dashboard] Complete task error:', error);
+        completeTask(taskId);
+      },
+    });
   };
 
-  const handleFail = (taskId: string) => {
-    console.log('[Dashboard] Failing task:', taskId);
-    setPendingJokerTaskId(taskId);
-    resolveTaskMutation.mutate({ task_id: taskId, resolution_status: 'failed' });
-  };
+
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -296,7 +304,7 @@ export default function Dashboard() {
             </View>
             <View style={styles.tileFundGoalsContainer}>
               {fundGoals.map((goal) => {
-                const progress = goal.target > 0 ? (goal.current / goal.target) * 100 : 0;
+                const progress = goal.target ? (goal.current / goal.target) * 100 : 0;
                 return (
                   <View key={goal.id} style={styles.tileFundGoalRow}>
                     <View style={styles.tileFundGoalInfo}>
@@ -305,18 +313,21 @@ export default function Dashboard() {
                         <Text style={[styles.tileFundGoalName, { color: theme.textHigh }]} numberOfLines={1}>
                           {goal.name}
                         </Text>
-                        <View style={[styles.tileFundGoalBar, { backgroundColor: `${goal.color}15` }]}>
-                          <View
-                            style={[
-                              styles.tileFundGoalBarFill,
-                              { backgroundColor: goal.color, width: `${Math.min(progress, 100)}%` },
-                            ]}
-                          />
-                        </View>
+                        {goal.target && (
+                          <View style={[styles.tileFundGoalBar, { backgroundColor: `${goal.color}15` }]}>
+                            <View
+                              style={[
+                                styles.tileFundGoalBarFill,
+                                { backgroundColor: goal.color, width: `${Math.min(progress, 100)}%` },
+                              ]}
+                            />
+                          </View>
+                        )}
                       </View>
                     </View>
                     <Text style={[styles.tileFundGoalAmount, { color: theme.textMedium }]}>
-                      €{goal.current}
+                      {currentList?.currencySymbol || '€'}{goal.current.toFixed(2)}
+                      {goal.target && <Text style={{ fontSize: 11, color: theme.textLow }}>/{goal.target.toFixed(0)}</Text>}
                     </Text>
                   </View>
                 );
@@ -378,11 +389,40 @@ export default function Dashboard() {
         <Plus size={28} color="#FFFFFF" />
       </Pressable>
 
-      <TaskEditSheet
-        visible={taskSheetVisible}
-        onClose={() => setTaskSheetVisible(false)}
-        onSave={() => console.log('Task saved')}
-      />
+      {currentList && (
+        <TaskFormModal
+          visible={taskSheetVisible}
+          onClose={() => setTaskSheetVisible(false)}
+          onSubmit={(data: TaskFormData) => {
+            addTask({
+              title: data.title,
+              description: data.description,
+              category: data.category,
+              startAt: data.startDate.toISOString(),
+              endAt: data.endDate.toISOString(),
+              allDay: data.allDay,
+              gracePeriod: data.gracePeriod,
+              stake: data.stake,
+              assignedTo: data.assignedTo.length === 1 ? data.assignedTo[0] : data.assignedTo,
+              priority: data.priority,
+              reminder: data.reminder,
+              customReminderMinutes: data.customReminderMinutes,
+              recurrence: data.recurrence,
+              isShared: data.isShared,
+              fundTargetId: data.fundTargetId,
+            });
+            setTaskSheetVisible(false);
+            console.log('[Dashboard] Task created:', data.title);
+          }}
+          categories={currentList.categories}
+          members={currentListMembers}
+          fundTargets={appFundTargets.map(f => ({ id: f.id, name: f.name, emoji: f.emoji }))}
+          defaultGraceMinutes={currentList.defaultGraceMinutes}
+          defaultStakeCents={currentList.defaultStakeCents}
+          currencySymbol={currentList.currencySymbol}
+          existingTasks={tasks}
+        />
+      )}
     </View>
   );
 }
