@@ -55,6 +55,25 @@ export default function DashboardScreen() {
     staleTime: 30_000,
   });
 
+  const utils = trpc.useUtils();
+
+  const resolveTaskMutation = trpc.tasks.resolveTask.useMutation({
+    onSuccess: async () => {
+      try {
+        await Promise.all([
+          utils.tasks.invalidate(),
+          utils.fundGoals.getTotals.invalidate(),
+          utils.user.getMe.invalidate(),
+        ]);
+      } catch (e) {
+        console.log('[Dashboard] Invalidate error', e);
+      }
+    },
+    onError: (e) => {
+      console.log('[Dashboard] resolveTask mutation error', e);
+    },
+  });
+
   const now = useMemo(() => ClockService.getCurrentTime(), []);
   
   const { todayStart, todayEnd, tomorrowEnd } = useMemo(() => {
@@ -124,15 +143,17 @@ export default function DashboardScreen() {
   const handleCompleteTask = useCallback(
     (taskId: string) => {
       completeTask(taskId);
+      resolveTaskMutation.mutate({ task_id: taskId, resolution_status: 'completed' });
     },
-    [completeTask]
+    [completeTask, resolveTaskMutation]
   );
 
   const handleFailTask = useCallback(
     (taskId: string) => {
       failTask(taskId);
+      resolveTaskMutation.mutate({ task_id: taskId, resolution_status: 'failed' });
     },
-    [failTask]
+    [failTask, resolveTaskMutation]
   );
 
   return (
