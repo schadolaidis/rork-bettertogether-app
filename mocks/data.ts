@@ -58,7 +58,7 @@ export const MOCK_LISTS: List[] = [
     memberIds: ['user-1', 'user-2'],
     categories: DEFAULT_CATEGORIES,
     currency: 'USD',
-    currencySymbol: '$',
+    currencySymbol: '€',
     defaultGraceMinutes: 30,
     defaultStakeCents: 500,
     allowMemberCategoryManage: false,
