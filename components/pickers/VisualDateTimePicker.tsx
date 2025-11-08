@@ -460,14 +460,7 @@ export const VisualDateTimePicker: React.FC<VisualDateTimePickerProps> = ({
             <View style={styles.timePickersContainer}>
               <TimePickerWheel
                 value={startTime}
-                onChange={(newTime) => {
-                  setStartTime(newTime);
-                  const [h, m] = newTime.split(':').map(Number);
-                  let endH = h + 1;
-                  const endM = m;
-                  if (endH >= 24) endH = 0;
-                  setEndTime(`${endH.toString().padStart(2, '0')}:${endM.toString().padStart(2, '0')}`);
-                }}
+                onChange={setStartTime}
                 label="Von"
               />
               <TimePickerWheel
