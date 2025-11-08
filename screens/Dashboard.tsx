@@ -6,6 +6,8 @@ import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useApp } from '@/contexts/AppContext';
 import { TaskFormModal, TaskFormData } from '@/components/TaskFormModal';
+import { SmartQuickAddModal } from '@/components/SmartQuickAddModal';
+import { ParsedTaskData } from '@/services/NLPTaskParser';
 import { AppBar } from '@/components/design-system/AppBar';
 import { Card } from '@/components/design-system/Card';
 import { IconButton } from '@/components/design-system/IconButton';
@@ -19,6 +21,7 @@ export default function Dashboard() {
   const insets = useSafeAreaInsets();
   const { tasks, completeTask, failTask, currentList, currentListMembers, addTask, fundTargets: appFundTargets } = useApp();
   const [taskSheetVisible, setTaskSheetVisible] = useState(false);
+  const [smartAddVisible, setSmartAddVisible] = useState(false);
   const [pendingJokerTaskId, setPendingJokerTaskId] = useState<string | null>(null);
   const utils = trpc.useUtils();
 
@@ -150,7 +153,52 @@ export default function Dashboard() {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
-    setTaskSheetVisible(true);
+    setSmartAddVisible(true);
+  };
+
+  const handleSmartAddSubmit = (data: ParsedTaskData) => {
+    console.log('[Dashboard] Smart add:', data);
+    
+    const startDate = data.date || new Date();
+    if (data.time) {
+      const [hours, minutes] = data.time.split(':').map(Number);
+      startDate.setHours(hours, minutes, 0, 0);
+    } else if (!data.allDay) {
+      startDate.setHours(startDate.getHours() + 1, 0, 0, 0);
+    } else {
+      startDate.setHours(0, 0, 0, 0);
+    }
+    
+    const endDate = new Date(startDate);
+    if (data.allDay) {
+      endDate.setHours(23, 59, 59, 999);
+    } else {
+      endDate.setHours(startDate.getHours() + 1, 0, 0, 0);
+    }
+    
+    const reminderType = data.reminder !== undefined 
+      ? (data.reminder === 0 ? 'at_due' as const : data.reminder === 30 ? '30_min' as const : 'custom' as const)
+      : 'none' as const;
+    
+    addTask({
+      title: data.title,
+      description: data.location ? `📍 ${data.location}` : '',
+      category: data.category || 'Work',
+      startAt: startDate.toISOString(),
+      endAt: endDate.toISOString(),
+      allDay: data.allDay || false,
+      gracePeriod: currentList?.defaultGraceMinutes || 0,
+      stake: data.stake || (currentList?.defaultStakeCents || 0) / 100,
+      assignedTo: currentListMembers[0]?.id || '',
+      priority: data.priority || 'medium',
+      reminder: reminderType,
+      customReminderMinutes: data.reminder !== undefined && data.reminder !== 0 && data.reminder !== 30 ? data.reminder : 30,
+      recurrence: data.recurrence || 'none',
+      isShared: false,
+      fundTargetId: undefined,
+    });
+    
+    setSmartAddVisible(false);
   };
 
   const handleTaskPress = (task: any) => {
@@ -397,38 +445,47 @@ export default function Dashboard() {
       </Pressable>
 
       {currentList && (
-        <TaskFormModal
-          visible={taskSheetVisible}
-          onClose={() => setTaskSheetVisible(false)}
-          onSubmit={(data: TaskFormData) => {
-            addTask({
-              title: data.title,
-              description: data.description,
-              category: data.category,
-              startAt: data.startDate.toISOString(),
-              endAt: data.endDate.toISOString(),
-              allDay: data.allDay,
-              gracePeriod: data.gracePeriod,
-              stake: data.stake,
-              assignedTo: data.assignedTo.length === 1 ? data.assignedTo[0] : data.assignedTo,
-              priority: data.priority,
-              reminder: data.reminder,
-              customReminderMinutes: data.customReminderMinutes,
-              recurrence: data.recurrence,
-              isShared: data.isShared,
-              fundTargetId: data.fundTargetId,
-            });
-            setTaskSheetVisible(false);
-            console.log('[Dashboard] Task created:', data.title);
-          }}
-          categories={currentList.categories}
-          members={currentListMembers}
-          fundTargets={appFundTargets.map(f => ({ id: f.id, name: f.name, emoji: f.emoji }))}
-          defaultGraceMinutes={currentList.defaultGraceMinutes}
-          defaultStakeCents={currentList.defaultStakeCents}
-          currencySymbol={currentList.currencySymbol}
-          existingTasks={tasks}
-        />
+        <>
+          <SmartQuickAddModal
+            visible={smartAddVisible}
+            onClose={() => setSmartAddVisible(false)}
+            onSubmit={handleSmartAddSubmit}
+            categories={currentList.categories}
+          />
+          
+          <TaskFormModal
+            visible={taskSheetVisible}
+            onClose={() => setTaskSheetVisible(false)}
+            onSubmit={(data: TaskFormData) => {
+              addTask({
+                title: data.title,
+                description: data.description,
+                category: data.category,
+                startAt: data.startDate.toISOString(),
+                endAt: data.endDate.toISOString(),
+                allDay: data.allDay,
+                gracePeriod: data.gracePeriod,
+                stake: data.stake,
+                assignedTo: data.assignedTo.length === 1 ? data.assignedTo[0] : data.assignedTo,
+                priority: data.priority,
+                reminder: data.reminder,
+                customReminderMinutes: data.customReminderMinutes,
+                recurrence: data.recurrence,
+                isShared: data.isShared,
+                fundTargetId: data.fundTargetId,
+              });
+              setTaskSheetVisible(false);
+              console.log('[Dashboard] Task created:', data.title);
+            }}
+            categories={currentList.categories}
+            members={currentListMembers}
+            fundTargets={appFundTargets.map(f => ({ id: f.id, name: f.name, emoji: f.emoji }))}
+            defaultGraceMinutes={currentList.defaultGraceMinutes}
+            defaultStakeCents={currentList.defaultStakeCents}
+            currencySymbol={currentList.currencySymbol}
+            existingTasks={tasks}
+          />
+        </>
       )}
     </View>
   );
