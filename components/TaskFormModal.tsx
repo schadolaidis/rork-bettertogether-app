@@ -513,7 +513,7 @@ export function TaskFormModal({
                   <Calendar size={20} color="#3B82F6" />
                 </View>
                 <View style={styles.dateTimeContent}>
-                  <Text style={styles.dateTimeLabel}>Due Date & Time</Text>
+                  <Text style={styles.dateTimeLabel}>When?</Text>
                   <Text style={styles.dateTimeValueText}>
                     {formatDate(startDate)}
                     {!allDay && ` · ${formatTime(startDate)}`}
@@ -523,6 +523,9 @@ export function TaskFormModal({
               </View>
               <ChevronRight size={20} color="#9CA3AF" />
             </TouchableOpacity>
+            <Text style={styles.dateTimeHintText}>
+              💡 Try typing: &ldquo;tomorrow 3pm&rdquo; or &ldquo;next friday at 2:30&rdquo;
+            </Text>
 
             <TouchableOpacity
               style={styles.fieldRow}
@@ -1527,8 +1530,15 @@ const styles = StyleSheet.create({
   },
   dateTimeValueText: {
     fontSize: 16,
-    fontWeight: '500' as const,
+    fontWeight: '600' as const,
     color: '#111827',
+  },
+  dateTimeHintText: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 8,
+    paddingHorizontal: 20,
+    lineHeight: 16,
   },
   allDayBadge: {
     fontSize: 12,
