@@ -28,7 +28,7 @@ import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TaskCategory, User, TaskPriority, ReminderType, RecurrenceType, Task } from '@/types';
 import { EUDateFormatter } from '@/utils/EULocale';
-import { DateTimePickerSheet } from '@/components/pickers/DateTimePickerSheet';
+import { VisualDateTimePicker } from '@/components/pickers/VisualDateTimePicker';
 
 export interface TaskFormData {
   title: string;
@@ -799,7 +799,7 @@ export function TaskFormModal({
         </View>
       </Modal>
 
-      <DateTimePickerSheet
+      <VisualDateTimePicker
         visible={showDatePicker}
         value={startDate.toISOString()}
         onChange={(value) => {
