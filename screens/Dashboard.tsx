@@ -11,6 +11,7 @@ import { ParsedTaskData } from '@/services/NLPTaskParser';
 import { AppBar } from '@/components/design-system/AppBar';
 import { Card } from '@/components/design-system/Card';
 import { IconButton } from '@/components/design-system/IconButton';
+import { RecurrenceType } from '@/types';
 
 import { trpc } from '@/lib/trpc';
 
@@ -157,48 +158,90 @@ export default function Dashboard() {
   };
 
   const handleSmartAddSubmit = (data: ParsedTaskData) => {
-    console.log('[Dashboard] Smart add:', data);
+    console.log('[Dashboard] Smart add received:', data);
     
-    const startDate = data.date || new Date();
-    if (data.time) {
-      const [hours, minutes] = data.time.split(':').map(Number);
-      startDate.setHours(hours, minutes, 0, 0);
-    } else if (!data.allDay) {
-      startDate.setHours(startDate.getHours() + 1, 0, 0, 0);
-    } else {
-      startDate.setHours(0, 0, 0, 0);
+    if (!data.title || !data.title.trim()) {
+      console.error('[Dashboard] Cannot create task without title');
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
+      return;
     }
     
-    const endDate = new Date(startDate);
-    if (data.allDay) {
-      endDate.setHours(23, 59, 59, 999);
-    } else {
-      endDate.setHours(startDate.getHours() + 1, 0, 0, 0);
+    try {
+      const startDate = data.date ? new Date(data.date.getTime()) : new Date();
+      
+      if (data.time && !data.allDay) {
+        const [hours, minutes] = data.time.split(':').map(Number);
+        if (!isNaN(hours) && !isNaN(minutes)) {
+          startDate.setHours(hours, minutes, 0, 0);
+        }
+      } else if (!data.allDay && !data.time) {
+        const now = new Date();
+        if (!data.date || startDate.toDateString() === now.toDateString()) {
+          startDate.setHours(now.getHours() + 1, 0, 0, 0);
+        } else {
+          startDate.setHours(9, 0, 0, 0);
+        }
+      } else if (data.allDay) {
+        startDate.setHours(0, 0, 0, 0);
+      }
+      
+      const endDate = new Date(startDate.getTime());
+      if (data.allDay) {
+        endDate.setHours(23, 59, 59, 999);
+      } else {
+        endDate.setTime(startDate.getTime() + 60 * 60 * 1000);
+      }
+      
+      const reminderType = data.reminder !== undefined 
+        ? (data.reminder === 0 ? 'at_due' as const : data.reminder === 30 ? '30_min' as const : 'custom' as const)
+        : 'none' as const;
+      
+      let description = '';
+      if (data.location) {
+        description += `📍 ${data.location}`;
+      }
+      if (data.attendees && data.attendees.length > 0) {
+        description += `${description ? '\n' : ''}👥 ${data.attendees.join(', ')}`;
+      }
+      if (data.videoCall) {
+        const videoLabels = { zoom: 'Zoom', meet: 'Google Meet', teams: 'Microsoft Teams' };
+        description += `${description ? '\n' : ''}🎥 ${videoLabels[data.videoCall]}`;
+      }
+      
+      const taskData = {
+        title: data.title.trim(),
+        description: description || undefined,
+        category: data.category || 'Work',
+        startAt: startDate.toISOString(),
+        endAt: endDate.toISOString(),
+        allDay: data.allDay || false,
+        gracePeriod: currentList?.defaultGraceMinutes || 0,
+        stake: data.stake !== undefined ? data.stake : (currentList?.defaultStakeCents || 0) / 100,
+        assignedTo: currentListMembers[0]?.id || '',
+        priority: data.priority || 'medium',
+        reminder: reminderType,
+        customReminderMinutes: data.reminder !== undefined && data.reminder !== 0 && data.reminder !== 30 ? data.reminder : 30,
+        recurrence: (data.recurrence || 'none') as RecurrenceType,
+        isShared: false,
+        fundTargetId: undefined,
+      };
+      
+      console.log('[Dashboard] Creating task:', taskData);
+      addTask(taskData);
+      
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+      
+      setSmartAddVisible(false);
+    } catch (error) {
+      console.error('[Dashboard] Error creating task:', error);
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
     }
-    
-    const reminderType = data.reminder !== undefined 
-      ? (data.reminder === 0 ? 'at_due' as const : data.reminder === 30 ? '30_min' as const : 'custom' as const)
-      : 'none' as const;
-    
-    addTask({
-      title: data.title,
-      description: data.location ? `📍 ${data.location}` : '',
-      category: data.category || 'Work',
-      startAt: startDate.toISOString(),
-      endAt: endDate.toISOString(),
-      allDay: data.allDay || false,
-      gracePeriod: currentList?.defaultGraceMinutes || 0,
-      stake: data.stake || (currentList?.defaultStakeCents || 0) / 100,
-      assignedTo: currentListMembers[0]?.id || '',
-      priority: data.priority || 'medium',
-      reminder: reminderType,
-      customReminderMinutes: data.reminder !== undefined && data.reminder !== 0 && data.reminder !== 30 ? data.reminder : 30,
-      recurrence: data.recurrence || 'none',
-      isShared: false,
-      fundTargetId: undefined,
-    });
-    
-    setSmartAddVisible(false);
   };
 
   const handleTaskPress = (task: any) => {

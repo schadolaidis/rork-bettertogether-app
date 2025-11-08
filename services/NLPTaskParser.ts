@@ -88,8 +88,16 @@ export class NLPTaskParser {
   };
 
   static parse(input: string): ParsedTaskData {
+    console.log('[NLPTaskParser] Parsing input:', input);
+    
     const matchedTokens: string[] = [];
     let workingInput = input.trim();
+    
+    if (!workingInput) {
+      console.log('[NLPTaskParser] Empty input');
+      return { title: '', matchedTokens: [] };
+    }
+    
     let title = '';
     let date: Date | undefined;
     let time: string | undefined;
@@ -221,6 +229,28 @@ export class NLPTaskParser {
     }
 
     title = workingInput.replace(/\s+/g, ' ').trim();
+    
+    if (!title) {
+      title = input.trim();
+    }
+    
+    console.log('[NLPTaskParser] Parsed result:', {
+      title,
+      date: date?.toISOString(),
+      time,
+      allDay,
+      category,
+      priority,
+      stake,
+      reminder,
+      location,
+      attendees,
+      recurrence,
+      tags,
+      calendarKey,
+      isTodo,
+      videoCall,
+    });
 
     return {
       title,
