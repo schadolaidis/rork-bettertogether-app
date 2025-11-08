@@ -22,8 +22,14 @@ export default function Dashboard() {
   const [pendingJokerTaskId, setPendingJokerTaskId] = useState<string | null>(null);
   const utils = trpc.useUtils();
 
-  const userQuery = trpc.user.getMe.useQuery();
-  const fundTotalsQuery = trpc.fundGoals.getTotals.useQuery();
+  const userQuery = trpc.user.getMe.useQuery(undefined, {
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+  const fundTotalsQuery = trpc.fundGoals.getTotals.useQuery(undefined, {
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
 
   const useJokerMutation = trpc.tasks.useJokerOnTask.useMutation({
     onSuccess: async () => {
@@ -109,9 +115,10 @@ export default function Dashboard() {
   const nextTask = todayTasks[0] || null;
   const upcomingTasks = todayTasks.slice(1, 4);
   
-  const streakCount = userQuery.data?.currentStreakCount ?? 0;
-  const jokerCount = userQuery.data?.jokerCount ?? 0;
-  const totalSavings = (fundTotalsQuery.data?.totalCollectedCents ?? 0) / 100;
+  const currentUser = useApp().currentUser;
+  const streakCount = userQuery.data?.currentStreakCount ?? currentUser?.currentStreakCount ?? 0;
+  const jokerCount = userQuery.data?.jokerCount ?? currentUser?.jokerCount ?? 0;
+  const totalSavings = (fundTotalsQuery.data?.totalCollectedCents ?? appFundTargets.reduce((sum, f) => sum + (f.totalCollectedCents || 0), 0)) / 100;
   
   const fundGoals = useMemo(() => {
     const colors = [theme.primary, theme.accent, theme.success, theme.warning];
@@ -207,7 +214,7 @@ export default function Dashboard() {
         showsVerticalScrollIndicator={false}
       >
         <Text style={[styles.greeting, { color: theme.textHigh }]}>
-          {getGreeting()}, {userQuery.data?.name || 'Rork'}
+          {getGreeting()}, {userQuery.data?.name || currentUser?.name || 'Rork'}
         </Text>
         <Text style={[styles.subGreeting, { color: theme.textMedium }]}>
           {streakCount > 0 ? 'Deine Flamme wartet.' : 'Starte deine Serie!'}

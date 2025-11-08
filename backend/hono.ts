@@ -6,9 +6,8 @@ import { createContext } from "./trpc/create-context";
 const app = new Hono();
 
 app.use(
-  "/trpc/*",
+  "/api/trpc/*",
   trpcServer({
-    endpoint: "/api/trpc",
     router: appRouter,
     createContext,
   })
