@@ -127,30 +127,49 @@ export const SwipeableTaskCard: React.FC<SwipeableTaskCardProps> = ({
     }
   };
 
-  const formatDueDate = (task: Task): string => {
-    if (!task.startAt) return 'Kein Fälligkeitsdatum';
+  const formatDueDateNatural = (task: Task): { natural: string; time: string; isOverdue: boolean; isToday: boolean; isTomorrow: boolean } => {
+    if (!task.startAt) return { natural: 'Kein Datum', time: '', isOverdue: false, isToday: false, isTomorrow: false };
     
     const startDate = new Date(task.startAt);
     const now = new Date();
-    const diffMs = startDate.getTime() - now.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const taskDay = new Date(startDate);
+    taskDay.setHours(0, 0, 0, 0);
+    const dayDiff = Math.floor((taskDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
-    if (diffDays === 0) {
-      return `Heute ${startDate.toLocaleTimeString('de-DE', { hour: 'numeric', minute: '2-digit' })}`;
-    } else if (diffDays === 1) {
-      return `Morgen ${startDate.toLocaleTimeString('de-DE', { hour: 'numeric', minute: '2-digit' })}`;
-    } else if (diffDays === -1) {
-      return `Gestern ${startDate.toLocaleTimeString('de-DE', { hour: 'numeric', minute: '2-digit' })}`;
-    } else if (diffDays > 1 && diffDays < 7) {
-      return `${startDate.toLocaleDateString('de-DE', { weekday: 'short' })} ${startDate.toLocaleTimeString('de-DE', { hour: 'numeric', minute: '2-digit' })}`;
+    let natural = '';
+    const time = task.allDay ? 'Ganztägig' : startDate.toLocaleTimeString('de-DE', { hour: 'numeric', minute: '2-digit' });
+    const isOverdue = startDate < now && task.status !== 'completed';
+    
+    if (dayDiff === 0) {
+      natural = 'Heute';
+      return { natural, time, isOverdue, isToday: true, isTomorrow: false };
+    } else if (dayDiff === 1) {
+      natural = 'Morgen';
+      return { natural, time, isOverdue, isToday: false, isTomorrow: true };
+    } else if (dayDiff === -1) {
+      natural = 'Gestern';
+      return { natural, time, isOverdue: true, isToday: false, isTomorrow: false };
+    } else if (dayDiff > 1 && dayDiff < 7) {
+      natural = startDate.toLocaleDateString('de-DE', { weekday: 'long' });
+      return { natural, time, isOverdue, isToday: false, isTomorrow: false };
+    } else if (dayDiff < -1) {
+      natural = startDate.toLocaleDateString('de-DE', { 
+        day: 'numeric', 
+        month: 'short'
+      });
+      return { natural, time, isOverdue: true, isToday: false, isTomorrow: false };
     }
     
-    return startDate.toLocaleDateString('de-DE', { 
-      month: 'short', 
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit'
+    natural = startDate.toLocaleDateString('de-DE', { 
+      weekday: 'short',
+      day: 'numeric', 
+      month: 'short'
     });
+    
+    return { natural, time, isOverdue, isToday: false, isTomorrow: false };
   };
 
   const canSwipe = task.status !== 'completed' && 
@@ -161,6 +180,8 @@ export const SwipeableTaskCard: React.FC<SwipeableTaskCardProps> = ({
   const categoryMeta = useMemo(() => {
     return { emoji: '📌', color: theme.primary };
   }, [theme.primary]);
+  
+  const dueDateInfo = useMemo(() => formatDueDateNatural(task), [task]);
 
   return (
     <View style={styles.swipeContainer}>
@@ -200,7 +221,35 @@ export const SwipeableTaskCard: React.FC<SwipeableTaskCardProps> = ({
             </View>
           }
           title={task.title}
-          subtitle={formatDueDate(task)}
+          subtitle={
+            <View style={styles.dateTimeContainer}>
+              <View style={[
+                styles.dateChip,
+                dueDateInfo.isOverdue && styles.dateChipOverdue,
+                dueDateInfo.isToday && styles.dateChipToday,
+                dueDateInfo.isTomorrow && styles.dateChipTomorrow,
+              ]}>
+                <Text style={[
+                  styles.dateChipText,
+                  dueDateInfo.isOverdue && styles.dateChipTextOverdue,
+                  dueDateInfo.isToday && styles.dateChipTextToday,
+                  dueDateInfo.isTomorrow && styles.dateChipTextTomorrow,
+                ]}>
+                  {dueDateInfo.natural}
+                </Text>
+              </View>
+              {!task.allDay && (
+                <Text style={styles.timeText}>
+                  {dueDateInfo.time}
+                </Text>
+              )}
+              {task.allDay && (
+                <View style={styles.allDayChip}>
+                  <Text style={styles.allDayText}>Ganztägig</Text>
+                </View>
+              )}
+            </View>
+          }
           right={
             <View style={styles.taskRight}>
               <Text style={[theme.typography.label, { color: theme.textHigh }]}>
@@ -282,5 +331,56 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '600' as const,
     fontSize: 11,
+  },
+  dateTimeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+  },
+  dateChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    backgroundColor: '#F3F4F6',
+  },
+  dateChipToday: {
+    backgroundColor: '#DBEAFE',
+  },
+  dateChipTomorrow: {
+    backgroundColor: '#FEF3C7',
+  },
+  dateChipOverdue: {
+    backgroundColor: '#FEE2E2',
+  },
+  dateChipText: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    color: '#6B7280',
+  },
+  dateChipTextToday: {
+    color: '#2563EB',
+  },
+  dateChipTextTomorrow: {
+    color: '#D97706',
+  },
+  dateChipTextOverdue: {
+    color: '#DC2626',
+  },
+  timeText: {
+    fontSize: 13,
+    fontWeight: '500' as const,
+    color: '#6B7280',
+  },
+  allDayChip: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    backgroundColor: '#F3F4F6',
+  },
+  allDayText: {
+    fontSize: 11,
+    fontWeight: '500' as const,
+    color: '#9CA3AF',
   },
 });

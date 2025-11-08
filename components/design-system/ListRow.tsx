@@ -4,7 +4,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 
 export type ListRowProps = {
   title: string;
-  subtitle?: string;
+  subtitle?: string | React.ReactNode;
   left?: React.ReactNode;
   right?: React.ReactNode;
   onPress?: () => void;
@@ -20,7 +20,13 @@ export const ListRow: React.FC<ListRowProps> = ({ title, subtitle, left, right, 
           {!!left && <View style={styles.left}>{typeof left === 'string' ? <Text>{left}</Text> : left}</View>}
           <View style={styles.center}>
             <Text style={[styles.title, { color: theme.textHigh }]} numberOfLines={1}>{title}</Text>
-            {!!subtitle && <Text style={[styles.subtitle, { color: theme.textLow }]} numberOfLines={1}>{subtitle}</Text>}
+            {!!subtitle && (
+              typeof subtitle === 'string' ? (
+                <Text style={[styles.subtitle, { color: theme.textLow }]} numberOfLines={1}>{subtitle}</Text>
+              ) : (
+                <View style={styles.subtitleNode}>{subtitle}</View>
+              )
+            )}
           </View>
           {!!right && <View style={styles.right}>{typeof right === 'string' ? <Text>{right}</Text> : right}</View>}
         </View>
@@ -33,7 +39,13 @@ export const ListRow: React.FC<ListRowProps> = ({ title, subtitle, left, right, 
       {!!left && <View style={styles.left}>{typeof left === 'string' ? <Text>{left}</Text> : left}</View>}
       <View style={styles.center}>
         <Text style={[styles.title, { color: theme.textHigh }]} numberOfLines={1}>{title}</Text>
-        {!!subtitle && <Text style={[styles.subtitle, { color: theme.textLow }]} numberOfLines={1}>{subtitle}</Text>}
+        {!!subtitle && (
+          typeof subtitle === 'string' ? (
+            <Text style={[styles.subtitle, { color: theme.textLow }]} numberOfLines={1}>{subtitle}</Text>
+          ) : (
+            <View style={styles.subtitleNode}>{subtitle}</View>
+          )
+        )}
       </View>
       {!!right && <View style={styles.right}>{typeof right === 'string' ? <Text>{right}</Text> : right}</View>}
     </View>
@@ -47,4 +59,5 @@ const styles = StyleSheet.create({
   right: { marginLeft: 12 },
   title: { fontSize: 16, fontWeight: '500' as const },
   subtitle: { fontSize: 12 },
+  subtitleNode: { marginTop: 2 },
 });
