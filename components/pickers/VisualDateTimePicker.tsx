@@ -22,33 +22,114 @@ interface VisualDateTimePickerProps {
 
 const WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 
-const TimeSlot: React.FC<{
+const TimePickerWheel: React.FC<{
+  value: string;
+  onChange: (value: string) => void;
   label: string;
-  time: string;
-  isSelected: boolean;
-  onSelect: () => void;
-}> = ({ label, time, isSelected, onSelect }) => {
+}> = ({ value, onChange, label }) => {
+  const [hour, minute] = value.split(':').map(Number);
+
+  const incrementHour = () => {
+    const newHour = (hour + 1) % 24;
+    onChange(`${newHour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`);
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  };
+
+  const decrementHour = () => {
+    const newHour = (hour - 1 + 24) % 24;
+    onChange(`${newHour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`);
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  };
+
+  const incrementMinute = () => {
+    let newMinute = minute + 15;
+    let newHour = hour;
+    if (newMinute >= 60) {
+      newMinute = 0;
+      newHour = (hour + 1) % 24;
+    }
+    onChange(`${newHour.toString().padStart(2, '0')}:${newMinute.toString().padStart(2, '0')}`);
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  };
+
+  const decrementMinute = () => {
+    let newMinute = minute - 15;
+    let newHour = hour;
+    if (newMinute < 0) {
+      newMinute = 45;
+      newHour = (hour - 1 + 24) % 24;
+    }
+    onChange(`${newHour.toString().padStart(2, '0')}:${newMinute.toString().padStart(2, '0')}`);
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  };
+
   return (
-    <Pressable
-      onPress={() => {
-        if (Platform.OS !== 'web') {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        }
-        onSelect();
-      }}
-      style={({ pressed }) => [
-        styles.timeSlot,
-        isSelected && styles.timeSlotSelected,
-        pressed && !isSelected && styles.timeSlotPressed,
-      ]}
-    >
-      <Text style={[styles.timeSlotLabel, isSelected && styles.timeSlotLabelSelected]}>
-        {label}
-      </Text>
-      <Text style={[styles.timeSlotTime, isSelected && styles.timeSlotTimeSelected]}>
-        {time}
-      </Text>
-    </Pressable>
+    <View style={styles.timePickerWheel}>
+      <Text style={styles.timePickerWheelLabel}>{label}</Text>
+      <View style={styles.timeWheelContainer}>
+        <View style={styles.timeWheelColumn}>
+          <Pressable
+            onPress={decrementHour}
+            style={({ pressed }) => [
+              styles.timeWheelButton,
+              { opacity: pressed ? 0.6 : 1 },
+            ]}
+            hitSlop={8}
+          >
+            <ChevronLeft size={24} color="#3B82F6" strokeWidth={2.5} style={{ transform: [{ rotate: '90deg' }] }} />
+          </Pressable>
+          <View style={styles.timeWheelValue}>
+            <Text style={styles.timeWheelText}>{hour.toString().padStart(2, '0')}</Text>
+          </View>
+          <Pressable
+            onPress={incrementHour}
+            style={({ pressed }) => [
+              styles.timeWheelButton,
+              { opacity: pressed ? 0.6 : 1 },
+            ]}
+            hitSlop={8}
+          >
+            <ChevronRight size={24} color="#3B82F6" strokeWidth={2.5} style={{ transform: [{ rotate: '90deg' }] }} />
+          </Pressable>
+        </View>
+
+        <Text style={styles.timeWheelSeparator}>:</Text>
+
+        <View style={styles.timeWheelColumn}>
+          <Pressable
+            onPress={decrementMinute}
+            style={({ pressed }) => [
+              styles.timeWheelButton,
+              { opacity: pressed ? 0.6 : 1 },
+            ]}
+            hitSlop={8}
+          >
+            <ChevronLeft size={24} color="#3B82F6" strokeWidth={2.5} style={{ transform: [{ rotate: '90deg' }] }} />
+          </Pressable>
+          <View style={styles.timeWheelValue}>
+            <Text style={styles.timeWheelText}>{minute.toString().padStart(2, '0')}</Text>
+          </View>
+          <Pressable
+            onPress={incrementMinute}
+            style={({ pressed }) => [
+              styles.timeWheelButton,
+              { opacity: pressed ? 0.6 : 1 },
+            ]}
+            hitSlop={8}
+          >
+            <ChevronRight size={24} color="#3B82F6" strokeWidth={2.5} style={{ transform: [{ rotate: '90deg' }] }} />
+          </Pressable>
+        </View>
+      </View>
+    </View>
   );
 };
 
@@ -190,16 +271,7 @@ export const VisualDateTimePicker: React.FC<VisualDateTimePickerProps> = ({
     return days;
   }, [currentMonth]);
 
-  const timeSlots = useMemo(() => {
-    const slots: { label: string; time: string }[] = [];
-    for (let hour = 0; hour < 24; hour++) {
-      for (let minute = 0; minute < 60; minute += 15) {
-        const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-        slots.push({ label: timeStr, time: timeStr });
-      }
-    }
-    return slots;
-  }, []);
+
 
   const isToday = useCallback((dateStr: string) => {
     const today = new Date().toISOString().split('T')[0];
@@ -385,61 +457,25 @@ export const VisualDateTimePicker: React.FC<VisualDateTimePickerProps> = ({
           </View>
 
           {!isAllDay && (
-            <>
-              <View style={styles.timePickerRow}>
-                <View style={styles.timePickerColumn}>
-                  <Text style={styles.timePickerLabel}>Von</Text>
-                  <Pressable
-                    onPress={() => {
-                      if (Platform.OS !== 'web') {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      }
-                    }}
-                    style={styles.timePickerButton}
-                  >
-                    <Text style={styles.timePickerButtonText}>{startTime}</Text>
-                  </Pressable>
-                </View>
-                <Text style={styles.timePickerSeparator}>–</Text>
-                <View style={styles.timePickerColumn}>
-                  <Text style={styles.timePickerLabel}>Bis</Text>
-                  <Pressable
-                    onPress={() => {
-                      if (Platform.OS !== 'web') {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      }
-                    }}
-                    style={styles.timePickerButton}
-                  >
-                    <Text style={styles.timePickerButtonText}>{endTime}</Text>
-                  </Pressable>
-                </View>
-              </View>
-
-              <ScrollView 
-                horizontal 
-                showsHorizontalScrollIndicator={false}
-                style={styles.timeSlotScroll}
-                contentContainerStyle={styles.timeSlotContainer}
-              >
-                {timeSlots.map((slot, index) => (
-                  <TimeSlot
-                    key={index}
-                    label={slot.label}
-                    time={slot.time}
-                    isSelected={slot.time === startTime}
-                    onSelect={() => {
-                      setStartTime(slot.time);
-                      const [h, m] = slot.time.split(':').map(Number);
-                      let endH = h + 1;
-                      const endM = m;
-                      if (endH >= 24) endH = 0;
-                      setEndTime(`${endH.toString().padStart(2, '0')}:${endM.toString().padStart(2, '0')}`);
-                    }}
-                  />
-                ))}
-              </ScrollView>
-            </>
+            <View style={styles.timePickersContainer}>
+              <TimePickerWheel
+                value={startTime}
+                onChange={(newTime) => {
+                  setStartTime(newTime);
+                  const [h, m] = newTime.split(':').map(Number);
+                  let endH = h + 1;
+                  const endM = m;
+                  if (endH >= 24) endH = 0;
+                  setEndTime(`${endH.toString().padStart(2, '0')}:${endM.toString().padStart(2, '0')}`);
+                }}
+                label="Von"
+              />
+              <TimePickerWheel
+                value={endTime}
+                onChange={setEndTime}
+                label="Bis"
+              />
+            </View>
           )}
         </View>
       </ScrollView>
@@ -584,88 +620,65 @@ const styles = StyleSheet.create({
   allDayToggleTextActive: {
     color: '#3B82F6',
   },
-  timePickerRow: {
+  timePickersContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 16,
-    marginTop: 8,
+    gap: 20,
+    marginTop: 16,
   },
-  timePickerColumn: {
+  timePickerWheel: {
     flex: 1,
-    gap: 8,
+    gap: 12,
   },
-  timePickerLabel: {
+  timePickerWheelLabel: {
     fontSize: 13,
     fontWeight: '600' as const,
     color: '#6B7280',
     textAlign: 'center',
   },
-  timePickerButton: {
+  timeWheelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#FFFFFF',
+    borderRadius: 16,
     borderWidth: 2,
     borderColor: '#3B82F6',
-    borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  timePickerButtonText: {
-    fontSize: 28,
+  timeWheelColumn: {
+    alignItems: 'center',
+    gap: 8,
+  },
+  timeWheelButton: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 18,
+    backgroundColor: '#EFF6FF',
+  },
+  timeWheelValue: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    minWidth: 56,
+    alignItems: 'center',
+  },
+  timeWheelText: {
+    fontSize: 32,
     fontWeight: '700' as const,
     color: '#3B82F6',
   },
-  timePickerSeparator: {
-    fontSize: 24,
+  timeWheelSeparator: {
+    fontSize: 32,
     fontWeight: '700' as const,
-    color: '#6B7280',
-    marginTop: 20,
-  },
-  timeSlotScroll: {
-    marginTop: 8,
-  },
-  timeSlotContainer: {
-    gap: 8,
-    paddingHorizontal: 4,
-  },
-  timeSlot: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    backgroundColor: '#F3F4F6',
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    minWidth: 70,
-    alignItems: 'center',
-  },
-  timeSlotSelected: {
-    backgroundColor: '#3B82F6',
-    borderColor: '#3B82F6',
-  },
-  timeSlotPressed: {
-    backgroundColor: '#E5E7EB',
-  },
-  timeSlotLabel: {
-    fontSize: 11,
-    fontWeight: '600' as const,
-    color: '#6B7280',
-    marginBottom: 2,
-  },
-  timeSlotLabelSelected: {
-    color: '#BFDBFE',
-  },
-  timeSlotTime: {
-    fontSize: 16,
-    fontWeight: '700' as const,
-    color: '#111827',
-  },
-  timeSlotTimeSelected: {
-    color: '#FFFFFF',
+    color: '#3B82F6',
+    marginHorizontal: 4,
   },
   footerContainer: {
     flexDirection: 'row',
