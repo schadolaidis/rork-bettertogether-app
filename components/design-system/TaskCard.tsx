@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { Clock } from 'lucide-react-native';
 import { DesignTokens } from '@/constants/design-tokens';
 
-export type SimpleTaskStatus = 'pending' | 'overdue' | 'completed' | 'failed';
+export type SimpleTaskStatus = 'pending' | 'overdue' | 'completed' | 'failed' | 'failed_joker_used' | 'failed_stake_paid';
 
 interface TaskCardProps {
   title: string;

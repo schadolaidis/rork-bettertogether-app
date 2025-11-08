@@ -12,9 +12,10 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Filter, Undo2, Plus, X, Target } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useApp } from '@/contexts/AppContext';
-import { Task, TaskCategory, TaskStatus, User } from '@/types';
+import { TaskCategory, TaskStatus } from '@/types';
 import { TaskFormModal, TaskFormData, FundTargetOption } from '@/components/TaskFormModal';
 import { QuickAddModal, QuickTaskData } from '@/components/QuickAddModal';
+import { SmartQuickAddModal } from '@/components/SmartQuickAddModal';
 import { MOCK_FUND_TARGETS } from '@/mocks/data';
 import { SectionHeader } from '@/components/design-system/SectionHeader';
 import { TaskCard as SimpleTaskCard } from '@/components/design-system/TaskCard';
@@ -27,7 +28,7 @@ export default function TasksScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
-  const { tasks, currentList, currentListMembers, addTask, completeTask, failTask, undoFailTask, undoAction } = useApp();
+  const { tasks, currentList, currentListMembers, addTask, undoFailTask, undoAction } = useApp();
   
   const fundTargets: FundTargetOption[] = useMemo(() => {
     if (!currentList) return [];
@@ -55,6 +56,7 @@ export default function TasksScreen() {
   const [showFilters, setShowFilters] = useState(initialFilter !== 'all');
   const [showFullTaskForm, setShowFullTaskForm] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [showSmartAdd, setShowSmartAdd] = useState(false);
 
   useEffect(() => {
     if (initialFilter !== 'all' && initialFilter !== filter) {
@@ -98,6 +100,8 @@ export default function TasksScreen() {
           pending: 1,
           completed: 2,
           failed: 3,
+          failed_joker_used: 4,
+          failed_stake_paid: 5,
         };
         return statusOrder[a.status] - statusOrder[b.status];
       }
@@ -212,6 +216,35 @@ export default function TasksScreen() {
     [addTask, currentList, currentListMembers]
   );
 
+  const handleSmartAddSubmit = useCallback(
+    (parsedData: any) => {
+      if (!currentList) return;
+
+      const startDate = parsedData.date || new Date(Date.now() + 3600000);
+      const endDate = new Date(startDate.getTime() + 7200000);
+
+      addTask({
+        title: parsedData.title,
+        description: parsedData.location ? `Ort: ${parsedData.location}` : '',
+        category: parsedData.category || 'Work',
+        startAt: startDate.toISOString(),
+        endAt: endDate.toISOString(),
+        allDay: parsedData.allDay || false,
+        gracePeriod: currentList.defaultGraceMinutes,
+        stake: parsedData.stake || currentList.defaultStakeCents / 100,
+        assignedTo: currentListMembers[0]?.id || '',
+        priority: parsedData.priority || 'medium',
+        reminder: parsedData.reminder !== undefined ? 'custom' : 'none',
+        customReminderMinutes: parsedData.reminder || 30,
+        recurrence: parsedData.recurrence || 'none',
+        isShared: false,
+      });
+
+      console.log('[Task] Created (smart add):', parsedData.title);
+    },
+    [addTask, currentList, currentListMembers]
+  );
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
@@ -300,27 +333,51 @@ export default function TasksScreen() {
           </View>
         )}
 
-        <TouchableOpacity
-          style={styles.createTaskButton}
-          onPress={() => {
-            if (Platform.OS !== 'web') {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            }
-            setShowFullTaskForm(true);
-          }}
-        >
-          <View style={styles.createTaskContent}>
-            <View style={styles.createTaskTextWrapper}>
-              <Text style={styles.createTaskTitle}>Create New Task</Text>
-              <Text style={styles.createTaskSubtext}>
-                Assign to a Focus Goal and set your commitment
-              </Text>
+        <View style={{ paddingHorizontal: 20, gap: 12, marginTop: 16 }}>
+          <TouchableOpacity
+            style={styles.smartCreateButton}
+            onPress={() => {
+              if (Platform.OS !== 'web') {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+              setShowSmartAdd(true);
+            }}
+          >
+            <View style={styles.smartCreateContent}>
+              <View style={styles.smartCreateIconWrapper}>
+                <Text style={styles.sparkleIcon}>✨</Text>
+              </View>
+              <View style={styles.smartCreateTextWrapper}>
+                <Text style={styles.smartCreateTitle}>Quick Add (AI)</Text>
+                <Text style={styles.smartCreateSubtext}>
+                  z.B.: &quot;morgen 10 uhr Meeting with Max&quot;
+                </Text>
+              </View>
             </View>
-            <View style={styles.createTaskIconCircle}>
-              <Plus size={22} color="#3B82F6" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.createTaskButton}
+            onPress={() => {
+              if (Platform.OS !== 'web') {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+              setShowFullTaskForm(true);
+            }}
+          >
+            <View style={styles.createTaskContent}>
+              <View style={styles.createTaskTextWrapper}>
+                <Text style={styles.createTaskTitle}>Create New Task</Text>
+                <Text style={styles.createTaskSubtext}>
+                  Assign to a Focus Goal and set your commitment
+                </Text>
+              </View>
+              <View style={styles.createTaskIconCircle}>
+                <Plus size={22} color="#3B82F6" />
+              </View>
             </View>
-          </View>
-        </TouchableOpacity>
+          </TouchableOpacity>
+        </View>
 
 
         {(filter !== 'all' || memberIdParam) && (
@@ -498,6 +555,12 @@ export default function TasksScreen() {
           onSubmit={handleQuickAddSubmit}
           categories={currentList.categories}
         />
+        <SmartQuickAddModal
+          visible={showSmartAdd}
+          onClose={() => setShowSmartAdd(false)}
+          onSubmit={handleSmartAddSubmit}
+          categories={currentList.categories}
+        />
         </>
       )}
     </View>
@@ -643,15 +706,55 @@ const styles = StyleSheet.create({
     fontWeight: '700' as const,
     color: '#8B5CF6',
   },
+  smartCreateButton: {
+    backgroundColor: '#667EEA',
+    borderRadius: 16,
+    shadowColor: '#667EEA',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 4,
+    overflow: 'hidden',
+  },
+  smartCreateContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 18,
+    gap: 14,
+  },
+  smartCreateIconWrapper: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sparkleIcon: {
+    fontSize: 26,
+  },
+  smartCreateTextWrapper: {
+    flex: 1,
+  },
+  smartCreateTitle: {
+    fontSize: 17,
+    fontWeight: '700' as const,
+    color: '#FFFFFF',
+    marginBottom: 3,
+  },
+  smartCreateSubtext: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.85)',
+    lineHeight: 16,
+  },
   createTaskButton: {
-    marginHorizontal: 20,
-    marginTop: 16,
-    marginBottom: 8,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
   },
