@@ -27,7 +27,11 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
 
   const { data: messages = [], refetch } = trpc.chat.getMessages.useQuery(
     { goalId, listId: currentListId },
-    { refetchInterval: 5000, enabled: !!goalId && !!currentListId }
+    { 
+      refetchInterval: 5000, 
+      enabled: !!goalId && !!currentListId,
+      refetchIntervalInBackground: false
+    }
   );
 
   const sendMessageMutation = trpc.chat.sendMessage.useMutation({
@@ -88,10 +92,13 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
     );
   };
 
+  const prevMessagesLengthRef = useRef(messages.length);
+
   useEffect(() => {
-    if (messages.length > 0 && flatListRef.current) {
+    if (messages.length > prevMessagesLengthRef.current && flatListRef.current) {
       flatListRef.current.scrollToEnd({ animated: true });
     }
+    prevMessagesLengthRef.current = messages.length;
   }, [messages.length]);
 
   return (
@@ -116,6 +123,9 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.messagesList}
           showsVerticalScrollIndicator={false}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          windowSize={10}
         />
       )}
 
