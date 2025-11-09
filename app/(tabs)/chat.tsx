@@ -24,6 +24,13 @@ export default function ChatScreen() {
   const [selectedFundId, setSelectedFundId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
 
+  React.useEffect(() => {
+    console.log('--- CHAT SCREEN: MOUNTED ---');
+    return () => {
+      console.log('!!! CHAT SCREEN: UNMOUNTED !!!');
+    };
+  }, []);
+
   const activeFunds = useMemo(() => {
     return fundTargets.filter(fund => fund.totalCollectedCents > 0 || fund.targetAmountCents);
   }, [fundTargets]);

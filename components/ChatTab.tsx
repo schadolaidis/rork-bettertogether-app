@@ -28,12 +28,25 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
 
   const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
 
+  useEffect(() => {
+    console.log('--- CHAT TAB: MOUNTED ---');
+    return () => {
+      console.log('!!! CHAT TAB: UNMOUNTED !!!');
+    };
+  }, []);
+
   const { data: messagesFromServer = [], refetch } = trpc.chat.getMessages.useQuery(
     { goalId, listId: currentListId || '' },
     { refetchInterval: 5000, enabled: !!goalId && !!currentListId }
   );
 
   useEffect(() => {
+    if (!messagesFromServer || messagesFromServer.length === 0) {
+      previousMessagesRef.current = [];
+      setLocalMessages([]);
+      return;
+    }
+
     const sortedServerMessages = [...messagesFromServer].sort(
       (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
@@ -46,7 +59,14 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
       
       setLocalMessages(prevMessages => {
         const tempMessages = prevMessages.filter(m => m.id.startsWith('temp-'));
-        return [...sortedServerMessages, ...tempMessages];
+        const merged = [...sortedServerMessages, ...tempMessages];
+        
+        const existingIds = new Set(prevMessages.map(m => m.id));
+        const newIds = new Set(merged.map(m => m.id));
+        const hasChanges = merged.length !== prevMessages.length || 
+          Array.from(newIds).some(id => !existingIds.has(id));
+        
+        return hasChanges ? merged : prevMessages;
       });
     }
   }, [messagesFromServer]);

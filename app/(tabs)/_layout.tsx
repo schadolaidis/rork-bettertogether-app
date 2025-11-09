@@ -73,6 +73,7 @@ export default function TabLayout() {
         options={{
           title: chatTitle,
           tabBarIcon: ({ color, size }) => <MessageCircle color={color} size={size} />,
+          unmountOnBlur: false,
         }}
       />
       <Tabs.Screen
