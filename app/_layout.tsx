@@ -2,19 +2,29 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import * as Notifications from "expo-notifications";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { PortalProvider, PortalHost } from "@gorhom/portal";
 import { AppProvider, useApp } from "@/contexts/AppContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
-import { trpc, trpcClient } from "@/lib/trpc";
+import { trpc } from "@/lib/trpc";
 import { JokerPromptModal } from "@/components/JokerPromptModal";
 import { DebugErrorBoundary } from "@/components/DebugErrorBoundary";
+import { httpLink } from "@trpc/client";
+import superjson from "superjson";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
+
+const getBaseUrl = () => {
+  if (process.env.EXPO_PUBLIC_RORK_API_BASE_URL) {
+    return process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
+  }
+  console.warn('[tRPC] EXPO_PUBLIC_RORK_API_BASE_URL not set, using fallback');
+  return 'http://localhost:8081';
+};
 
 function RootLayoutNav() {
   const router = useRouter();
@@ -80,13 +90,35 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
+  const [trpcClient] = useState(() =>
+    trpc.createClient({
+      links: [
+        httpLink({
+          url: `${getBaseUrl()}/api/trpc`,
+          transformer: superjson,
+          fetch(url, options) {
+            console.log('[tRPC] Fetching:', url);
+            return fetch(url, options).then(async (res) => {
+              console.log('[tRPC] Response status:', res.status, res.statusText);
+              if (!res.ok) {
+                const text = await res.text();
+                console.error('[tRPC] Error response body:', text);
+              }
+              return res;
+            });
+          },
+        }),
+      ],
+    })
+  );
+
   useEffect(() => {
     SplashScreen.hideAsync();
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <trpc.Provider client={trpcClient} queryClient={queryClient}>
+    <trpc.Provider client={trpcClient} queryClient={queryClient}>
+      <QueryClientProvider client={queryClient}>
         <AppProvider>
           <GestureHandlerRootView style={{ flex: 1 }}>
             <ThemeProvider>
@@ -99,7 +131,7 @@ export default function RootLayout() {
             </ThemeProvider>
           </GestureHandlerRootView>
         </AppProvider>
-      </trpc.Provider>
-    </QueryClientProvider>
+      </QueryClientProvider>
+    </trpc.Provider>
   );
 }
