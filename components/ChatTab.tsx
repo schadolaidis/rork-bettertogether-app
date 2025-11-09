@@ -76,7 +76,7 @@ export const ChatTab = memo(function ChatTab({ goalId, onSendMessage }: ChatTabP
 
   const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
 
-  const { data: messagesFromServer = [], refetch } = trpc.chat.getMessages.useQuery(
+  const { data: messagesFromServer = [], refetch, isError, error } = trpc.chat.getMessages.useQuery(
     { goalId, listId: currentListId || '' },
     { 
       refetchInterval: 10000, 
@@ -84,8 +84,16 @@ export const ChatTab = memo(function ChatTab({ goalId, onSendMessage }: ChatTabP
       refetchOnWindowFocus: false,
       refetchOnMount: true,
       refetchIntervalInBackground: false,
+      retry: 3,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     }
   );
+
+  useEffect(() => {
+    if (isError) {
+      logger.error('[ChatTab] Query error:', error);
+    }
+  }, [isError, error]);
 
   useEffect(() => {
     if (isFirstRender.current) {
@@ -142,7 +150,10 @@ export const ChatTab = memo(function ChatTab({ goalId, onSendMessage }: ChatTabP
     });
   }, [messagesFromServer]);
 
-  const sendMessageMutation = trpc.chat.sendMessage.useMutation();
+  const sendMessageMutation = trpc.chat.sendMessage.useMutation({
+    retry: 2,
+    retryDelay: 1000,
+  });
 
   const handleSendMessage = useCallback((text: string) => {
     if (!text.trim() || !currentUserId || !currentListId) {
@@ -174,8 +185,8 @@ export const ChatTab = memo(function ChatTab({ goalId, onSendMessage }: ChatTabP
         listId: currentListId,
       },
       {
-        onSuccess: () => {
-          logger.log('[ChatTab] Message sent successfully');
+        onSuccess: (data) => {
+          logger.log('[ChatTab] Message sent successfully:', data?.id);
           setTimeout(() => {
             refetch();
           }, 500);

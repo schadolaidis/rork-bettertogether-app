@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -24,6 +24,13 @@ export default function ChatScreen() {
   const { fundTargets, currentList } = useApp();
   const [selectedFundId, setSelectedFundId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+
+  useEffect(() => {
+    console.log('[ChatScreen] Mounted');
+    return () => {
+      console.log('[ChatScreen] Unmounted');
+    };
+  }, []);
 
 
 

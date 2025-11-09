@@ -1,11 +1,16 @@
 import { createTRPCReact } from "@trpc/react-query";
-import { createTRPCClient, httpLink } from "@trpc/client";
+import { createTRPCClient, httpLink, TRPCClientError } from "@trpc/client";
 import type { AppRouter } from "@/backend/trpc/app-router";
 import superjson from "superjson";
+import { Platform } from "react-native";
 
 export const trpc = createTRPCReact<AppRouter>();
 
 const getBaseUrl = () => {
+  if (Platform.OS === 'web') {
+    return '';
+  }
+
   const baseUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
   
   if (baseUrl) {
@@ -14,7 +19,6 @@ const getBaseUrl = () => {
   }
 
   console.warn('[tRPC] EXPO_PUBLIC_RORK_API_BASE_URL not set, using fallback');
-  console.warn('[tRPC] Available env vars:', Object.keys(process.env).filter(k => k.includes('RORK') || k.includes('EXPO')));
   return 'http://localhost:8081';
 };
 
@@ -24,17 +28,27 @@ export const trpcClient = createTRPCClient<AppRouter>({
       url: `${getBaseUrl()}/api/trpc`,
       transformer: superjson,
       async fetch(url, options) {
-        console.log('[tRPC Client] Fetching:', url);
-        const response = await fetch(url, options);
-        console.log('[tRPC Client] Response status:', response.status, response.statusText);
+        console.log('[tRPC Client] Request:', url);
         
-        if (!response.ok) {
-          const cloned = response.clone();
-          const text = await cloned.text();
-          console.error('[tRPC Client] Error response body:', text);
+        try {
+          const response = await fetch(url, options);
+          console.log('[tRPC Client] Response:', response.status, response.statusText);
+          
+          if (!response.ok) {
+            const contentType = response.headers.get('content-type');
+            const isHtml = contentType?.includes('text/html');
+            
+            if (isHtml) {
+              console.error('[tRPC Client] ERROR: Received HTML instead of JSON (404/502)');
+              throw new TRPCClientError('Backend server not reachable. Got HTML response instead of JSON.');
+            }
+          }
+          
+          return response;
+        } catch (error) {
+          console.error('[tRPC Client] Fetch failed:', error);
+          throw error;
         }
-        
-        return response;
       },
     }),
   ],
