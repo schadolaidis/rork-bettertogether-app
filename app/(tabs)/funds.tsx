@@ -10,18 +10,15 @@ import {
   Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter, Stack } from 'expo-router';
+import { Stack } from 'expo-router';
 import {
   Plus,
   Target,
-  Edit2,
   TrendingUp,
   Clock,
   Users,
   CheckCircle2,
   AlertCircle,
-  Trash2,
-  ChevronRight,
   Sparkles,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
@@ -33,7 +30,6 @@ import { ModalInputWrapper } from '@/components/ModalInputWrapper';
 type TabType = 'overview' | 'history' | 'stats';
 
 export default function FundsScreen() {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const {
     currentList,
@@ -138,28 +134,7 @@ export default function FundsScreen() {
     setTargetAmount('');
   }, [name, emoji, description, targetAmount, editingFund, updateFundTarget]);
 
-  const handleDelete = useCallback(
-    (fund: any) => {
-      Alert.alert(
-        'Delete Fund Goal',
-        `Are you sure you want to delete "${fund.name}"? This action cannot be undone.`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Delete',
-            style: 'destructive',
-            onPress: () => {
-              deleteFundTarget(fund.id);
-              if (Platform.OS !== 'web') {
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              }
-            },
-          },
-        ]
-      );
-    },
-    [deleteFundTarget]
-  );
+
 
   const openEditModal = useCallback((fund: any) => {
     console.log('[FundEdit] Opening edit modal for fund:', fund.id, fund.name);
@@ -290,7 +265,7 @@ export default function FundsScreen() {
               if (Platform.OS !== 'web') {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               }
-              router.push(`/tasks?fundTargetId=${fund.id}`);
+              openEditModal(fund);
             }}
             activeOpacity={0.7}
           >
@@ -432,50 +407,6 @@ export default function FundsScreen() {
                 </Text>
               </View>
             )}
-
-            <View style={styles.fundActions}>
-              <TouchableOpacity
-                style={styles.fundActionButton}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  if (Platform.OS !== 'web') {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }
-                  openEditModal(fund);
-                }}
-              >
-                <Edit2 size={18} color={DesignTokens.colors.primary[500]} />
-                <Text style={styles.fundActionText}>Edit</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.fundActionButton}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  if (Platform.OS !== 'web') {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }
-                  handleDelete(fund);
-                }}
-              >
-                <Trash2 size={18} color={DesignTokens.colors.error[500]} />
-                <Text style={[styles.fundActionText, { color: DesignTokens.colors.error[500] }]}>
-                  Delete
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.fundActionButton, styles.fundActionButtonPrimary]}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  if (Platform.OS !== 'web') {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }
-                  router.push(`/tasks?fundTargetId=${fund.id}`);
-                }}
-              >
-                <Text style={styles.fundActionTextPrimary}>View Tasks</Text>
-                <ChevronRight size={18} color={DesignTokens.colors.neutral[0]} />
-              </TouchableOpacity>
-            </View>
           </TouchableOpacity>
         );
       })}
@@ -1026,7 +957,6 @@ const styles = StyleSheet.create({
     paddingVertical: DesignTokens.spacing.md,
     borderTopWidth: 1,
     borderTopColor: DesignTokens.colors.neutral[200],
-    marginBottom: DesignTokens.spacing.md,
     gap: DesignTokens.spacing.md,
   },
   fundMetaItem: {
@@ -1050,7 +980,7 @@ const styles = StyleSheet.create({
     gap: DesignTokens.spacing.sm,
     padding: DesignTokens.spacing.md,
     borderRadius: DesignTokens.radius.md,
-    marginBottom: DesignTokens.spacing.md,
+    marginTop: DesignTokens.spacing.md,
   },
   suggestionText: {
     ...DesignTokens.typography.bodySmall,
