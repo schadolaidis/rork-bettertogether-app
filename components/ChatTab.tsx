@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -42,30 +42,30 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
     const prevIds = previousMessagesRef.current.map(m => m.id).join(',');
     
     if (serverIds !== prevIds) {
-      setLocalMessages(prevMessages => {
-        const tempIds = prevMessages.filter(m => m.id.startsWith('temp-')).map(m => m.id);
-        const nonTempServerMessages = sortedServerMessages.filter(m => !m.id.startsWith('temp-'));
-        const tempMessages = prevMessages.filter(m => tempIds.includes(m.id));
-        return [...nonTempServerMessages, ...tempMessages];
-      });
       previousMessagesRef.current = sortedServerMessages;
+      
+      setLocalMessages(prevMessages => {
+        const tempMessages = prevMessages.filter(m => m.id.startsWith('temp-'));
+        return [...sortedServerMessages, ...tempMessages];
+      });
     }
   }, [messagesFromServer]);
 
   const sendMessageMutation = trpc.chat.sendMessage.useMutation();
 
-  const handleSend = () => {
+  const handleSend = useCallback(() => {
     if (!inputText.trim() || !currentUserId || !currentListId) return;
 
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
 
+    const messageContent = inputText.trim();
     const optimisticMessage: ChatMessage = {
       id: `temp-${Date.now()}`,
       goalId,
       senderId: currentUserId,
-      content: inputText.trim(),
+      content: messageContent,
       timestamp: new Date().toISOString(),
       listId: currentListId,
     };
@@ -77,7 +77,7 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
       {
         goalId,
         senderId: currentUserId,
-        content: inputText.trim(),
+        content: messageContent,
         listId: currentListId,
       },
       {
@@ -91,9 +91,9 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
     );
 
     if (onSendMessage) {
-      onSendMessage(inputText.trim());
+      onSendMessage(messageContent);
     }
-  };
+  }, [inputText, currentUserId, currentListId, goalId, sendMessageMutation, refetch, onSendMessage]);
 
   const renderMessage = ({ item }: { item: ChatMessage }) => {
     const isCurrentUser = item.senderId === currentUserId;
