@@ -16,7 +16,7 @@ import { DesignTokens } from '@/constants/design-tokens';
 
 
 
-import { LedgerEntry, User, TaskCategory } from '@/types';
+import { LedgerEntry, User, TaskCategory, FundTarget } from '@/types';
 import { ClockService } from '@/services/ClockService';
 import { router } from 'expo-router';
 
@@ -243,10 +243,6 @@ export default function BalancesScreen() {
     ? ((totalExpenses - totalPreviousExpenses) / totalPreviousExpenses) * 100
     : 0;
 
-  const _fundGrowthThisMonth = useMemo(() => {
-    return currentMonthEntries.reduce((sum, e) => sum + e.amount, 0);
-  }, [currentMonthEntries]);
-
   const currentUserBalance = getUserBalance(currentUserId);
   const myPreviousBalance = previousMonthEntries
     .filter((e) => e.userId === currentUserId)
@@ -256,7 +252,7 @@ export default function BalancesScreen() {
     : 0;
 
   const groupedByDate = useMemo((): DateGroup[] => {
-    const sorted = currentMonthEntries.sort(
+    const sorted = [...currentMonthEntries].sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     );
 
