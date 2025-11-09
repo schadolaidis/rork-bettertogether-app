@@ -19,10 +19,15 @@ SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
 
 const getBaseUrl = () => {
-  if (process.env.EXPO_PUBLIC_RORK_API_BASE_URL) {
-    return process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
+  const baseUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
+  
+  if (baseUrl) {
+    console.log('[tRPC _layout] Using configured base URL:', baseUrl);
+    return baseUrl;
   }
-  console.warn('[tRPC] EXPO_PUBLIC_RORK_API_BASE_URL not set, using fallback');
+  
+  console.warn('[tRPC _layout] EXPO_PUBLIC_RORK_API_BASE_URL not set, using fallback');
+  console.warn('[tRPC _layout] Available env vars:', Object.keys(process.env).filter(k => k.includes('RORK') || k.includes('EXPO')));
   return 'http://localhost:8081';
 };
 
@@ -101,7 +106,8 @@ export default function RootLayout() {
             return fetch(url, options).then(async (res) => {
               console.log('[tRPC] Response status:', res.status, res.statusText);
               if (!res.ok) {
-                const text = await res.text();
+                const cloned = res.clone();
+                const text = await cloned.text();
                 console.error('[tRPC] Error response body:', text);
               }
               return res;

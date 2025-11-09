@@ -5,6 +5,13 @@ import { createContext } from "./trpc/create-context";
 
 const app = new Hono();
 
+app.use('*', async (c, next) => {
+  console.log('[Hono] Incoming request:', c.req.method, c.req.url);
+  console.log('[Hono] Headers:', Object.fromEntries(c.req.raw.headers.entries()));
+  await next();
+  console.log('[Hono] Response status:', c.res.status);
+});
+
 app.use(
   "/api/trpc/*",
   trpcServer({
