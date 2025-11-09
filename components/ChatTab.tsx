@@ -60,14 +60,16 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
     const hasNewMessages = sortedServerMessages.some(m => !prevIds.has(m.id));
     const hasDeletedMessages = previousMessagesRef.current.some(m => !serverIds.has(m.id));
     
-    if (hasNewMessages || hasDeletedMessages || previousMessagesRef.current.length !== sortedServerMessages.length) {
-      previousMessagesRef.current = sortedServerMessages;
-      
-      setLocalMessages(prevMessages => {
-        const tempMessages = prevMessages.filter(m => m.id.startsWith('temp-'));
-        return [...sortedServerMessages, ...tempMessages];
-      });
+    if (!hasNewMessages && !hasDeletedMessages && previousMessagesRef.current.length === sortedServerMessages.length) {
+      return;
     }
+    
+    previousMessagesRef.current = sortedServerMessages;
+    
+    setLocalMessages(prevMessages => {
+      const tempMessages = prevMessages.filter(m => m.id.startsWith('temp-'));
+      return [...sortedServerMessages, ...tempMessages];
+    });
   }, [messagesFromServer]);
 
   useEffect(() => {
