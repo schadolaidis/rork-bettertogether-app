@@ -20,42 +20,34 @@ interface ChatTabProps {
   onSendMessage?: (content: string) => void;
 }
 
-function ChatInput({ 
-  onSend, 
-  disabled 
-}: { 
-  onSend: (text: string) => void; 
+interface ChatInputProps {
+  onSend: (text: string) => void;
   disabled: boolean;
-}) {
+}
+
+const ChatInput = memo(function ChatInput({ onSend, disabled }: ChatInputProps) {
   const [inputText, setInputText] = useState('');
-  const inputRef = useRef(inputText);
-  const onSendRef = useRef(onSend);
 
   useEffect(() => {
-    inputRef.current = inputText;
-    console.log('ChatInput: inputText changed to:', inputText);
-  }, [inputText]);
-
-  useEffect(() => {
-    onSendRef.current = onSend;
-  }, [onSend]);
-
-  useEffect(() => {
-    console.log('ChatInput: RENDERED (disabled:', disabled, ')');
-  });
+    console.log('ChatInput: MOUNTED');
+    return () => {
+      console.log('ChatInput: UNMOUNTED');
+    };
+  }, []);
 
   const handleChangeText = useCallback((text: string) => {
-    console.log('ChatInput: handleChangeText called with:', text);
+    console.log('ChatInput: text changed to:', text);
     setInputText(text);
   }, []);
 
   const handleSend = useCallback(() => {
-    const text = inputRef.current.trim();
-    if (!text) return;
+    const trimmed = inputText.trim();
+    if (!trimmed) return;
     
-    onSendRef.current(text);
+    console.log('ChatInput: sending:', trimmed);
+    onSend(trimmed);
     setInputText('');
-  }, []);
+  }, [inputText, onSend]);
 
   return (
     <View style={styles.inputContainer}>
@@ -84,7 +76,7 @@ function ChatInput({
       </TouchableOpacity>
     </View>
   );
-}
+});
 
 export const ChatTab = memo(function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
   const { currentListMembers, currentListId, currentUserId } = useApp();
