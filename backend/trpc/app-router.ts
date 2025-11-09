@@ -7,6 +7,7 @@ import parseTaskString from "./routes/tasks/parseTaskString/route";
 import getFundTotals from "./routes/fundGoals/getTotals/route";
 import getMe from "./routes/user/getMe/route";
 import sendMessage from "./routes/chat/sendMessage/route";
+import getMessages from "./routes/chat/getMessages/route";
 
 export const appRouter = createTRPCRouter({
   example: createTRPCRouter({
@@ -26,6 +27,7 @@ export const appRouter = createTRPCRouter({
   }),
   chat: createTRPCRouter({
     sendMessage,
+    getMessages,
   }),
 });
 

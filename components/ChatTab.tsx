@@ -12,6 +12,7 @@ import {
 import { Send } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useApp } from '@/contexts/AppContext';
+import { trpc } from '@/lib/trpc';
 import type { ChatMessage } from '@/types';
 
 interface ChatTabProps {
@@ -20,11 +21,20 @@ interface ChatTabProps {
 }
 
 export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
-  const { currentListMembers } = useApp();
+  const { currentListMembers, currentListId, currentUserId } = useApp();
   const [inputText, setInputText] = useState('');
   const flatListRef = useRef<FlatList>(null);
 
-  const messages: ChatMessage[] = [];
+  const { data: messages = [], refetch } = trpc.chat.getMessages.useQuery(
+    { goalId, listId: currentListId },
+    { refetchInterval: 5000, enabled: !!goalId && !!currentListId }
+  );
+
+  const sendMessageMutation = trpc.chat.sendMessage.useMutation({
+    onSuccess: () => {
+      refetch();
+    },
+  });
 
   const handleSend = () => {
     if (!inputText.trim()) return;
@@ -32,6 +42,13 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
+
+    sendMessageMutation.mutate({
+      goalId,
+      senderId: currentUserId,
+      content: inputText.trim(),
+      listId: currentListId,
+    });
 
     if (onSendMessage) {
       onSendMessage(inputText.trim());
