@@ -25,7 +25,6 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
   const [inputText, setInputText] = useState('');
   const flatListRef = useRef<FlatList>(null);
   const previousMessagesRef = useRef<ChatMessage[]>([]);
-  const inputTextRef = useRef('');
 
   const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
 
@@ -72,14 +71,12 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
     });
   }, [messagesFromServer]);
 
-  useEffect(() => {
-    inputTextRef.current = inputText;
-  }, [inputText]);
+
 
   const sendMessageMutation = trpc.chat.sendMessage.useMutation();
 
   const handleSend = useCallback(() => {
-    const currentText = inputTextRef.current.trim();
+    const currentText = inputText.trim();
     if (!currentText || !currentUserId || !currentListId) return;
 
     if (Platform.OS !== 'web') {
@@ -95,9 +92,8 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
       listId: currentListId,
     };
 
-    setInputText('');
-    inputTextRef.current = '';
     setLocalMessages((prev) => [...prev, optimisticMessage]);
+    setInputText('');
 
     sendMessageMutation.mutate(
       {
@@ -119,7 +115,7 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
     if (onSendMessage) {
       onSendMessage(currentText);
     }
-  }, [currentUserId, currentListId, goalId, sendMessageMutation, refetch, onSendMessage]);
+  }, [inputText, currentUserId, currentListId, goalId, sendMessageMutation, refetch, onSendMessage]);
 
   const renderMessage = ({ item }: { item: ChatMessage }) => {
     const isCurrentUser = item.senderId === currentUserId;
@@ -216,10 +212,7 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
           placeholder="Type a message..."
           placeholderTextColor="#9CA3AF"
           value={inputText}
-          onChangeText={(text) => {
-            setInputText(text);
-            inputTextRef.current = text;
-          }}
+          onChangeText={setInputText}
           multiline
           maxLength={500}
         />
