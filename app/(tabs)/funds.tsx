@@ -18,7 +18,6 @@ import {
   Clock,
   Users,
   CheckCircle2,
-  AlertCircle,
   Sparkles,
   Trash2,
 } from 'lucide-react-native';
@@ -73,6 +72,18 @@ export default function FundsScreen() {
       if (!fund.targetAmountCents) return false;
       return fund.totalCollectedCents >= fund.targetAmountCents;
     }).length;
+  }, [fundTargets]);
+
+  const averageProgress = useMemo(() => {
+    const goalsWithTargets = fundTargets.filter(fund => fund.targetAmountCents && fund.targetAmountCents > 0);
+    if (goalsWithTargets.length === 0) return 0;
+    
+    const totalProgress = goalsWithTargets.reduce((sum, fund) => {
+      const progress = Math.min((fund.totalCollectedCents / fund.targetAmountCents!) * 100, 100);
+      return sum + progress;
+    }, 0);
+    
+    return totalProgress / goalsWithTargets.length;
   }, [fundTargets]);
 
   const EMOJI_OPTIONS = [
@@ -504,14 +515,6 @@ export default function FundsScreen() {
     const topFund = [...fundTargets].sort(
       (a, b) => b.totalCollectedCents - a.totalCollectedCents
     )[0];
-    const totalFailedTasks = tasks.filter((t) => t.status === 'failed').length;
-    console.log('[FundStats]', totalFailedTasks, 'total failed tasks');
-    const thisMonthFailed = tasks.filter((t) => {
-      if (t.status !== 'failed' || !t.failedAt) return false;
-      const date = new Date(t.failedAt);
-      const now = new Date();
-      return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
-    }).length;
 
     return (
       <View style={styles.statsContainer}>
@@ -535,11 +538,11 @@ export default function FundsScreen() {
         </View>
 
         <View style={styles.statCard}>
-          <View style={[styles.statIconBg, { backgroundColor: DesignTokens.colors.error[50] }]}>
-            <AlertCircle size={24} color={DesignTokens.colors.error[500]} />
+          <View style={[styles.statIconBg, { backgroundColor: DesignTokens.colors.warning[50] }]}>
+            <Target size={24} color={DesignTokens.colors.warning[500]} />
           </View>
-          <Text style={styles.statValue}>{thisMonthFailed}</Text>
-          <Text style={styles.statLabel}>Failed This Month</Text>
+          <Text style={styles.statValue}>{averageProgress.toFixed(0)}%</Text>
+          <Text style={styles.statLabel}>Average Progress</Text>
         </View>
 
         {topFund && (
