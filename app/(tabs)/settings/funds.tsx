@@ -441,7 +441,11 @@ export default function FundsScreen() {
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.modalScroll} contentContainerStyle={styles.modalContent}>
+          <ScrollView 
+            style={styles.modalScroll} 
+            contentContainerStyle={styles.modalContent}
+            keyboardShouldPersistTaps="handled"
+          >
             <View style={styles.formGroup}>
               <Text style={styles.label}>Emoji</Text>
               <ScrollView
@@ -513,6 +517,24 @@ export default function FundsScreen() {
               </View>
               <Text style={styles.helperText}>Set a price goal to track progress</Text>
             </View>
+
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={() => {
+                setShowEditModal(false);
+                setEditingFund(null);
+                setName('');
+                setEmoji('🎯');
+                setDescription('');
+                setTargetAmount('');
+                if (editingFund) {
+                  handleDelete(editingFund);
+                }
+              }}
+            >
+              <Trash2 size={20} color="#EF4444" />
+              <Text style={styles.deleteButtonText}>Delete Fund Goal</Text>
+            </TouchableOpacity>
           </ScrollView>
 
           <View style={styles.modalFooter}>
@@ -902,5 +924,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600' as const,
     color: '#FFFFFF',
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 24,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: '#FEE2E2',
+    borderWidth: 1,
+    borderColor: '#EF4444',
+  },
+  deleteButtonText: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: '#EF4444',
   },
 });
