@@ -719,77 +719,84 @@ export default function FundsScreen() {
           confirmLabel={editingFund ? 'Save Changes' : 'Create'}
           testID="fund-modal"
         >
-          <View style={styles.modalFormGroup}>
-            <Text style={styles.modalLabel}>Emoji</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.emojiScroll}
-              contentContainerStyle={styles.emojiScrollContent}
-            >
-              {EMOJI_OPTIONS.map((e) => (
-                <TouchableOpacity
-                  key={e}
-                  style={[styles.emojiOption, emoji === e && styles.emojiOptionSelected]}
-                  onPress={() => {
-                    if (Platform.OS !== 'web') {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    }
-                    setEmoji(e);
-                  }}
-                >
-                  <Text style={styles.emojiOptionText}>{e}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
+          <ScrollView 
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled
+          >
+            <View style={styles.modalFormGroup}>
+              <Text style={styles.modalLabel}>Emoji</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.emojiScroll}
+                contentContainerStyle={styles.emojiScrollContent}
+                nestedScrollEnabled
+              >
+                {EMOJI_OPTIONS.map((e) => (
+                  <TouchableOpacity
+                    key={e}
+                    style={[styles.emojiOption, emoji === e && styles.emojiOptionSelected]}
+                    onPress={() => {
+                      if (Platform.OS !== 'web') {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      }
+                      setEmoji(e);
+                    }}
+                  >
+                    <Text style={styles.emojiOptionText}>{e}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
 
-          <View style={styles.modalFormGroup}>
-            <Text style={styles.modalLabel}>Name *</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="e.g. Vacation Fund, New Car, etc."
-              placeholderTextColor={DesignTokens.colors.neutral[400]}
-              value={name}
-              onChangeText={setName}
-              maxLength={50}
-            />
-          </View>
-
-          <View style={styles.modalFormGroup}>
-            <Text style={styles.modalLabel}>Description (optional)</Text>
-            <TextInput
-              style={[styles.modalInput, styles.modalTextArea]}
-              placeholder="What is this fund for?"
-              placeholderTextColor={DesignTokens.colors.neutral[400]}
-              value={description}
-              onChangeText={setDescription}
-              multiline
-              maxLength={200}
-            />
-          </View>
-
-          <View style={styles.modalFormGroup}>
-            <Text style={styles.modalLabel}>Target Amount (optional)</Text>
-            <View style={styles.amountInputContainer}>
-              <Text style={styles.currencyPrefix}>{currencySymbol}</Text>
+            <View style={styles.modalFormGroup}>
+              <Text style={styles.modalLabel}>Name *</Text>
               <TextInput
-                style={styles.amountInput}
-                placeholder="0.00"
+                style={styles.modalInput}
+                placeholder="e.g. Vacation Fund, New Car, etc."
                 placeholderTextColor={DesignTokens.colors.neutral[400]}
-                value={targetAmount}
-                onChangeText={(text) => {
-                  const cleaned = text.replace(/[^0-9.]/g, '');
-                  const parts = cleaned.split('.');
-                  if (parts.length > 2) return;
-                  if (parts[1] && parts[1].length > 2) return;
-                  setTargetAmount(cleaned);
-                }}
-                keyboardType="decimal-pad"
+                value={name}
+                onChangeText={setName}
+                maxLength={50}
               />
             </View>
-            <Text style={styles.helperText}>Set a goal to track progress</Text>
-          </View>
+
+            <View style={styles.modalFormGroup}>
+              <Text style={styles.modalLabel}>Description (optional)</Text>
+              <TextInput
+                style={[styles.modalInput, styles.modalTextArea]}
+                placeholder="What is this fund for?"
+                placeholderTextColor={DesignTokens.colors.neutral[400]}
+                value={description}
+                onChangeText={setDescription}
+                multiline
+                maxLength={200}
+              />
+            </View>
+
+            <View style={styles.modalFormGroup}>
+              <Text style={styles.modalLabel}>Target Amount (optional)</Text>
+              <View style={styles.amountInputContainer}>
+                <Text style={styles.currencyPrefix}>{currencySymbol}</Text>
+                <TextInput
+                  style={styles.amountInput}
+                  placeholder="0.00"
+                  placeholderTextColor={DesignTokens.colors.neutral[400]}
+                  value={targetAmount}
+                  onChangeText={(text) => {
+                    const cleaned = text.replace(/[^0-9.]/g, '');
+                    const parts = cleaned.split('.');
+                    if (parts.length > 2) return;
+                    if (parts[1] && parts[1].length > 2) return;
+                    setTargetAmount(cleaned);
+                  }}
+                  keyboardType="decimal-pad"
+                />
+              </View>
+              <Text style={styles.helperText}>Set a goal to track progress</Text>
+            </View>
+          </ScrollView>
         </ModalInputWrapper>
       </View>
     </>
@@ -1258,8 +1265,7 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   emojiScroll: {
-    marginHorizontal: -DesignTokens.spacing.xl,
-    paddingHorizontal: DesignTokens.spacing.xl,
+    flexGrow: 0,
   },
   emojiScrollContent: {
     gap: DesignTokens.spacing.sm,
