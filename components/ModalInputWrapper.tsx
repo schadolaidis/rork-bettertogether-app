@@ -85,13 +85,16 @@ export const ModalInputWrapper: React.FC<ModalInputWrapperProps> = ({
     if (!avoidKeyboard) return;
     const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-    const onShow = (e: any) =>
+    const onShow = (e: any) => {
+      const keyboardHeight = e.endCoordinates.height;
+      const offset = Math.min(keyboardHeight * 0.3, height * 0.15);
       Animated.timing(kbOffset, {
-        toValue: Math.min(e.endCoordinates.height - 8, height * 0.4),
+        toValue: offset,
         duration: 180,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }).start();
+    };
     const onHide = () =>
       Animated.timing(kbOffset, {
         toValue: 0,
