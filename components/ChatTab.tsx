@@ -37,8 +37,13 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
     const sortedServerMessages = [...messagesFromServer].sort(
       (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
-    setLocalMessages(sortedServerMessages);
-    previousMessagesRef.current = sortedServerMessages;
+    
+    const messagesChanged = JSON.stringify(previousMessagesRef.current) !== JSON.stringify(sortedServerMessages);
+    
+    if (messagesChanged) {
+      setLocalMessages(sortedServerMessages);
+      previousMessagesRef.current = sortedServerMessages;
+    }
   }, [messagesFromServer]);
 
   const sendMessageMutation = trpc.chat.sendMessage.useMutation();
