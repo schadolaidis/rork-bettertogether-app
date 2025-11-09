@@ -255,7 +255,7 @@ export function SmartQuickAddModal({
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.overlay}
       >
         <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
@@ -294,71 +294,80 @@ export function SmartQuickAddModal({
             </View>
           </View>
 
-          {showCheatSheet && (
-            <ScrollView style={styles.cheatSheet} contentContainerStyle={styles.cheatSheetContent}>
-              <Text style={styles.cheatSheetTitle}>Shortcuts & Befehle</Text>
-              {cheatSheet.map((line, i) => (
-                <Text key={i} style={styles.cheatSheetLine}>
-                  • {line}
-                </Text>
-              ))}
-            </ScrollView>
-          )}
-
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder="z.B.: morgen 10 uhr /work with Max reminder 10 min zoom"
-              placeholderTextColor="#9CA3AF"
-              value={input}
-              onChangeText={setInput}
-              multiline
-              autoFocus
-              onSubmitEditing={handleSubmit}
-              blurOnSubmit={false}
-            />
-          </View>
-
-          {previewItems.length > 0 && (
-            <View style={styles.previewContainer}>
-              <View style={styles.previewHeader}>
-                <Sparkles size={14} color="#3B82F6" />
-                <Text style={styles.previewTitle}>Live-Vorschau</Text>
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={true}
+          >
+            {showCheatSheet && (
+              <View style={styles.cheatSheet}>
+                <View style={styles.cheatSheetContent}>
+                  <Text style={styles.cheatSheetTitle}><Text>Shortcuts & Befehle</Text></Text>
+                  {cheatSheet.map((line, i) => (
+                    <Text key={i} style={styles.cheatSheetLine}>
+                      <Text>• {line}</Text>
+                    </Text>
+                  ))}
+                </View>
               </View>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.previewScrollContent}
-              >
-                {previewItems.map((item, index) => (
-                  <View key={index} style={[styles.previewBadge, { borderColor: item.color }]}>
-                    {renderIcon(item.icon, item.color)}
-                    <View style={styles.previewBadgeContent}>
-                      <Text style={styles.previewBadgeLabel}>{item.label}</Text>
-                      <Text style={[styles.previewBadgeValue, { color: item.color }]}>
-                        {item.value}
-                      </Text>
+            )}
+
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.input}
+                placeholder="z.B.: morgen 10 uhr /work with Max reminder 10 min zoom"
+                placeholderTextColor="#9CA3AF"
+                value={input}
+                onChangeText={setInput}
+                multiline
+                autoFocus
+                onSubmitEditing={handleSubmit}
+                blurOnSubmit={false}
+              />
+            </View>
+
+            {previewItems.length > 0 && (
+              <View style={styles.previewContainer}>
+                <View style={styles.previewHeader}>
+                  <Sparkles size={14} color="#3B82F6" />
+                  <Text style={styles.previewTitle}><Text>Live-Vorschau</Text></Text>
+                </View>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.previewScrollContent}
+                >
+                  {previewItems.map((item, index) => (
+                    <View key={index} style={[styles.previewBadge, { borderColor: item.color }]}>
+                      {renderIcon(item.icon, item.color)}
+                      <View style={styles.previewBadgeContent}>
+                        <Text style={styles.previewBadgeLabel}><Text>{item.label}</Text></Text>
+                        <Text style={[styles.previewBadgeValue, { color: item.color }]}>
+                          <Text>{item.value}</Text>
+                        </Text>
+                      </View>
                     </View>
-                  </View>
-                ))}
-              </ScrollView>
-            </View>
-          )}
+                  ))}
+                </ScrollView>
+              </View>
+            )}
 
-          {parsedData.title && (
-            <View style={styles.titlePreview}>
-              <Text style={styles.titlePreviewLabel}>Titel:</Text>
-              <Text style={styles.titlePreviewText}>{parsedData.title}</Text>
-            </View>
-          )}
+            {parsedData.title && (
+              <View style={styles.titlePreview}>
+                <Text style={styles.titlePreviewLabel}><Text>Titel:</Text></Text>
+                <Text style={styles.titlePreviewText}><Text>{parsedData.title}</Text></Text>
+              </View>
+            )}
 
-          <View style={styles.examples}>
-            <Text style={styles.examplesTitle}>Beispiele:</Text>
-            <Text style={styles.exampleText}>• morgen 10 uhr Meeting with Max at Office</Text>
-            <Text style={styles.exampleText}>• freitag 14:30 Arzt reminder 15 #privat</Text>
-            <Text style={styles.exampleText}>• todo Einkaufen heute 18 p1 €10</Text>
-            <Text style={styles.exampleText}>• +30 Call zoom</Text>
-          </View>
+            <View style={styles.examples}>
+              <Text style={styles.examplesTitle}><Text>Beispiele:</Text></Text>
+              <Text style={styles.exampleText}><Text>• morgen 10 uhr Meeting with Max at Office</Text></Text>
+              <Text style={styles.exampleText}><Text>• freitag 14:30 Arzt reminder 15 #privat</Text></Text>
+              <Text style={styles.exampleText}><Text>• todo Einkaufen heute 18 p1 €10</Text></Text>
+              <Text style={styles.exampleText}><Text>• +30 Call zoom</Text></Text>
+            </View>
+          </ScrollView>
 
           <View style={styles.footer}>
             <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
@@ -442,8 +451,13 @@ const styles = StyleSheet.create({
   closeButton: {
     padding: 4,
   },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
   cheatSheet: {
-    maxHeight: 180,
     backgroundColor: '#F9FAFB',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
