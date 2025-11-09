@@ -38,9 +38,10 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
       (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
     
-    const messagesChanged = JSON.stringify(previousMessagesRef.current) !== JSON.stringify(sortedServerMessages);
+    const serverIds = sortedServerMessages.map(m => m.id).join(',');
+    const prevIds = previousMessagesRef.current.map(m => m.id).join(',');
     
-    if (messagesChanged) {
+    if (serverIds !== prevIds) {
       setLocalMessages(sortedServerMessages);
       previousMessagesRef.current = sortedServerMessages;
     }
