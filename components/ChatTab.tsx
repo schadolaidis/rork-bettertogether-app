@@ -42,8 +42,10 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
 
   useEffect(() => {
     if (!messagesFromServer || messagesFromServer.length === 0) {
-      previousMessagesRef.current = [];
-      setLocalMessages([]);
+      if (previousMessagesRef.current.length > 0) {
+        previousMessagesRef.current = [];
+        setLocalMessages(prev => prev.filter(m => m.id.startsWith('temp-')));
+      }
       return;
     }
 
@@ -51,22 +53,18 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
       (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
     
-    const serverIds = sortedServerMessages.map(m => m.id).join(',');
-    const prevIds = previousMessagesRef.current.map(m => m.id).join(',');
+    const serverIds = new Set(sortedServerMessages.map(m => m.id));
+    const prevIds = new Set(previousMessagesRef.current.map(m => m.id));
     
-    if (serverIds !== prevIds) {
+    const hasNewMessages = sortedServerMessages.some(m => !prevIds.has(m.id));
+    const hasDeletedMessages = previousMessagesRef.current.some(m => !serverIds.has(m.id));
+    
+    if (hasNewMessages || hasDeletedMessages || previousMessagesRef.current.length !== sortedServerMessages.length) {
       previousMessagesRef.current = sortedServerMessages;
       
       setLocalMessages(prevMessages => {
         const tempMessages = prevMessages.filter(m => m.id.startsWith('temp-'));
-        const merged = [...sortedServerMessages, ...tempMessages];
-        
-        const existingIds = new Set(prevMessages.map(m => m.id));
-        const newIds = new Set(merged.map(m => m.id));
-        const hasChanges = merged.length !== prevMessages.length || 
-          Array.from(newIds).some(id => !existingIds.has(id));
-        
-        return hasChanges ? merged : prevMessages;
+        return [...sortedServerMessages, ...tempMessages];
       });
     }
   }, [messagesFromServer]);
