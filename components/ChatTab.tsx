@@ -25,6 +25,7 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
   const [inputText, setInputText] = useState('');
   const flatListRef = useRef<FlatList>(null);
   const previousMessagesRef = useRef<ChatMessage[]>([]);
+  const inputTextRef = useRef('');
 
   const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
 
@@ -69,33 +70,38 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
     }
   }, [messagesFromServer]);
 
+  useEffect(() => {
+    inputTextRef.current = inputText;
+  }, [inputText]);
+
   const sendMessageMutation = trpc.chat.sendMessage.useMutation();
 
   const handleSend = useCallback(() => {
-    if (!inputText.trim() || !currentUserId || !currentListId) return;
+    const currentText = inputTextRef.current.trim();
+    if (!currentText || !currentUserId || !currentListId) return;
 
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
 
-    const messageContent = inputText.trim();
     const optimisticMessage: ChatMessage = {
       id: `temp-${Date.now()}`,
       goalId,
       senderId: currentUserId,
-      content: messageContent,
+      content: currentText,
       timestamp: new Date().toISOString(),
       listId: currentListId,
     };
 
-    setLocalMessages((prev) => [...prev, optimisticMessage]);
     setInputText('');
+    inputTextRef.current = '';
+    setLocalMessages((prev) => [...prev, optimisticMessage]);
 
     sendMessageMutation.mutate(
       {
         goalId,
         senderId: currentUserId,
-        content: messageContent,
+        content: currentText,
         listId: currentListId,
       },
       {
@@ -109,9 +115,9 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
     );
 
     if (onSendMessage) {
-      onSendMessage(messageContent);
+      onSendMessage(currentText);
     }
-  }, [inputText, currentUserId, currentListId, goalId, sendMessageMutation, refetch, onSendMessage]);
+  }, [currentUserId, currentListId, goalId, sendMessageMutation, refetch, onSendMessage]);
 
   const renderMessage = ({ item }: { item: ChatMessage }) => {
     const isCurrentUser = item.senderId === currentUserId;
@@ -208,7 +214,10 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
           placeholder="Type a message..."
           placeholderTextColor="#9CA3AF"
           value={inputText}
-          onChangeText={setInputText}
+          onChangeText={(text) => {
+            setInputText(text);
+            inputTextRef.current = text;
+          }}
           multiline
           maxLength={500}
         />
