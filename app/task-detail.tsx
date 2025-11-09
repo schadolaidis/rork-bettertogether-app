@@ -35,7 +35,7 @@ export default function TaskDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { tasks, currentList, currentListMembers, updateTask, completeTask } = useApp();
+  const { tasks, currentList, currentListMembers, updateTask, completeTask, failTask } = useApp();
 
   const task = useMemo(() => {
     return tasks.find((t) => t.id === id);
@@ -91,6 +91,15 @@ export default function TaskDetailScreen() {
     completeTask(task.id);
     router.back();
   }, [task, completeTask, router]);
+
+  const handleFailTask = useCallback(() => {
+    if (!task) return;
+    if (Platform.OS !== 'web') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    }
+    failTask(task.id);
+    router.back();
+  }, [task, failTask, router]);
 
   const handleDateTimeConfirm = useCallback((isoString: string) => {
     if (!task) return;
@@ -447,14 +456,24 @@ export default function TaskDetailScreen() {
             </TouchableOpacity>
           </View>
 
-          {task.status !== 'completed' && task.status !== 'failed' && (
-            <TouchableOpacity
-              style={styles.completeButton}
-              onPress={handleCompleteTask}
-            >
-              <CheckCircle2 size={20} color="#FFFFFF" />
-              <Text style={styles.completeButtonText}>Mark as Complete</Text>
-            </TouchableOpacity>
+          {task.status !== 'completed' && task.status !== 'failed' && task.status !== 'failed_joker_used' && task.status !== 'failed_stake_paid' && (
+            <View style={styles.actionButtons}>
+              <TouchableOpacity
+                style={styles.completeButton}
+                onPress={handleCompleteTask}
+              >
+                <CheckCircle2 size={20} color="#FFFFFF" />
+                <Text style={styles.completeButtonText}>Mark as Complete</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.failButton}
+                onPress={handleFailTask}
+              >
+                <X size={20} color="#FFFFFF" />
+                <Text style={styles.failButtonText}>Mark as Failed</Text>
+              </TouchableOpacity>
+            </View>
           )}
 
           {task.createdAt && (
@@ -1050,6 +1069,11 @@ const styles = StyleSheet.create({
     color: '#3B82F6',
     marginTop: 2,
   },
+  actionButtons: {
+    gap: 12,
+    marginHorizontal: 20,
+    marginBottom: 24,
+  },
   completeButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1058,10 +1082,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#10B981',
     borderRadius: 14,
     paddingVertical: 16,
-    marginHorizontal: 20,
-    marginBottom: 24,
   },
   completeButtonText: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: '#FFFFFF',
+  },
+  failButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#EF4444',
+    borderRadius: 14,
+    paddingVertical: 16,
+  },
+  failButtonText: {
     fontSize: 16,
     fontWeight: '600' as const,
     color: '#FFFFFF',
