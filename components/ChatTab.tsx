@@ -25,13 +25,20 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
   const [inputText, setInputText] = useState('');
   const flatListRef = useRef<FlatList>(null);
 
-  const { data: messages = [], refetch } = trpc.chat.getMessages.useQuery(
+  const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
+
+  const { data: messagesFromServer = [], refetch } = trpc.chat.getMessages.useQuery(
     { goalId, listId: currentListId || '' },
     { refetchInterval: 5000, enabled: !!goalId && !!currentListId }
   );
 
+  useEffect(() => {
+    setLocalMessages(messagesFromServer);
+  }, [messagesFromServer]);
+
   const sendMessageMutation = trpc.chat.sendMessage.useMutation({
-    onSuccess: () => {
+    onSuccess: (newMessage) => {
+      setLocalMessages((prev) => [...prev, newMessage]);
       refetch();
     },
   });
@@ -43,36 +50,69 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
 
-    sendMessageMutation.mutate({
+    const optimisticMessage: ChatMessage = {
+      id: `temp-${Date.now()}`,
       goalId,
       senderId: currentUserId,
       content: inputText.trim(),
+      timestamp: new Date().toISOString(),
       listId: currentListId,
-    });
+    };
+
+    setLocalMessages((prev) => [...prev, optimisticMessage]);
+    setInputText('');
+
+    sendMessageMutation.mutate(
+      {
+        goalId,
+        senderId: currentUserId,
+        content: inputText.trim(),
+        listId: currentListId,
+      },
+      {
+        onSuccess: (newMessage) => {
+          setLocalMessages((prev) => {
+            const withoutTemp = prev.filter((m) => m.id !== optimisticMessage.id);
+            return [...withoutTemp, newMessage];
+          });
+        },
+        onError: () => {
+          setLocalMessages((prev) => prev.filter((m) => m.id !== optimisticMessage.id));
+        },
+      }
+    );
 
     if (onSendMessage) {
       onSendMessage(inputText.trim());
     }
-
-    setInputText('');
   };
 
   const renderMessage = ({ item }: { item: ChatMessage }) => {
+    const isCurrentUser = item.senderId === currentUserId;
     const sender = currentListMembers.find((m) => m.id === item.senderId);
     const senderName = sender?.name || 'Unknown';
     const senderColor = sender?.color || '#6B7280';
     const timestamp = new Date(item.timestamp);
 
     return (
-      <View style={styles.messageContainer}>
-        <View style={[styles.avatar, { backgroundColor: senderColor }]}>
-          <Text style={styles.avatarText}>
-            {senderName.charAt(0).toUpperCase()}
-          </Text>
-        </View>
-        <View style={styles.messageContent}>
+      <View
+        style={[
+          styles.messageContainer,
+          isCurrentUser && styles.messageContainerRight,
+        ]}
+      >
+        {!isCurrentUser && (
+          <View style={[styles.avatar, { backgroundColor: senderColor }]}>
+            <Text style={styles.avatarText}>
+              {senderName.charAt(0).toUpperCase()}
+            </Text>
+          </View>
+        )}
+        <View style={[styles.messageContent, isCurrentUser && styles.messageContentRight]}>
           <View style={styles.messageHeader}>
-            <Text style={styles.senderName}>{senderName}</Text>
+            <Text style={styles.senderName}>
+              {isCurrentUser ? 'You' : senderName}
+            </Text>
             <Text style={styles.timestamp}>
               {timestamp.toLocaleTimeString([], {
                 hour: '2-digit',
@@ -80,19 +120,35 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
               })}
             </Text>
           </View>
-          <View style={styles.messageBubble}>
-            <Text style={styles.messageText}>{item.content}</Text>
+          <View
+            style={[
+              styles.messageBubble,
+              isCurrentUser && styles.messageBubbleRight,
+            ]}
+          >
+            <Text style={[styles.messageText, isCurrentUser && styles.messageTextRight]}>
+              {item.content}
+            </Text>
           </View>
         </View>
+        {isCurrentUser && (
+          <View style={[styles.avatar, { backgroundColor: senderColor }]}>
+            <Text style={styles.avatarText}>
+              {senderName.charAt(0).toUpperCase()}
+            </Text>
+          </View>
+        )}
       </View>
     );
   };
 
   useEffect(() => {
-    if (messages.length > 0 && flatListRef.current) {
-      flatListRef.current.scrollToEnd({ animated: true });
+    if (localMessages.length > 0 && flatListRef.current) {
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
     }
-  }, [messages.length]);
+  }, [localMessages.length]);
 
   return (
     <KeyboardAvoidingView
@@ -100,7 +156,7 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
-      {messages.length === 0 ? (
+      {localMessages.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyEmoji}>💬</Text>
           <Text style={styles.emptyTitle}>No messages yet</Text>
@@ -111,7 +167,7 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
       ) : (
         <FlatList
           ref={flatListRef}
-          data={messages}
+          data={localMessages}
           renderItem={renderMessage}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.messagesList}
@@ -161,6 +217,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     gap: 12,
   },
+  messageContainerRight: {
+    flexDirection: 'row-reverse',
+  },
   avatar: {
     width: 36,
     height: 36,
@@ -175,6 +234,9 @@ const styles = StyleSheet.create({
   },
   messageContent: {
     flex: 1,
+  },
+  messageContentRight: {
+    alignItems: 'flex-end',
   },
   messageHeader: {
     flexDirection: 'row',
@@ -201,10 +263,16 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 1,
   },
+  messageBubbleRight: {
+    backgroundColor: '#3B82F6',
+  },
   messageText: {
     fontSize: 15,
     color: '#374151',
     lineHeight: 20,
+  },
+  messageTextRight: {
+    color: '#FFFFFF',
   },
   inputContainer: {
     flexDirection: 'row',
