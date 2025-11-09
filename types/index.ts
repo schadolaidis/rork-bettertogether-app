@@ -151,3 +151,12 @@ export interface Currency {
   symbol: string;
   name: string;
 }
+
+export interface ChatMessage {
+  id: string;
+  goalId: string;
+  senderId: string;
+  content: string;
+  timestamp: string;
+  listId: string;
+}

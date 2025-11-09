@@ -1,4 +1,4 @@
-import { Task, User, List, TaskCategory, CategoryMeta, LedgerEntry, FundTarget } from '@/types';
+import { Task, User, List, TaskCategory, CategoryMeta, LedgerEntry, FundTarget, ChatMessage } from '@/types';
 
 export const MOCK_USERS: User[] = [
   {
@@ -411,3 +411,5 @@ export const STATUS_COLORS = {
   failed: '#EF4444',
   overdue: '#F59E0B',
 };
+
+export const MOCK_CHAT_MESSAGES: ChatMessage[] = [];
