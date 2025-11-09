@@ -19,6 +19,13 @@ export default function TabLayout() {
   const surface = getToken(theme, 'surface', '#FFFFFF');
   const border = getToken(theme, 'border', '#CBD5E1');
   
+  const dashboardTitle = t?.tabs?.dashboard || 'Dashboard';
+  const calendarTitle = t?.tabs?.calendar || 'Calendar';
+  const tasksTitle = t?.tabs?.tasks || 'Tasks';
+  const fundsTitle = t?.tabs?.fundGoals || 'Fund Goals';
+  const chatTitle = t?.tabs?.chat || 'Chat';
+  const settingsTitle = t?.tabs?.settings || 'Settings';
+  
   return (
     <Tabs
       screenOptions={{
@@ -36,35 +43,35 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: t.tabs.dashboard,
+          title: dashboardTitle,
           tabBarIcon: ({ color, size }) => <LayoutDashboard color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="calendar"
         options={{
-          title: t.tabs.calendar,
+          title: calendarTitle,
           tabBarIcon: ({ color, size }) => <Calendar color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="tasks"
         options={{
-          title: t.tabs.tasks,
+          title: tasksTitle,
           tabBarIcon: ({ color, size }) => <CheckSquare color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="funds"
         options={{
-          title: t.tabs.fundGoals,
+          title: fundsTitle,
           tabBarIcon: ({ color, size }) => <Target color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="chat"
         options={{
-          title: t.tabs.chat,
+          title: chatTitle,
           tabBarIcon: ({ color, size }) => <MessageCircle color={color} size={size} />,
         }}
       />
@@ -77,7 +84,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: t.tabs.settings,
+          title: settingsTitle,
           tabBarIcon: ({ color, size }) => <Settings color={color} size={size} />,
         }}
       />
