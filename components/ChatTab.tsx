@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -20,11 +20,57 @@ interface ChatTabProps {
   onSendMessage?: (content: string) => void;
 }
 
-export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
-  const { currentListMembers, currentListId, currentUserId } = useApp();
+const ChatInput = memo(function ChatInput({ 
+  onSend, 
+  disabled 
+}: { 
+  onSend: (text: string) => void; 
+  disabled: boolean;
+}) {
   const [inputText, setInputText] = useState('');
+
+  const handleSend = useCallback(() => {
+    const text = inputText.trim();
+    if (!text) return;
+    
+    onSend(text);
+    setInputText('');
+  }, [inputText, onSend]);
+
+  return (
+    <View style={styles.inputContainer}>
+      <TextInput
+        style={styles.input}
+        placeholder="Type a message..."
+        placeholderTextColor="#9CA3AF"
+        value={inputText}
+        onChangeText={setInputText}
+        multiline
+        maxLength={500}
+        editable={!disabled}
+      />
+      <TouchableOpacity
+        style={[
+          styles.sendButton,
+          !inputText.trim() && styles.sendButtonDisabled,
+        ]}
+        onPress={handleSend}
+        disabled={!inputText.trim() || disabled}
+      >
+        <Send
+          size={20}
+          color={inputText.trim() ? '#FFFFFF' : '#9CA3AF'}
+        />
+      </TouchableOpacity>
+    </View>
+  );
+});
+
+export const ChatTab = memo(function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
+  const { currentListMembers, currentListId, currentUserId } = useApp();
   const flatListRef = useRef<FlatList>(null);
   const previousMessagesRef = useRef<ChatMessage[]>([]);
+  const isFirstRender = useRef(true);
 
   const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
 
@@ -37,10 +83,27 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
 
   const { data: messagesFromServer = [], refetch } = trpc.chat.getMessages.useQuery(
     { goalId, listId: currentListId || '' },
-    { refetchInterval: 5000, enabled: !!goalId && !!currentListId }
+    { 
+      refetchInterval: 5000, 
+      enabled: !!goalId && !!currentListId,
+      refetchOnWindowFocus: false,
+      refetchOnMount: true,
+    }
   );
 
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      if (messagesFromServer.length > 0) {
+        const sorted = [...messagesFromServer].sort(
+          (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        );
+        previousMessagesRef.current = sorted;
+        setLocalMessages(sorted);
+      }
+      return;
+    }
+
     if (!messagesFromServer || messagesFromServer.length === 0) {
       if (previousMessagesRef.current.length > 0) {
         previousMessagesRef.current = [];
@@ -67,17 +130,22 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
     
     setLocalMessages(prevMessages => {
       const tempMessages = prevMessages.filter(m => m.id.startsWith('temp-'));
-      return [...sortedServerMessages, ...tempMessages];
+      
+      const filteredServerMessages = sortedServerMessages.filter(msg => {
+        return !tempMessages.some(temp => 
+          temp.content === msg.content && 
+          Math.abs(new Date(temp.timestamp).getTime() - new Date(msg.timestamp).getTime()) < 10000
+        );
+      });
+      
+      return [...filteredServerMessages, ...tempMessages];
     });
   }, [messagesFromServer]);
 
-
-
   const sendMessageMutation = trpc.chat.sendMessage.useMutation();
 
-  const handleSend = useCallback(() => {
-    const currentText = inputText.trim();
-    if (!currentText || !currentUserId || !currentListId) return;
+  const handleSendMessage = useCallback((text: string) => {
+    if (!text.trim() || !currentUserId || !currentListId) return;
 
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -87,24 +155,25 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
       id: `temp-${Date.now()}`,
       goalId,
       senderId: currentUserId,
-      content: currentText,
+      content: text,
       timestamp: new Date().toISOString(),
       listId: currentListId,
     };
 
     setLocalMessages((prev) => [...prev, optimisticMessage]);
-    setInputText('');
 
     sendMessageMutation.mutate(
       {
         goalId,
         senderId: currentUserId,
-        content: currentText,
+        content: text,
         listId: currentListId,
       },
       {
         onSuccess: () => {
-          refetch();
+          setTimeout(() => {
+            refetch();
+          }, 500);
         },
         onError: () => {
           setLocalMessages((prev) => prev.filter((m) => m.id !== optimisticMessage.id));
@@ -113,11 +182,11 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
     );
 
     if (onSendMessage) {
-      onSendMessage(currentText);
+      onSendMessage(text);
     }
-  }, [inputText, currentUserId, currentListId, goalId, sendMessageMutation, refetch, onSendMessage]);
+  }, [currentUserId, currentListId, goalId, sendMessageMutation, refetch, onSendMessage]);
 
-  const renderMessage = ({ item }: { item: ChatMessage }) => {
+  const renderMessage = useCallback(({ item }: { item: ChatMessage }) => {
     const isCurrentUser = item.senderId === currentUserId;
     const sender = currentListMembers.find((m) => m.id === item.senderId);
     const senderName = sender?.name || 'Unknown';
@@ -170,7 +239,7 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
         )}
       </View>
     );
-  };
+  }, [currentUserId, currentListMembers]);
 
   useEffect(() => {
     if (localMessages.length > 0 && flatListRef.current) {
@@ -206,33 +275,13 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
         />
       )}
 
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Type a message..."
-          placeholderTextColor="#9CA3AF"
-          value={inputText}
-          onChangeText={setInputText}
-          multiline
-          maxLength={500}
-        />
-        <TouchableOpacity
-          style={[
-            styles.sendButton,
-            !inputText.trim() && styles.sendButtonDisabled,
-          ]}
-          onPress={handleSend}
-          disabled={!inputText.trim()}
-        >
-          <Send
-            size={20}
-            color={inputText.trim() ? '#FFFFFF' : '#9CA3AF'}
-          />
-        </TouchableOpacity>
-      </View>
+      <ChatInput 
+        onSend={handleSendMessage} 
+        disabled={!currentUserId || !currentListId}
+      />
     </KeyboardAvoidingView>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {
