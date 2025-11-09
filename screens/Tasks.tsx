@@ -51,7 +51,11 @@ export default function Tasks() {
       case 'completed':
         return tasks.filter(t => t.status === 'completed');
       case 'failed':
-        return tasks.filter(t => t.status === 'failed');
+        return tasks.filter(t => 
+          t.status === 'failed' || 
+          t.status === 'failed_stake_paid' || 
+          t.status === 'failed_joker_used'
+        );
       case 'upcoming':
         return tasks.filter(t => {
           if (!t.startAt) return false;

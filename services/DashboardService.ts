@@ -40,7 +40,7 @@ export class DashboardService {
     });
 
     const failedTasks = tasks.filter((t) => {
-      if (t.status !== 'failed' || !t.failedAt) return false;
+      if ((t.status !== 'failed' && t.status !== 'failed_stake_paid' && t.status !== 'failed_joker_used') || !t.failedAt) return false;
       const failDate = new Date(t.failedAt);
       const taskMonth = `${failDate.getFullYear()}-${String(failDate.getMonth() + 1).padStart(2, '0')}`;
       return taskMonth === month;

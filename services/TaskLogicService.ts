@@ -50,7 +50,7 @@ export class TaskLogicService {
       return { text: 'Completed', color: '#10B981', isUrgent: false };
     }
 
-    if (task.status === 'failed') {
+    if (task.status === 'failed' || task.status === 'failed_stake_paid' || task.status === 'failed_joker_used') {
       return { text: 'Failed', color: '#EF4444', isUrgent: false };
     }
 
@@ -133,7 +133,7 @@ export class TaskLogicService {
         return;
       }
 
-      if (task.status === 'failed') {
+      if (task.status === 'failed' || task.status === 'failed_stake_paid' || task.status === 'failed_joker_used') {
         return;
       }
 
@@ -217,7 +217,10 @@ export class TaskLogicService {
   }
 
   static computeTaskState(task: Task): TaskStatus {
-    if (task.status === 'completed' || task.status === 'failed') {
+    if (task.status === 'completed' || 
+        task.status === 'failed' || 
+        task.status === 'failed_stake_paid' || 
+        task.status === 'failed_joker_used') {
       return task.status;
     }
 
@@ -268,7 +271,11 @@ export class TaskLogicService {
   }
 
   static getFailedTasks(tasks: Task[]): Task[] {
-    return tasks.filter(t => t.status === 'failed');
+    return tasks.filter(t => 
+      t.status === 'failed' || 
+      t.status === 'failed_stake_paid' || 
+      t.status === 'failed_joker_used'
+    );
   }
 
   static getTotalStakeForTasks(tasks: Task[]): number {

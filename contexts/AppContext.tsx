@@ -313,7 +313,10 @@ export const [AppProvider, useApp] = createContextHook(() => {
     const newLedgerEntries: LedgerEntry[] = [];
     
     const updatedTasks = tasks.map((task) => {
-      if (task.status === 'completed' || task.status === 'failed') {
+      if (task.status === 'completed' || 
+          task.status === 'failed' || 
+          task.status === 'failed_stake_paid' || 
+          task.status === 'failed_joker_used') {
         return task;
       }
 
