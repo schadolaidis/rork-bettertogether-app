@@ -26,7 +26,7 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
   const flatListRef = useRef<FlatList>(null);
 
   const { data: messages = [], refetch } = trpc.chat.getMessages.useQuery(
-    { goalId, listId: currentListId },
+    { goalId, listId: currentListId || '' },
     { refetchInterval: 5000, enabled: !!goalId && !!currentListId }
   );
 
@@ -37,7 +37,7 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
   });
 
   const handleSend = () => {
-    if (!inputText.trim()) return;
+    if (!inputText.trim() || !currentUserId || !currentListId) return;
 
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
