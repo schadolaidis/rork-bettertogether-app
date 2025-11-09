@@ -354,9 +354,7 @@ export default function FundsScreen() {
               </Text>
               {targetAmountValue && (
                 <Text style={styles.fundTargetAmount}>
-                  {' '}
-                  / {currencySymbol}
-                  {targetAmountValue.toFixed(2)}
+                  {' / '}{currencySymbol}{targetAmountValue.toFixed(2)}
                 </Text>
               )}
             </View>
@@ -606,13 +604,10 @@ export default function FundsScreen() {
               <Text style={styles.summaryLabel}>Total Progress</Text>
               <View style={styles.summaryAmounts}>
                 <Text style={styles.summarySaved}>
-                  {currencySymbol}
-                  {totalSaved.toFixed(2)}
+                  {currencySymbol}{totalSaved.toFixed(2)}
                 </Text>
                 <Text style={styles.summaryTarget}>
-                  {' '}
-                  / {currencySymbol}
-                  {totalTargets.toFixed(2)}
+                  {' / '}{currencySymbol}{totalTargets.toFixed(2)}
                 </Text>
               </View>
               <Text style={styles.summarySubtext}>
