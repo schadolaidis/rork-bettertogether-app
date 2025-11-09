@@ -34,10 +34,11 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
   );
 
   useEffect(() => {
-    if (messagesFromServer.length !== previousMessagesRef.current.length) {
-      setLocalMessages(messagesFromServer);
-      previousMessagesRef.current = messagesFromServer;
-    }
+    const sortedServerMessages = [...messagesFromServer].sort(
+      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+    setLocalMessages(sortedServerMessages);
+    previousMessagesRef.current = sortedServerMessages;
   }, [messagesFromServer]);
 
   const sendMessageMutation = trpc.chat.sendMessage.useMutation();
@@ -168,6 +169,7 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.messagesList}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         />
       )}
 
