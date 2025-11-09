@@ -495,7 +495,7 @@ export default function FundsScreen() {
                   {task?.title || 'Unknown Task'}
                 </Text>
                 <Text style={styles.historySubtitle}>
-                  {fund?.name || 'Unknown Fund'} • {date.toLocaleDateString()}
+                  {fund?.name || 'Unknown Fund'} {String.fromCharCode(8226)} {date.toLocaleDateString()}
                 </Text>
               </View>
               <Text style={styles.historyAmount}>
