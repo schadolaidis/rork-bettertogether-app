@@ -42,7 +42,12 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
     const prevIds = previousMessagesRef.current.map(m => m.id).join(',');
     
     if (serverIds !== prevIds) {
-      setLocalMessages(sortedServerMessages);
+      setLocalMessages(prevMessages => {
+        const tempIds = prevMessages.filter(m => m.id.startsWith('temp-')).map(m => m.id);
+        const nonTempServerMessages = sortedServerMessages.filter(m => !m.id.startsWith('temp-'));
+        const tempMessages = prevMessages.filter(m => tempIds.includes(m.id));
+        return [...nonTempServerMessages, ...tempMessages];
+      });
       previousMessagesRef.current = sortedServerMessages;
     }
   }, [messagesFromServer]);
