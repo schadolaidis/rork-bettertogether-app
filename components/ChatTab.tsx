@@ -24,6 +24,7 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
   const { currentListMembers, currentListId, currentUserId } = useApp();
   const [inputText, setInputText] = useState('');
   const flatListRef = useRef<FlatList>(null);
+  const previousMessagesRef = useRef<ChatMessage[]>([]);
 
   const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
 
@@ -33,7 +34,10 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
   );
 
   useEffect(() => {
-    setLocalMessages(messagesFromServer);
+    if (messagesFromServer.length !== previousMessagesRef.current.length) {
+      setLocalMessages(messagesFromServer);
+      previousMessagesRef.current = messagesFromServer;
+    }
   }, [messagesFromServer]);
 
   const sendMessageMutation = trpc.chat.sendMessage.useMutation();
