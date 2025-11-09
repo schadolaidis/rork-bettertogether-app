@@ -8,12 +8,14 @@ import {
   TouchableOpacity,
   Platform,
   KeyboardAvoidingView,
+  ListRenderItem,
 } from 'react-native';
 import { Send } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useApp } from '@/contexts/AppContext';
 import { trpc } from '@/lib/trpc';
 import type { ChatMessage } from '@/types';
+import { logger } from '@/utils/logger';
 
 interface ChatTabProps {
   goalId: string;
@@ -28,23 +30,11 @@ interface ChatInputProps {
 const ChatInput = memo(function ChatInput({ onSend, disabled }: ChatInputProps) {
   const [inputText, setInputText] = useState('');
 
-  useEffect(() => {
-    console.log('ChatInput: MOUNTED');
-    return () => {
-      console.log('ChatInput: UNMOUNTED');
-    };
-  }, []);
-
-  const handleChangeText = useCallback((text: string) => {
-    console.log('ChatInput: text changed to:', text);
-    setInputText(text);
-  }, []);
-
   const handleSend = useCallback(() => {
     const trimmed = inputText.trim();
     if (!trimmed) return;
     
-    console.log('ChatInput: sending:', trimmed);
+    logger.log('[ChatInput] Sending:', trimmed);
     onSend(trimmed);
     setInputText('');
   }, [inputText, onSend]);
@@ -56,7 +46,7 @@ const ChatInput = memo(function ChatInput({ onSend, disabled }: ChatInputProps) 
         placeholder="Type a message..."
         placeholderTextColor="#9CA3AF"
         value={inputText}
-        onChangeText={handleChangeText}
+        onChangeText={setInputText}
         multiline
         maxLength={500}
         editable={!disabled}
@@ -85,13 +75,6 @@ export const ChatTab = memo(function ChatTab({ goalId, onSendMessage }: ChatTabP
   const isFirstRender = useRef(true);
 
   const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
-
-  useEffect(() => {
-    console.log('--- CHAT TAB: MOUNTED ---');
-    return () => {
-      console.log('!!! CHAT TAB: UNMOUNTED !!!');
-    };
-  }, []);
 
   const { data: messagesFromServer = [], refetch } = trpc.chat.getMessages.useQuery(
     { goalId, listId: currentListId || '' },
@@ -162,9 +145,8 @@ export const ChatTab = memo(function ChatTab({ goalId, onSendMessage }: ChatTabP
   const sendMessageMutation = trpc.chat.sendMessage.useMutation();
 
   const handleSendMessage = useCallback((text: string) => {
-    console.log('[ChatTab] handleSendMessage called with:', text);
     if (!text.trim() || !currentUserId || !currentListId) {
-      console.log('[ChatTab] Skipping send - missing data');
+      logger.log('[ChatTab] Skipping send - missing data');
       return;
     }
 
@@ -181,7 +163,7 @@ export const ChatTab = memo(function ChatTab({ goalId, onSendMessage }: ChatTabP
       listId: currentListId,
     };
 
-    console.log('[ChatTab] Adding optimistic message:', optimisticMessage.id);
+    logger.log('[ChatTab] Adding optimistic message:', optimisticMessage.id);
     setLocalMessages((prev) => [...prev, optimisticMessage]);
 
     sendMessageMutation.mutate(
@@ -193,13 +175,13 @@ export const ChatTab = memo(function ChatTab({ goalId, onSendMessage }: ChatTabP
       },
       {
         onSuccess: () => {
-          console.log('[ChatTab] Message sent successfully');
+          logger.log('[ChatTab] Message sent successfully');
           setTimeout(() => {
             refetch();
           }, 500);
         },
         onError: (error) => {
-          console.error('[ChatTab] Error sending message:', error);
+          logger.error('[ChatTab] Error sending message:', error);
           setLocalMessages((prev) => prev.filter((m) => m.id !== optimisticMessage.id));
         },
       }
@@ -210,7 +192,18 @@ export const ChatTab = memo(function ChatTab({ goalId, onSendMessage }: ChatTabP
     }
   }, [currentUserId, currentListId, goalId, sendMessageMutation, refetch, onSendMessage]);
 
-  const renderMessage = useCallback(({ item }: { item: ChatMessage }) => {
+  const getItemLayout = useCallback(
+    (_: ArrayLike<ChatMessage> | null | undefined, index: number) => ({
+      length: 80,
+      offset: 80 * index,
+      index,
+    }),
+    []
+  );
+
+  const keyExtractor = useCallback((item: ChatMessage) => item.id, []);
+
+  const renderMessage: ListRenderItem<ChatMessage> = useCallback(({ item }) => {
     const isCurrentUser = item.senderId === currentUserId;
     const sender = currentListMembers.find((m) => m.id === item.senderId);
     const senderName = sender?.name || 'Unknown';
@@ -292,10 +285,15 @@ export const ChatTab = memo(function ChatTab({ goalId, onSendMessage }: ChatTabP
           ref={flatListRef}
           data={localMessages}
           renderItem={renderMessage}
-          keyExtractor={(item) => item.id}
+          keyExtractor={keyExtractor}
+          getItemLayout={getItemLayout}
           contentContainerStyle={styles.messagesList}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          removeClippedSubviews={Platform.OS === 'android'}
         />
       )}
 

@@ -1,6 +1,6 @@
 import { publicProcedure } from "@/backend/trpc/create-context";
 import { z } from "zod";
-import { MOCK_CHAT_MESSAGES } from "@/mocks/data";
+import { ChatMessageStore } from "@/mocks/ChatMessageStore";
 import type { ChatMessage } from "@/types";
 import { TRPCError } from "@trpc/server";
 
@@ -35,7 +35,7 @@ export default publicProcedure
         listId,
       };
 
-      MOCK_CHAT_MESSAGES.push(newMessage);
+      ChatMessageStore.add(newMessage);
 
       console.log("[Chat sendMessage] Success:", newMessage.id);
       return newMessage;

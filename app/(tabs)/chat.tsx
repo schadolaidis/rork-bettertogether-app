@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -15,6 +15,7 @@ import { useApp } from '@/contexts/AppContext';
 import { DesignTokens } from '@/constants/design-tokens';
 import { ChatTab } from '@/components/ChatTab';
 
+
 type ViewMode = 'list' | 'chat';
 
 export default function ChatScreen() {
@@ -24,32 +25,27 @@ export default function ChatScreen() {
   const [selectedFundId, setSelectedFundId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
 
-  React.useEffect(() => {
-    console.log('--- CHAT SCREEN: MOUNTED ---');
-    return () => {
-      console.log('!!! CHAT SCREEN: UNMOUNTED !!!');
-    };
-  }, []);
+
 
   const activeFunds = useMemo(() => {
     return fundTargets.filter(fund => fund.totalCollectedCents > 0 || fund.targetAmountCents);
   }, [fundTargets]);
 
-  const handleSelectFund = (fundId: string) => {
+  const handleSelectFund = useCallback((fundId: string) => {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     setSelectedFundId(fundId);
     setViewMode('chat');
-  };
+  }, []);
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     setViewMode('list');
     setSelectedFundId(null);
-  };
+  }, []);
 
   const selectedFund = useMemo(() => {
     return fundTargets.find(f => f.id === selectedFundId);

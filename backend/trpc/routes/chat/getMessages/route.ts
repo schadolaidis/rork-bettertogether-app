@@ -1,6 +1,6 @@
 import { publicProcedure } from "@/backend/trpc/create-context";
 import { z } from "zod";
-import { MOCK_CHAT_MESSAGES } from "@/mocks/data";
+import { ChatMessageStore } from "@/mocks/ChatMessageStore";
 import { TRPCError } from "@trpc/server";
 
 const inputSchema = z.object({
@@ -23,9 +23,8 @@ export default publicProcedure
         });
       }
 
-      const messages = MOCK_CHAT_MESSAGES.filter(
-        (msg) => msg.goalId === goalId && msg.listId === listId
-      ).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      const messages = ChatMessageStore.findByGoalAndList(goalId, listId)
+        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
       console.log("[Chat getMessages] Success: Found", messages.length, "messages");
       return messages;
