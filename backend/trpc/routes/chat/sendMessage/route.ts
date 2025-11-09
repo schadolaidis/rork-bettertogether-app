@@ -11,7 +11,7 @@ const inputSchema = z.object({
   listId: z.string(),
 });
 
-export default publicProcedure
+export const sendMessageProcedure = publicProcedure
   .input(inputSchema)
   .mutation(async ({ input }) => {
     try {
@@ -51,3 +51,5 @@ export default publicProcedure
       });
     }
   });
+
+export default sendMessageProcedure;

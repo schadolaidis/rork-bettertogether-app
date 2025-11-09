@@ -27,11 +27,22 @@ export const trpcClient = createTRPCClient<AppRouter>({
     httpLink({
       url: `${getBaseUrl()}/api/trpc`,
       transformer: superjson,
+      headers: () => ({
+        'Content-Type': 'application/json',
+      }),
       async fetch(url, options) {
         console.log('[tRPC Client] Request:', url);
         
         try {
-          const response = await fetch(url, options);
+          const response = await fetch(url, {
+            ...options,
+            headers: {
+              ...options?.headers,
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
+          });
+          
           console.log('[tRPC Client] Response:', response.status, response.statusText);
           
           if (!response.ok) {
@@ -39,13 +50,18 @@ export const trpcClient = createTRPCClient<AppRouter>({
             const isHtml = contentType?.includes('text/html');
             
             if (isHtml) {
-              console.error('[tRPC Client] ERROR: Received HTML instead of JSON (404/502)');
-              throw new TRPCClientError('Backend server not reachable. Got HTML response instead of JSON.');
+              const bodyText = await response.text();
+              console.error('[tRPC Client] ERROR: Received HTML instead of JSON');
+              console.error('[tRPC Client] Response body:', bodyText.substring(0, 500));
+              throw new TRPCClientError('Backend server not reachable. Please check your connection.');
             }
           }
           
           return response;
         } catch (error) {
+          if (error instanceof TRPCClientError) {
+            throw error;
+          }
           console.error('[tRPC Client] Fetch failed:', error);
           throw error;
         }

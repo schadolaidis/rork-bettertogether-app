@@ -6,8 +6,8 @@ import useJokerOnTask from "./routes/tasks/useJokerOnTask/route";
 import parseTaskString from "./routes/tasks/parseTaskString/route";
 import getFundTotals from "./routes/fundGoals/getTotals/route";
 import getMe from "./routes/user/getMe/route";
-import chatSendMessage from "./routes/chat/sendMessage/route";
-import chatGetMessages from "./routes/chat/getMessages/route";
+import sendMessageProcedure from "./routes/chat/sendMessage/route";
+import getMessagesProcedure from "./routes/chat/getMessages/route";
 
 export const appRouter = createTRPCRouter({
   example: createTRPCRouter({
@@ -26,8 +26,8 @@ export const appRouter = createTRPCRouter({
     getMe,
   }),
   chat: createTRPCRouter({
-    sendMessage: chatSendMessage,
-    getMessages: chatGetMessages,
+    sendMessage: sendMessageProcedure,
+    getMessages: getMessagesProcedure,
   }),
 });
 

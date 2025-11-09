@@ -76,7 +76,7 @@ export const ChatTab = memo(function ChatTab({ goalId, onSendMessage }: ChatTabP
 
   const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
 
-  const { data: messagesFromServer = [], refetch, isError, error } = trpc.chat.getMessages.useQuery(
+  const { data: messagesFromServer = [], refetch, isError, error, isLoading } = trpc.chat.getMessages.useQuery(
     { goalId, listId: currentListId || '' },
     { 
       refetchInterval: 10000, 
@@ -84,14 +84,15 @@ export const ChatTab = memo(function ChatTab({ goalId, onSendMessage }: ChatTabP
       refetchOnWindowFocus: false,
       refetchOnMount: true,
       refetchIntervalInBackground: false,
-      retry: 3,
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      retry: 2,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+      staleTime: 5000,
     }
   );
 
   useEffect(() => {
-    if (isError) {
-      logger.error('[ChatTab] Query error:', error);
+    if (isError && error) {
+      logger.error('[ChatTab] Query error:', error.message, error.data);
     }
   }, [isError, error]);
 
@@ -151,8 +152,11 @@ export const ChatTab = memo(function ChatTab({ goalId, onSendMessage }: ChatTabP
   }, [messagesFromServer]);
 
   const sendMessageMutation = trpc.chat.sendMessage.useMutation({
-    retry: 2,
+    retry: 1,
     retryDelay: 1000,
+    onError: (error) => {
+      logger.error('[ChatTab] Mutation error:', error.message, error.data);
+    },
   });
 
   const handleSendMessage = useCallback((text: string) => {
@@ -188,11 +192,13 @@ export const ChatTab = memo(function ChatTab({ goalId, onSendMessage }: ChatTabP
         onSuccess: (data) => {
           logger.log('[ChatTab] Message sent successfully:', data?.id);
           setTimeout(() => {
-            refetch();
-          }, 500);
+            refetch().catch((err) => {
+              logger.error('[ChatTab] Refetch error:', err);
+            });
+          }, 300);
         },
         onError: (error) => {
-          logger.error('[ChatTab] Error sending message:', error);
+          logger.error('[ChatTab] Error sending message:', error.message, error.data);
           setLocalMessages((prev) => prev.filter((m) => m.id !== optimisticMessage.id));
         },
       }

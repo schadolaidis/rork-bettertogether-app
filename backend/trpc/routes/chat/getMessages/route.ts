@@ -8,7 +8,7 @@ const inputSchema = z.object({
   listId: z.string(),
 });
 
-export default publicProcedure
+export const getMessagesProcedure = publicProcedure
   .input(inputSchema)
   .query(async ({ input }) => {
     try {
@@ -40,3 +40,5 @@ export default publicProcedure
       });
     }
   });
+
+export default getMessagesProcedure;
