@@ -113,7 +113,6 @@ export const ModalInputWrapper: React.FC<ModalInputWrapperProps> = ({
     backgroundColor: 'rgba(0,0,0,0.4)',
     opacity: backdrop,
     ...StyleSheet.absoluteFillObject,
-    zIndex: DesignTokens.zIndex.scrim,
   } as const;
 
   const translateY = Animated.add(cardY, Animated.multiply(kbOffset, -1));
@@ -130,27 +129,29 @@ export const ModalInputWrapper: React.FC<ModalInputWrapperProps> = ({
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 8,
-    zIndex: DesignTokens.zIndex.sheet,
   } as const;
 
   return (
     <Portal>
-      <Animated.View style={backdropStyle}>
-        <Pressable
-          testID={`${testID}-backdrop`}
-          style={{ flex: 1 }}
-          onPress={() => {
-            Keyboard.dismiss();
-            if (dismissOnBackdrop) onClose();
-          }}
-        />
-      </Animated.View>
+      <View style={{ ...StyleSheet.absoluteFillObject, zIndex: DesignTokens.zIndex.scrim }}>
+        <Animated.View style={backdropStyle}>
+          <Pressable
+            testID={`${testID}-backdrop`}
+            style={{ flex: 1 }}
+            onPress={() => {
+              Keyboard.dismiss();
+              if (dismissOnBackdrop) onClose();
+            }}
+          />
+        </Animated.View>
+      </View>
 
       <SafeAreaView
         pointerEvents="box-none"
         style={{
           ...StyleSheet.absoluteFillObject,
           justifyContent: 'center',
+          zIndex: DesignTokens.zIndex.sheet,
         }}
       >
         <Animated.View style={cardStyle} testID={testID}>

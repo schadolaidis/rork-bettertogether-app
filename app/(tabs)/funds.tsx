@@ -20,6 +20,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Sparkles,
+  Trash2,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useApp } from '@/contexts/AppContext';
@@ -133,6 +134,39 @@ export default function FundsScreen() {
     setDescription('');
     setTargetAmount('');
   }, [name, emoji, description, targetAmount, editingFund, updateFundTarget]);
+
+  const handleDelete = useCallback(() => {
+    if (!editingFund) return;
+
+    Alert.alert(
+      'Delete Fund Goal',
+      `Are you sure you want to delete "${editingFund.name}"? This action cannot be undone.`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            console.log('[FundEdit] Deleting fund:', editingFund.id);
+            deleteFundTarget(editingFund.id);
+
+            if (Platform.OS !== 'web') {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            }
+
+            setEditingFund(null);
+            setName('');
+            setEmoji('🎯');
+            setDescription('');
+            setTargetAmount('');
+          },
+        },
+      ]
+    );
+  }, [editingFund, deleteFundTarget]);
 
 
 
@@ -727,6 +761,17 @@ export default function FundsScreen() {
               </View>
               <Text style={styles.helperText}>Set a goal to track progress</Text>
             </View>
+
+            {editingFund && (
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={handleDelete}
+                activeOpacity={0.7}
+              >
+                <Trash2 size={20} color={DesignTokens.colors.error[500]} />
+                <Text style={styles.deleteButtonText}>Delete Fund Goal</Text>
+              </TouchableOpacity>
+            )}
           </ScrollView>
         </ModalInputWrapper>
       </View>
@@ -1243,5 +1288,22 @@ const styles = StyleSheet.create({
     ...DesignTokens.typography.bodySmall,
     color: DesignTokens.colors.neutral[500],
     marginTop: DesignTokens.spacing.xs,
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: DesignTokens.spacing.sm,
+    marginTop: DesignTokens.spacing.xxl,
+    paddingVertical: DesignTokens.spacing.md,
+    borderRadius: DesignTokens.radius.md,
+    backgroundColor: DesignTokens.colors.error[50],
+    borderWidth: 1,
+    borderColor: DesignTokens.colors.error[500],
+  },
+  deleteButtonText: {
+    ...DesignTokens.typography.bodyMedium,
+    fontWeight: '600',
+    color: DesignTokens.colors.error[500],
   },
 });
