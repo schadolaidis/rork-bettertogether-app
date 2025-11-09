@@ -36,12 +36,7 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
     setLocalMessages(messagesFromServer);
   }, [messagesFromServer]);
 
-  const sendMessageMutation = trpc.chat.sendMessage.useMutation({
-    onSuccess: (newMessage) => {
-      setLocalMessages((prev) => [...prev, newMessage]);
-      refetch();
-    },
-  });
+  const sendMessageMutation = trpc.chat.sendMessage.useMutation();
 
   const handleSend = () => {
     if (!inputText.trim() || !currentUserId || !currentListId) return;
@@ -70,11 +65,8 @@ export function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
         listId: currentListId,
       },
       {
-        onSuccess: (newMessage) => {
-          setLocalMessages((prev) => {
-            const withoutTemp = prev.filter((m) => m.id !== optimisticMessage.id);
-            return [...withoutTemp, newMessage];
-          });
+        onSuccess: () => {
+          refetch();
         },
         onError: () => {
           setLocalMessages((prev) => prev.filter((m) => m.id !== optimisticMessage.id));
