@@ -17,7 +17,22 @@ import { Platform } from "react-native";
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      retryDelay: 1000,
+      staleTime: 30000,
+      cacheTime: 300000,
+      refetchOnWindowFocus: false,
+      refetchOnMount: true,
+      refetchOnReconnect: false,
+    },
+    mutations: {
+      retry: 0,
+    },
+  },
+});
 
 const getBaseUrl = () => {
   if (Platform.OS === 'web') {
@@ -27,11 +42,9 @@ const getBaseUrl = () => {
   const baseUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
   
   if (baseUrl) {
-    console.log('[tRPC _layout] Using configured base URL:', baseUrl);
     return baseUrl;
   }
   
-  console.warn('[tRPC _layout] EXPO_PUBLIC_RORK_API_BASE_URL not set, using fallback');
   return 'http://localhost:8081';
 };
 
@@ -109,8 +122,6 @@ export default function RootLayout() {
             'Content-Type': 'application/json',
           }),
           async fetch(url, options) {
-            console.log('[tRPC Provider] Request:', url);
-            
             try {
               const response = await fetch(url, {
                 ...options,
@@ -121,17 +132,12 @@ export default function RootLayout() {
                 },
               });
               
-              console.log('[tRPC Provider] Response:', response.status, response.statusText);
-              
               if (!response.ok) {
                 const contentType = response.headers.get('content-type');
                 const isHtml = contentType?.includes('text/html');
                 
                 if (isHtml) {
-                  const bodyText = await response.text();
-                  console.error('[tRPC Provider] ERROR: Received HTML instead of JSON');
-                  console.error('[tRPC Provider] Response body:', bodyText.substring(0, 500));
-                  throw new TRPCClientError('Backend server not reachable. Please check your connection.');
+                  throw new TRPCClientError('Backend unreachable');
                 }
               }
               
@@ -140,7 +146,6 @@ export default function RootLayout() {
               if (error instanceof TRPCClientError) {
                 throw error;
               }
-              console.error('[tRPC Provider] Fetch failed:', error);
               throw error;
             }
           },

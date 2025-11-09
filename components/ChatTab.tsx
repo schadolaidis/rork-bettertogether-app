@@ -76,25 +76,25 @@ export const ChatTab = memo(function ChatTab({ goalId, onSendMessage }: ChatTabP
 
   const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
 
-  const { data: messagesFromServer = [], refetch, isError, error, isLoading } = trpc.chat.getMessages.useQuery(
+  const { data: messagesFromServer = [] } = trpc.chat.getMessages.useQuery(
     { goalId, listId: currentListId || '' },
     { 
-      refetchInterval: 10000, 
+      refetchInterval: false, 
       enabled: !!goalId && !!currentListId,
       refetchOnWindowFocus: false,
       refetchOnMount: true,
       refetchIntervalInBackground: false,
-      retry: 2,
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
-      staleTime: 5000,
+      retry: 1,
+      retryDelay: 1000,
+      staleTime: 30000,
+      cacheTime: 300000,
+      onError: (err) => {
+        logger.error('[ChatTab] Query failed - using local only mode:', err.message);
+      },
     }
   );
 
-  useEffect(() => {
-    if (isError && error) {
-      logger.error('[ChatTab] Query error:', error.message, error.data);
-    }
-  }, [isError, error]);
+
 
   useEffect(() => {
     if (isFirstRender.current) {
@@ -152,10 +152,9 @@ export const ChatTab = memo(function ChatTab({ goalId, onSendMessage }: ChatTabP
   }, [messagesFromServer]);
 
   const sendMessageMutation = trpc.chat.sendMessage.useMutation({
-    retry: 1,
-    retryDelay: 1000,
+    retry: 0,
     onError: (error) => {
-      logger.error('[ChatTab] Mutation error:', error.message, error.data);
+      logger.error('[ChatTab] Mutation failed - message will stay local:', error.message);
     },
   });
 
@@ -191,11 +190,6 @@ export const ChatTab = memo(function ChatTab({ goalId, onSendMessage }: ChatTabP
       {
         onSuccess: (data) => {
           logger.log('[ChatTab] Message sent successfully:', data?.id);
-          setTimeout(() => {
-            refetch().catch((err) => {
-              logger.error('[ChatTab] Refetch error:', err);
-            });
-          }, 300);
         },
         onError: (error) => {
           logger.error('[ChatTab] Error sending message:', error.message, error.data);
@@ -207,7 +201,7 @@ export const ChatTab = memo(function ChatTab({ goalId, onSendMessage }: ChatTabP
     if (onSendMessage) {
       onSendMessage(text);
     }
-  }, [currentUserId, currentListId, goalId, sendMessageMutation, refetch, onSendMessage]);
+  }, [currentUserId, currentListId, goalId, sendMessageMutation, onSendMessage]);
 
   const getItemLayout = useCallback(
     (_: ArrayLike<ChatMessage> | null | undefined, index: number) => ({

@@ -31,8 +31,6 @@ export const trpcClient = createTRPCClient<AppRouter>({
         'Content-Type': 'application/json',
       }),
       async fetch(url, options) {
-        console.log('[tRPC Client] Request:', url);
-        
         try {
           const response = await fetch(url, {
             ...options,
@@ -43,17 +41,12 @@ export const trpcClient = createTRPCClient<AppRouter>({
             },
           });
           
-          console.log('[tRPC Client] Response:', response.status, response.statusText);
-          
           if (!response.ok) {
             const contentType = response.headers.get('content-type');
             const isHtml = contentType?.includes('text/html');
             
             if (isHtml) {
-              const bodyText = await response.text();
-              console.error('[tRPC Client] ERROR: Received HTML instead of JSON');
-              console.error('[tRPC Client] Response body:', bodyText.substring(0, 500));
-              throw new TRPCClientError('Backend server not reachable. Please check your connection.');
+              throw new TRPCClientError('Backend unreachable');
             }
           }
           
@@ -62,7 +55,6 @@ export const trpcClient = createTRPCClient<AppRouter>({
           if (error instanceof TRPCClientError) {
             throw error;
           }
-          console.error('[tRPC Client] Fetch failed:', error);
           throw error;
         }
       },
