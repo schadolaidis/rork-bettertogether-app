@@ -20,7 +20,7 @@ interface ChatTabProps {
   onSendMessage?: (content: string) => void;
 }
 
-const ChatInput = memo(function ChatInput({ 
+function ChatInput({ 
   onSend, 
   disabled 
 }: { 
@@ -28,14 +28,34 @@ const ChatInput = memo(function ChatInput({
   disabled: boolean;
 }) {
   const [inputText, setInputText] = useState('');
+  const inputRef = useRef(inputText);
+  const onSendRef = useRef(onSend);
+
+  useEffect(() => {
+    inputRef.current = inputText;
+    console.log('ChatInput: inputText changed to:', inputText);
+  }, [inputText]);
+
+  useEffect(() => {
+    onSendRef.current = onSend;
+  }, [onSend]);
+
+  useEffect(() => {
+    console.log('ChatInput: RENDERED (disabled:', disabled, ')');
+  });
+
+  const handleChangeText = useCallback((text: string) => {
+    console.log('ChatInput: handleChangeText called with:', text);
+    setInputText(text);
+  }, []);
 
   const handleSend = useCallback(() => {
-    const text = inputText.trim();
+    const text = inputRef.current.trim();
     if (!text) return;
     
-    onSend(text);
+    onSendRef.current(text);
     setInputText('');
-  }, [inputText, onSend]);
+  }, []);
 
   return (
     <View style={styles.inputContainer}>
@@ -44,7 +64,7 @@ const ChatInput = memo(function ChatInput({
         placeholder="Type a message..."
         placeholderTextColor="#9CA3AF"
         value={inputText}
-        onChangeText={setInputText}
+        onChangeText={handleChangeText}
         multiline
         maxLength={500}
         editable={!disabled}
@@ -64,7 +84,7 @@ const ChatInput = memo(function ChatInput({
       </TouchableOpacity>
     </View>
   );
-});
+}
 
 export const ChatTab = memo(function ChatTab({ goalId, onSendMessage }: ChatTabProps) {
   const { currentListMembers, currentListId, currentUserId } = useApp();
@@ -84,10 +104,11 @@ export const ChatTab = memo(function ChatTab({ goalId, onSendMessage }: ChatTabP
   const { data: messagesFromServer = [], refetch } = trpc.chat.getMessages.useQuery(
     { goalId, listId: currentListId || '' },
     { 
-      refetchInterval: 5000, 
+      refetchInterval: 10000, 
       enabled: !!goalId && !!currentListId,
       refetchOnWindowFocus: false,
       refetchOnMount: true,
+      refetchIntervalInBackground: false,
     }
   );
 
@@ -104,7 +125,11 @@ export const ChatTab = memo(function ChatTab({ goalId, onSendMessage }: ChatTabP
       return;
     }
 
-    if (!messagesFromServer || messagesFromServer.length === 0) {
+    if (!messagesFromServer) {
+      return;
+    }
+
+    if (messagesFromServer.length === 0) {
       if (previousMessagesRef.current.length > 0) {
         previousMessagesRef.current = [];
         setLocalMessages(prev => prev.filter(m => m.id.startsWith('temp-')));
@@ -145,7 +170,11 @@ export const ChatTab = memo(function ChatTab({ goalId, onSendMessage }: ChatTabP
   const sendMessageMutation = trpc.chat.sendMessage.useMutation();
 
   const handleSendMessage = useCallback((text: string) => {
-    if (!text.trim() || !currentUserId || !currentListId) return;
+    console.log('[ChatTab] handleSendMessage called with:', text);
+    if (!text.trim() || !currentUserId || !currentListId) {
+      console.log('[ChatTab] Skipping send - missing data');
+      return;
+    }
 
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -160,6 +189,7 @@ export const ChatTab = memo(function ChatTab({ goalId, onSendMessage }: ChatTabP
       listId: currentListId,
     };
 
+    console.log('[ChatTab] Adding optimistic message:', optimisticMessage.id);
     setLocalMessages((prev) => [...prev, optimisticMessage]);
 
     sendMessageMutation.mutate(
@@ -171,11 +201,13 @@ export const ChatTab = memo(function ChatTab({ goalId, onSendMessage }: ChatTabP
       },
       {
         onSuccess: () => {
+          console.log('[ChatTab] Message sent successfully');
           setTimeout(() => {
             refetch();
           }, 500);
         },
-        onError: () => {
+        onError: (error) => {
+          console.error('[ChatTab] Error sending message:', error);
           setLocalMessages((prev) => prev.filter((m) => m.id !== optimisticMessage.id));
         },
       }
