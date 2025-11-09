@@ -10,7 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import {
   Plus,
   Target,
@@ -20,6 +20,7 @@ import {
   CheckCircle2,
   Sparkles,
   Trash2,
+  MessageCircle,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useApp } from '@/contexts/AppContext';
@@ -31,6 +32,7 @@ type TabType = 'overview' | 'history' | 'stats';
 
 export default function FundsScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const {
     currentList,
     tasks,
@@ -450,6 +452,23 @@ export default function FundsScreen() {
                 </Text>
               </View>
             )}
+
+            <View style={styles.fundActions}>
+              <TouchableOpacity
+                style={styles.fundActionButton}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  if (Platform.OS !== 'web') {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }
+                  router.push(`/chat-fund?fundId=${fund.id}`);
+                }}
+                activeOpacity={0.7}
+              >
+                <MessageCircle size={18} color={DesignTokens.colors.primary[500]} />
+                <Text style={styles.fundActionText}>Chat</Text>
+              </TouchableOpacity>
+            </View>
           </TouchableOpacity>
         );
       })}

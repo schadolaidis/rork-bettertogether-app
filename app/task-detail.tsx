@@ -22,6 +22,7 @@ import {
   CheckCircle2,
   Check,
   ChevronRight,
+  MessageCircle,
 } from 'lucide-react-native';
 import { useApp } from '@/contexts/AppContext';
 import { FundTargetOption } from '@/components/TaskFormModal';
@@ -204,17 +205,30 @@ export default function TaskDetailScreen() {
         
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Edit Task</Text>
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={() => {
-              if (Platform.OS !== 'web') {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              }
-              router.back();
-            }}
-          >
-            <X size={24} color="#6B7280" />
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              style={styles.chatButton}
+              onPress={() => {
+                if (Platform.OS !== 'web') {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+                router.push(`/chat-task?taskId=${task.id}`);
+              }}
+            >
+              <MessageCircle size={22} color="#3B82F6" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => {
+                if (Platform.OS !== 'web') {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+                router.back();
+              }}
+            >
+              <X size={24} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <ScrollView 
@@ -903,6 +917,14 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700' as const,
     color: '#111827',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  chatButton: {
+    padding: 4,
   },
   closeButton: {
     padding: 4,
