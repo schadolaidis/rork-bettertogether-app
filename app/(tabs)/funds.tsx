@@ -495,7 +495,7 @@ export default function FundsScreen() {
                   {task?.title || 'Unknown Task'}
                 </Text>
                 <Text style={styles.historySubtitle}>
-                  {fund?.name || 'Unknown Fund'}{' • '}{date.toLocaleDateString()}
+                  {fund?.name || 'Unknown Fund'} • {date.toLocaleDateString()}
                 </Text>
               </View>
               <Text style={styles.historyAmount}>
@@ -574,7 +574,7 @@ export default function FundsScreen() {
           <View>
             <Text style={styles.title}>Fund Goals</Text>
             <Text style={styles.subtitle}>
-              {currentList?.name || 'Your List'}{' • '}{new Date().toLocaleDateString('en-US', { month: 'long' })}
+              {currentList?.name || 'Your List'} • {new Date().toLocaleDateString('en-US', { month: 'long' })}
             </Text>
           </View>
           <TouchableOpacity
@@ -611,7 +611,7 @@ export default function FundsScreen() {
                 </Text>
               </View>
               <Text style={styles.summarySubtext}>
-                {fundTargets.length} {fundTargets.length === 1 ? 'goal' : 'goals'}{' • '}{completedGoalsCount} completed
+                {fundTargets.length} {fundTargets.length === 1 ? 'goal' : 'goals'} • {completedGoalsCount} completed
               </Text>
             </View>
           </View>
