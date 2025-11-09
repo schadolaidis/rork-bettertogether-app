@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { LayoutDashboard, Calendar, CheckSquare, Target, Settings } from "lucide-react-native";
+import { LayoutDashboard, Calendar, CheckSquare, Target, Settings, MessageCircle } from "lucide-react-native";
 import React from "react";
 import { useApp } from "@/contexts/AppContext";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -59,6 +59,13 @@ export default function TabLayout() {
         options={{
           title: t.tabs.fundGoals,
           tabBarIcon: ({ color, size }) => <Target color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="chat"
+        options={{
+          title: t.tabs.chat,
+          tabBarIcon: ({ color, size }) => <MessageCircle color={color} size={size} />,
         }}
       />
       <Tabs.Screen

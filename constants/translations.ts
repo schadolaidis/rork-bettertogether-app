@@ -34,6 +34,7 @@ export interface Translations {
     calendar: string;
     tasks: string;
     fundGoals: string;
+    chat: string;
     settings: string;
   };
   dashboard: {
@@ -272,6 +273,7 @@ const en: Translations = {
     calendar: 'Calendar',
     tasks: 'Tasks',
     fundGoals: 'Fund Goals',
+    chat: 'Chat',
     settings: 'Settings',
   },
   dashboard: {
@@ -510,6 +512,7 @@ const de: Translations = {
     calendar: 'Kalender',
     tasks: 'Aufgaben',
     fundGoals: 'Sparziele',
+    chat: 'Chat',
     settings: 'Einstellungen',
   },
   dashboard: {
